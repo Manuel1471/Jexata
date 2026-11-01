@@ -272,8 +272,8 @@ defmodule Jexata.Evaluator do
   defp binary(op, a, b) when op in ["+", "-", "*", "/", "%"] do
     if is_number(a) and is_number(b) do
       case {op, b} do
-        {"/", 0} -> {:error, Error.new("D1001", "Division by zero")}
-        {"%", 0} -> {:error, Error.new("D1001", "Division by zero")}
+        {"/", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
+        {"%", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
         {"+", _} -> {:ok, a + b}
         {"-", _} -> {:ok, a - b}
         {"*", _} -> {:ok, a * b}
@@ -309,7 +309,11 @@ defmodule Jexata.Evaluator do
   defp string(false), do: "false"
   defp string(value) when is_binary(value), do: value
   defp string(value) when is_number(value), do: to_string(value)
-  defp string(_), do: "[object Object]"
+
+  defp string(value) do
+    {:ok, result} = Jexata.Functions.String.call("$string", [value])
+    result
+  end
 
   defp type_error(message), do: {:error, Error.new("T2001", message)}
 end

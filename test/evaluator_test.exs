@@ -28,6 +28,8 @@ defmodule Jexata.EvaluatorTest do
   test "reports type and arithmetic errors" do
     assert {:error, %Jexata.Error{code: "T2001"}} = Jexata.run("'a' + 2", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 / 0", %{})
+    assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 % 0.0", %{})
+    assert Jexata.run("{'a': 1} & 'x'", %{}) == {:ok, "{\"a\":1}x"}
   end
 
   test "compiled expressions can be reused concurrently" do

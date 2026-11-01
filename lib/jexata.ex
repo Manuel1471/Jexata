@@ -38,6 +38,9 @@ defmodule Jexata do
 
   @doc "Evaluates a compiled expression against JSON-like Elixir data."
   @spec evaluate(Expression.t(), json()) :: {:ok, json()} | {:error, Error.t()}
+  def evaluate(%Expression{ast: nil}, _data),
+    do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
   def evaluate(%Expression{ast: ast}, data) do
     with {:ok, value} <- Evaluator.evaluate(ast, data),
          do: {:ok, Jexata.Runtime.Value.public(value)}
