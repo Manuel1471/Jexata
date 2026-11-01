@@ -36,4 +36,44 @@ defmodule Jexata.Semantics do
   def compare("<=", left, right), do: left <= right
   def compare(">", left, right), do: left > right
   def compare(">=", left, right), do: left >= right
+
+  def number_string(value) when is_integer(value), do: Integer.to_string(value)
+
+  def number_string(value) when is_float(value) do
+    [mantissa, exponent] = value |> :erlang.float_to_binary(scientific: 14) |> String.split("e")
+    exponent = String.to_integer(exponent)
+    sign = if String.starts_with?(mantissa, "-"), do: "-", else: ""
+
+    digits =
+      mantissa |> String.trim_leading("-") |> String.replace(".", "") |> String.trim_trailing("0")
+
+    digits = if digits == "", do: "0", else: digits
+
+    cond do
+      digits == "0" ->
+        "0"
+
+      exponent in 0..20 ->
+        decimal_string(sign, digits, exponent + 1)
+
+      exponent in -6..-1 ->
+        sign <> "0." <> String.duplicate("0", -exponent - 1) <> digits
+
+      true ->
+        head = String.first(digits)
+        tail = String.slice(digits, 1..-1//1)
+        fractional = if tail == "", do: "", else: "." <> tail
+        exponent_text = if exponent > 0, do: "+#{exponent}", else: Integer.to_string(exponent)
+        sign <> head <> fractional <> "e" <> exponent_text
+    end
+  end
+
+  defp decimal_string(sign, digits, point) do
+    if point >= String.length(digits) do
+      sign <> digits <> String.duplicate("0", point - String.length(digits))
+    else
+      {whole, fractional} = String.split_at(digits, point)
+      sign <> whole <> "." <> fractional
+    end
+  end
 end

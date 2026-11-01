@@ -1,6 +1,6 @@
 defmodule Jexata.Functions.String do
   @moduledoc false
-  alias Jexata.Error
+  alias Jexata.{Error, Semantics}
   alias Jexata.Runtime.Value
 
   @supported [
@@ -16,11 +16,13 @@ defmodule Jexata.Functions.String do
     "$substringBefore",
     "$substringAfter",
     "$replace",
-    "$pad"
+    "$pad",
+    "$match"
   ]
   def supported?(name), do: name in @supported
 
   def call("$string", [value]) when is_binary(value), do: {:ok, value}
+  def call("$string", [value]) when is_number(value), do: {:ok, Semantics.number_string(value)}
 
   def call("$string", [value]) do
     if Value.undefined?(value) do
@@ -89,8 +91,40 @@ defmodule Jexata.Functions.String do
      )}
   end
 
+  def call("$replace", [value, %Regex{} = pattern, replacement])
+      when is_binary(value) and is_binary(replacement),
+      do: regex_replace(value, pattern, replacement, :all)
+
+  def call("$replace", [value, %Regex{} = pattern, replacement, limit])
+      when is_binary(value) and is_binary(replacement) and is_integer(limit) and limit >= 0,
+      do: regex_replace(value, pattern, replacement, limit)
+
   def call("$contains", [value, token]) when is_binary(value) and is_binary(token),
     do: {:ok, String.contains?(value, token)}
+
+  def call("$contains", [value, %Regex{} = pattern]) when is_binary(value),
+    do: {:ok, Regex.match?(pattern, value)}
+
+  def call("$match", [value, pattern]), do: call("$match", [value, pattern, :all])
+
+  def call("$match", [value, %Regex{} = pattern, limit])
+      when is_binary(value) and (limit == :all or (is_integer(limit) and limit >= 0)) do
+    matches = Regex.scan(pattern, value, return: :index)
+    matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
+
+    results =
+      Enum.map(matches, fn [{index, length} | captures] ->
+        groups =
+          Enum.map(captures, fn
+            {-1, _} -> ""
+            {start, size} -> binary_part(value, start, size)
+          end)
+
+        %{"match" => binary_part(value, index, length), "index" => index, "groups" => groups}
+      end)
+
+    {:ok, Value.sequence(results)}
+  end
 
   def call("$substring", [value, start]) when is_binary(value) and is_integer(start),
     do: substring(value, start, nil)
@@ -102,9 +136,16 @@ defmodule Jexata.Functions.String do
   def call("$split", [value, separator]) when is_binary(value) and is_binary(separator),
     do: {:ok, String.split(value, separator)}
 
+  def call("$split", [value, %Regex{} = pattern]) when is_binary(value),
+    do: {:ok, Regex.split(pattern, value)}
+
   def call("$split", [value, separator, limit])
       when is_binary(value) and is_binary(separator) and is_integer(limit) and limit >= 0,
       do: {:ok, value |> String.split(separator) |> Enum.take(limit)}
+
+  def call("$split", [value, %Regex{} = pattern, limit])
+      when is_binary(value) and is_integer(limit) and limit >= 0,
+      do: {:ok, pattern |> Regex.split(value) |> Enum.take(limit)}
 
   def call("$join", [values]) when is_list(values), do: call("$join", [values, ""])
 
@@ -122,6 +163,56 @@ defmodule Jexata.Functions.String do
     suffix = Enum.drop(chars, index)
     selected = if is_nil(count), do: suffix, else: Enum.take(suffix, max(count, 0))
     {:ok, Enum.join(selected)}
+  end
+
+  defp replace_regex(value, pattern, replacement, limit) do
+    matches = Regex.scan(pattern, value, return: :index)
+    matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
+
+    {parts, cursor} =
+      Enum.map_reduce(matches, 0, fn [{start, size} | captures] = match, cursor ->
+        untouched = binary_part(value, cursor, start - cursor)
+        replacement = expand_replacement(replacement, value, match, captures)
+        {[untouched, replacement], start + size}
+      end)
+
+    IO.iodata_to_binary([parts, binary_part(value, cursor, byte_size(value) - cursor)])
+  end
+
+  defp regex_replace(value, pattern, replacement, limit) do
+    if Regex.match?(pattern, ""),
+      do: {:error, Error.new("D1004", "Regex must not match an empty string")},
+      else: {:ok, replace_regex(value, pattern, replacement, limit)}
+  end
+
+  defp expand_replacement(template, value, full_match, captures) do
+    Regex.replace(~r/\$\$|\$\d+/, template, fn token ->
+      cond do
+        token == "$$" ->
+          "$"
+
+        true ->
+          digits = String.slice(token, 1..-1//1)
+          replacement_group(digits, value, [hd(full_match) | captures])
+      end
+    end)
+  end
+
+  defp replacement_group(digits, value, groups) do
+    candidates =
+      for width <- String.length(digits)..1//-1,
+          index = digits |> String.slice(0, width) |> String.to_integer(),
+          index < length(groups),
+          do: {index, String.slice(digits, width..-1//1)}
+
+    case candidates do
+      [{index, remainder} | _] ->
+        {start, size} = Enum.at(groups, index)
+        if(start < 0, do: "", else: binary_part(value, start, size)) <> remainder
+
+      [] ->
+        String.slice(digits, 1..-1//1)
+    end
   end
 
   defp json_value(nil), do: :null

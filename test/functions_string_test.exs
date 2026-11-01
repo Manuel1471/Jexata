@@ -26,4 +26,12 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$pad('foo', 5.7, '')", %{}) == {:ok, "foo  "}
     assert Jexata.run("$pad(missing, 3)", %{}) == {:ok, :undefined}
   end
+
+  test "number to string follows JSONata significant digits and exponent thresholds" do
+    assert Jexata.run("$string(22/7)", %{}) == {:ok, "3.14285714285714"}
+    assert Jexata.run("$string(1e20)", %{}) == {:ok, "100000000000000000000"}
+    assert Jexata.run("$string(1e21)", %{}) == {:ok, "1e+21"}
+    assert Jexata.run("$string(1e-6)", %{}) == {:ok, "0.000001"}
+    assert Jexata.run("$string(1e-7)", %{}) == {:ok, "1e-7"}
+  end
 end

@@ -50,6 +50,17 @@ defmodule Jexata.Parser do
        when type in [:literal, :number, :string],
        do: {:ok, {:literal, value}, rest}
 
+  defp prefix([%Token{type: :regex, value: {pattern, flags}, position: position} | rest]) do
+    if String.match?(flags, ~r/\A[im]*\z/) do
+      case Regex.compile(pattern, flags) do
+        {:ok, regex} -> {:ok, {:literal, regex}, rest}
+        {:error, _} -> {:error, Error.new("S0301", "Invalid regular expression", position)}
+      end
+    else
+      {:error, Error.new("S0301", "Invalid regular expression flags", position)}
+    end
+  end
+
   defp prefix([%Token{type: :name, value: name}, %Token{value: "("} | rest])
        when name in ["function", "λ"],
        do: lambda_parameters([], rest)
@@ -76,7 +87,7 @@ defmodule Jexata.Parser do
   defp prefix([]), do: {:error, Error.new("S0201", "Expected an expression")}
 
   defp infix(left, [%Token{value: "."} | rest], min_bp) when min_bp < 100 do
-    with {:ok, right, tail} <- prefix(rest),
+    with {:ok, right, tail} <- path_prefix(rest),
          {:ok, right, tail} <- path_postfix(right, tail),
          do: infix({:path, left, right}, tail, min_bp)
   end
@@ -127,6 +138,9 @@ defmodule Jexata.Parser do
   end
 
   defp infix(left, tokens, _), do: {:ok, left, tokens}
+
+  defp path_prefix([%Token{type: :string, value: name} | rest]), do: {:ok, {:name, name}, rest}
+  defp path_prefix(tokens), do: prefix(tokens)
 
   defp optional_alternate([%Token{value: ":"} | rest]), do: expression(rest, 19)
   defp optional_alternate(tail), do: {:ok, {:literal, Jexata.Runtime.Value.undefined()}, tail}

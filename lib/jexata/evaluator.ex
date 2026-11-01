@@ -237,6 +237,28 @@ defmodule Jexata.Evaluator do
     with {:ok, values} <- eval_list(args, data, context), do: higher_order(name, values, data)
   end
 
+  defp eval({:call, {:variable, "$replace"}, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context) do
+      case Map.fetch(context.environment, "$replace") do
+        {:ok, closure} ->
+          invoke(closure, values, data)
+
+        :error ->
+          case values do
+            [value, %Regex{} = pattern, %Closure{} = callback] when is_binary(value) ->
+              replace_callback(value, pattern, callback, :all, data)
+
+            [value, %Regex{} = pattern, %Closure{} = callback, limit]
+            when is_binary(value) and is_integer(limit) and limit >= 0 ->
+              replace_callback(value, pattern, callback, limit, data)
+
+            _ ->
+              Functions.call("$replace", values, data)
+          end
+      end
+    end
+  end
+
   defp eval({:call, {:variable, name}, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
@@ -350,6 +372,50 @@ defmodule Jexata.Evaluator do
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
 
+  defp replace_callback(value, pattern, callback, limit, data) do
+    if Regex.match?(pattern, "") do
+      {:error, Error.new("D1004", "Regex must not match an empty string")}
+    else
+      matches = Regex.scan(pattern, value, return: :index)
+      matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
+
+      Enum.reduce_while(matches, {:ok, [], 0}, fn [{start, size} | captures],
+                                                  {:ok, acc, cursor} ->
+        groups =
+          Enum.map(captures, fn
+            {-1, _} -> ""
+            {index, length} -> binary_part(value, index, length)
+          end)
+
+        match = %{
+          "match" => binary_part(value, start, size),
+          "index" => start,
+          "groups" => groups
+        }
+
+        case invoke_callback(callback, [match], data) do
+          {:ok, replacement} when is_binary(replacement) ->
+            prefix = binary_part(value, cursor, start - cursor)
+            {:cont, {:ok, [acc, prefix, replacement], start + size}}
+
+          {:ok, _} ->
+            {:halt, {:error, Error.new("D3012", "Replacement function must return a string")}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, parts, cursor} ->
+          {:ok,
+           IO.iodata_to_binary([parts, binary_part(value, cursor, byte_size(value) - cursor)])}
+
+        error ->
+          error
+      end
+    end
+  end
+
   defp eval_each(items, ast, root, flatten_arrays?, keep_array?) do
     Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
       case eval(ast, item, root) do
@@ -437,7 +503,7 @@ defmodule Jexata.Evaluator do
   defp string(true), do: "true"
   defp string(false), do: "false"
   defp string(value) when is_binary(value), do: value
-  defp string(value) when is_number(value), do: to_string(value)
+  defp string(value) when is_number(value), do: Semantics.number_string(value)
 
   defp string(value) do
     {:ok, result} = Jexata.Functions.String.call("$string", [value])

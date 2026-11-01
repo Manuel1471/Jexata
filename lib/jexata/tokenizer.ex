@@ -78,6 +78,9 @@ defmodule Jexata.Tokenizer do
       String.starts_with?(source, "$") ->
         scan_variable(source, position, acc)
 
+      String.starts_with?(source, "/") and regex_position?(acc) ->
+        scan_regex(source, position, acc)
+
       Regex.match?(@number, source) ->
         [lexeme] = Regex.run(@number, source)
 
@@ -130,6 +133,60 @@ defmodule Jexata.Tokenizer do
     lexeme = "$" <> name
     emit(source, lexeme, :variable, lexeme, position, acc)
   end
+
+  defp regex_position?([]), do: true
+
+  defp regex_position?([%Token{value: value} | _]),
+    do:
+      value in [
+        "(",
+        "[",
+        "{",
+        ",",
+        ":",
+        ";",
+        "?",
+        "=",
+        "+",
+        "-",
+        "*",
+        "/",
+        "%",
+        "&",
+        "|",
+        "~>",
+        ":="
+      ]
+
+  defp scan_regex(<<?/, rest::binary>>, position, acc) do
+    case regex_body(rest, [], false) do
+      {:ok, body, tail} ->
+        flags = Regex.run(~r/\A[a-z]*/, tail) |> hd()
+        remaining = binary_part(tail, byte_size(flags), byte_size(tail) - byte_size(flags))
+        consumed = byte_size(rest) - byte_size(remaining) + 1
+        scan(remaining, position + consumed, [token(:regex, {body, flags}, position) | acc])
+
+      :error ->
+        {:error, Error.new("S0104", "Unterminated regular expression", position)}
+    end
+  end
+
+  defp regex_body(<<>>, _, _), do: :error
+
+  defp regex_body(<<?\\, character, tail::binary>>, acc, in_class),
+    do: regex_body(tail, [<<?\\, character>> | acc], in_class)
+
+  defp regex_body(<<?[, tail::binary>>, acc, false),
+    do: regex_body(tail, ["[" | acc], true)
+
+  defp regex_body(<<?], tail::binary>>, acc, true),
+    do: regex_body(tail, ["]" | acc], false)
+
+  defp regex_body(<<?/, tail::binary>>, acc, false),
+    do: {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary(), tail}
+
+  defp regex_body(<<character, tail::binary>>, acc, in_class),
+    do: regex_body(tail, [<<character>> | acc], in_class)
 
   defp emit(source, lexeme, type, value, position, acc) do
     tail = binary_part(source, byte_size(lexeme), byte_size(source) - byte_size(lexeme))
