@@ -72,6 +72,8 @@ defmodule Jexata.Parser do
     with {:ok, value, tail} <- expression(rest, 90), do: {:ok, {:negate, value}, tail}
   end
 
+  defp prefix([%Token{value: "?"} | rest]), do: {:ok, :placeholder, rest}
+
   defp prefix([%Token{value: "*"} | rest]), do: {:ok, :wildcard, rest}
   defp prefix([%Token{value: "**"} | rest]), do: {:ok, :descendants, rest}
   defp prefix([%Token{value: "["} | rest]), do: collection(rest, "]", :array)

@@ -77,7 +77,8 @@ defmodule Jexata.Functions do
         is_list(value) or is_struct(value, Value.Sequence) ->
           "array"
 
-        is_struct(value, Jexata.Runtime.Closure) or is_struct(value, Jexata.Runtime.Builtin) ->
+        is_struct(value, Jexata.Runtime.Closure) or is_struct(value, Jexata.Runtime.Builtin) or
+            is_struct(value, Jexata.Runtime.Partial) ->
           "function"
 
         is_map(value) ->

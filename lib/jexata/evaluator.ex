@@ -1,7 +1,8 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.{Builtin, Closure, Signature, Value}
+  alias Jexata.Runtime.{Builtin, Closure, Partial, Signature, Value}
+  alias Jexata.Runtime.Partial.Placeholder
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
   def evaluate(ast, :undefined) do
@@ -12,6 +13,7 @@ defmodule Jexata.Evaluator do
   def evaluate(ast, data), do: eval(ast, data, %{root: data, environment: %{}})
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
+  defp eval(:placeholder, _, _), do: {:ok, %Placeholder{}}
   defp eval({:name, name}, data, _), do: {:ok, Semantics.select(data, name)}
   defp eval({:variable, "$"}, data, _), do: {:ok, data}
   defp eval({:variable, "$$"}, _, %{root: root}), do: {:ok, root}
@@ -289,8 +291,17 @@ defmodule Jexata.Evaluator do
   defp eval({:call, {:variable, name}, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
-        {:ok, closure} -> invoke(closure, values, data)
-        :error -> Functions.call(name, values, data)
+        {:ok, closure} ->
+          invoke_or_partial(closure, values, data)
+
+        :error ->
+          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+            if Functions.supported?(name),
+              do: {:ok, %Partial{function: %Builtin{name: name}, arguments: values}},
+              else: {:error, Error.new("T1008", "Unknown function #{name}")}
+          else
+            Functions.call(name, values, data)
+          end
       end
     end
   end
@@ -298,7 +309,17 @@ defmodule Jexata.Evaluator do
   defp eval({:call, target, args}, data, context) do
     with {:ok, function} <- eval(target, data, context),
          {:ok, values} <- eval_list(args, data, context) do
-      invoke(function, values, data)
+      if Enum.any?(values, &is_struct(&1, Placeholder)) and Value.undefined?(function) do
+        code =
+          case target do
+            {:name, name} -> if Functions.supported?("$" <> name), do: "T1007", else: "T1008"
+            _ -> "T1007"
+          end
+
+        {:error, Error.new(code, "Partial application requires a function")}
+      else
+        invoke_or_partial(function, values, data)
+      end
     end
   end
 
@@ -475,6 +496,14 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(%Builtin{} = builtin, [value | _], data),
     do: invoke(builtin, [value], data)
 
+  defp invoke_or_partial(function, values, data) do
+    if Enum.any?(values, &is_struct(&1, Placeholder)) do
+      {:ok, %Partial{function: function, arguments: values}}
+    else
+      invoke(function, values, data)
+    end
+  end
+
   defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data) do
     case Signature.bind(closure.signature, parameters, values, data) do
       {:ok, bound} ->
@@ -495,6 +524,17 @@ defmodule Jexata.Evaluator do
        do: higher_order(name, values, data)
 
   defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
+
+  defp invoke(%Partial{function: function, arguments: arguments}, values, data) do
+    {filled, remaining} =
+      Enum.map_reduce(arguments, values, fn
+        %Placeholder{}, [value | tail] -> {value, tail}
+        %Placeholder{} = placeholder, [] -> {placeholder, []}
+        fixed, rest -> {fixed, rest}
+      end)
+
+    invoke_or_partial(function, filled ++ remaining, data)
+  end
 
   defp invoke(%Regex{} = pattern, [value], _data) when is_binary(value) do
     case Regex.run(pattern, value, return: :index) do
