@@ -28,5 +28,8 @@ defmodule Jexata.FunctionsArrayTest do
              {:ok, ["b", "a", "c"]}
 
     assert Jexata.run("$sort(missing)", %{}) == {:ok, :undefined}
+
+    assert {:error, %Jexata.Error{code: "T2002"}} =
+             Jexata.run("$sort([1, 2], function($a,$b){$a + 'x'})", %{})
   end
 end

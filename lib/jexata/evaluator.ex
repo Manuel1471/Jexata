@@ -815,12 +815,7 @@ defmodule Jexata.Evaluator do
     else
       input
       |> Value.items()
-      |> Enum.reduce_while({:ok, []}, fn item, {:ok, sorted} ->
-        case insert_sorted(item, sorted, callback, data) do
-          {:ok, next} -> {:cont, {:ok, next}}
-          error -> {:halt, error}
-        end
-      end)
+      |> merge_sort(callback, data)
       |> case do
         {:ok, sorted} -> {:ok, Value.sequence(sorted)}
         error -> error
@@ -962,17 +957,29 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(_, _, _),
     do: {:error, Error.new("T1006", "Comparator or callback is not a function")}
 
-  defp insert_sorted(item, [], _callback, _data), do: {:ok, [item]}
+  defp merge_sort([], _callback, _data), do: {:ok, []}
+  defp merge_sort([_] = items, _callback, _data), do: {:ok, items}
 
-  defp insert_sorted(item, [head | tail] = sorted, callback, data) do
-    case invoke_callback(callback, [head, item], data) do
+  defp merge_sort(items, callback, data) do
+    {left, right} = Enum.split(items, div(length(items), 2))
+
+    with {:ok, left} <- merge_sort(left, callback, data),
+         {:ok, right} <- merge_sort(right, callback, data),
+         do: merge_sorted(left, right, callback, data, [])
+  end
+
+  defp merge_sorted([], right, _callback, _data, acc),
+    do: {:ok, Enum.reverse(acc, right)}
+
+  defp merge_sorted(left, [], _callback, _data, acc),
+    do: {:ok, Enum.reverse(acc, left)}
+
+  defp merge_sorted([a | left] = first, [b | right] = second, callback, data, acc) do
+    case invoke_callback(callback, [a, b], data) do
       {:ok, result} ->
-        if Semantics.boolean(result) do
-          {:ok, [item | sorted]}
-        else
-          with {:ok, rest} <- insert_sorted(item, tail, callback, data),
-               do: {:ok, [head | rest]}
-        end
+        if Semantics.boolean(result),
+          do: merge_sorted(first, right, callback, data, [b | acc]),
+          else: merge_sorted(left, second, callback, data, [a | acc])
 
       error ->
         error
