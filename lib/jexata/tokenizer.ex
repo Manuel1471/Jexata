@@ -332,9 +332,16 @@ defmodule Jexata.Tokenizer do
     end
   end
 
-  defp quoted(<<character::utf8, tail::binary>>, quote, position, acc),
-    do:
-      quoted(tail, quote, position + byte_size(<<character::utf8>>), [<<character::utf8>> | acc])
+  defp quoted(source, quote, position, acc) do
+    case :binary.match(source, [<<quote>>, "\\"]) do
+      {size, 1} when size > 0 ->
+        <<chunk::binary-size(^size), tail::binary>> = source
+        quoted(tail, quote, position + size, [chunk | acc])
+
+      :nomatch ->
+        quoted(<<>>, quote, position + byte_size(source), [source | acc])
+    end
+  end
 
   defp unicode_escape(<<digits::binary-size(4), tail::binary>>, quote, position, acc) do
     case Integer.parse(digits, 16) do
