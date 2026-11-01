@@ -595,24 +595,24 @@ defmodule Jexata.Evaluator do
     with {:ok, source} <- eval(left, data, context) do
       source
       |> Value.items()
-      |> Enum.reduce_while({:ok, []}, fn item, {:ok, acc} ->
+      |> Enum.reduce_while({:ok, [], List.duplicate(nil, length(terms))}, fn item,
+                                                                             {:ok, acc, types} ->
         case eval_sort_keys(terms, item, context) do
-          {:ok, keys} -> {:cont, {:ok, [{item, keys} | acc]}}
-          error -> {:halt, error}
+          {:ok, keys} ->
+            case update_sort_types(keys, types) do
+              {:ok, next_types} -> {:cont, {:ok, [{item, keys} | acc], next_types}}
+              error -> {:halt, error}
+            end
+
+          error ->
+            {:halt, error}
         end
       end)
       |> case do
-        {:ok, decorated} ->
+        {:ok, decorated, _types} ->
           decorated = Enum.reverse(decorated)
-
-          case validate_sort_keys(decorated) do
-            :ok ->
-              sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
-              {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
-
-            error ->
-              error
-          end
+          sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+          {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
 
         error ->
           error
@@ -657,22 +657,27 @@ defmodule Jexata.Evaluator do
 
   defp eval_indexed({:sort, left, terms}, data, context) do
     with {:ok, frames} <- eval_indexed(left, data, context) do
-      Enum.reduce_while(frames, {:ok, []}, fn {item, environment} = frame, {:ok, acc} ->
-        case eval_sort_keys(terms, item, %{context | environment: environment}) do
-          {:ok, keys} -> {:cont, {:ok, [{frame, keys} | acc]}}
-          error -> {:halt, error}
-        end
+      Enum.reduce_while(frames, {:ok, [], List.duplicate(nil, length(terms))}, fn
+        {item, environment} = frame, {:ok, acc, types} ->
+          case eval_sort_keys(terms, item, %{context | environment: environment}) do
+            {:ok, keys} ->
+              case update_sort_types(keys, types) do
+                {:ok, next_types} -> {:cont, {:ok, [{frame, keys} | acc], next_types}}
+                error -> {:halt, error}
+              end
+
+            error ->
+              {:halt, error}
+          end
       end)
       |> case do
-        {:ok, decorated} ->
+        {:ok, decorated, _types} ->
           decorated = Enum.reverse(decorated)
 
-          with :ok <- validate_sort_keys(decorated) do
-            {:ok,
-             decorated
-             |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
-             |> Enum.map(&elem(&1, 0))}
-          end
+          {:ok,
+           decorated
+           |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+           |> Enum.map(&elem(&1, 0))}
 
         error ->
           error
@@ -1879,21 +1884,20 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp validate_sort_keys([]), do: :ok
+  defp update_sort_types([], []), do: {:ok, []}
 
-  defp validate_sort_keys(decorated) do
-    key_count = decorated |> hd() |> elem(1) |> length()
+  defp update_sort_types([{_, %Value.Undefined{}} | keys], [type | types]) do
+    with {:ok, next} <- update_sort_types(keys, types), do: {:ok, [type | next]}
+  end
 
-    if Enum.any?(0..(key_count - 1), fn index ->
-         decorated
-         |> Enum.map(fn {_, keys} -> keys |> Enum.at(index) |> elem(1) end)
-         |> Enum.reject(&Value.undefined?/1)
-         |> Enum.map(fn value -> if is_number(value), do: :number, else: :string end)
-         |> Enum.uniq()
-         |> length() > 1
-       end),
-       do: {:error, Error.new("T2007", "Sort keys have incompatible types")},
-       else: :ok
+  defp update_sort_types([{_, value} | keys], [type | types]) do
+    next_type = if is_number(value), do: :number, else: :string
+
+    if type == nil or type == next_type do
+      with {:ok, next} <- update_sort_types(keys, types), do: {:ok, [next_type | next]}
+    else
+      {:error, Error.new("T2007", "Sort keys have incompatible types")}
+    end
   end
 
   defp descendants(value) when is_list(value), do: Enum.flat_map(value, &descendants/1)
