@@ -1,6 +1,6 @@
 # Jexata
 
-Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. It passes 1,239 of 1,271 cases in the portable JSONata v2.2.0 test suite; see the [compatibility report](docs/COMPATIBILITY.md) for exact results and gaps.
+Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. It passes 1,251 of 1,271 cases in the portable JSONata v2.2.0 test suite; see the [compatibility report](docs/COMPATIBILITY.md) for exact results and gaps.
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 

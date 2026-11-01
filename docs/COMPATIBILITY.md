@@ -14,13 +14,13 @@ Result on Elixir 1.20.2 / OTP 29:
 | Category | Cases |
 | --- | ---: |
 | Total | 1,271 |
-| Pass | 1,239 |
-| Fail | 13 |
-| Unsupported | 10 |
+| Pass | 1,251 |
+| Fail | 8 |
+| Unsupported | 3 |
 | Skipped | 9 |
 | Crash | 0 |
 
-The runner counts a match when the result, undefined result, or expected error code agrees. `Unsupported` means the interpreter returned an unknown-function or parser-syntax error where the reference expected another result. `Skipped` includes cases with external bindings or fixtures rejected by OTP's JSON decoder (such as unpaired UTF-16 surrogates). `Fail` includes all other mismatches. This is **97.5% of all cases** and is not a full compatibility claim.
+The runner counts a match when the result, undefined result, or expected error code agrees. `Unsupported` means the interpreter returned an unknown-function or parser-syntax error where the reference expected another result. `Skipped` includes cases with external bindings or fixtures rejected by OTP's JSON decoder (such as unpaired UTF-16 surrogates). `Fail` includes all other mismatches. This is **98.4% of all cases** and is not a full compatibility claim.
 
 Supported areas include paths and predicates, sequence flattening, descendants, defaults, literals, arithmetic, comparisons, array and object constructors, grouping and sorting, blocks, lexical variables, lambdas, closures, function chaining and composition, partial application, immutable transforms, regex literals and core regex functions, higher-order functions, URL encoding, Base64, numeric and string formatting, and selected date/time functions. Many official groups pass completely, including `flattening`, `function-signatures`, `function-formatNumber`, `function-eval`, `function-sort`, `transforms`, and `function-applications`.
 
