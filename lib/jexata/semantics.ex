@@ -19,7 +19,7 @@ defmodule Jexata.Semantics do
     value
     |> Value.items()
     |> Enum.map(fn
-      map when is_map(map) -> Map.get(map, name, Value.undefined())
+      map when is_map(map) and not is_struct(map) -> Map.get(map, name, Value.undefined())
       _ -> Value.undefined()
     end)
     |> Value.sequence()

@@ -5,5 +5,6 @@ defmodule Jexata.FunctionsObjectTest do
     assert Jexata.run("$lookup(obj, 'a')", %{"obj" => %{"a" => 2}}) == {:ok, 2}
     assert Jexata.run("$merge([{'a': 1}, {'b': 2}])", %{}) == {:ok, %{"a" => 1, "b" => 2}}
     assert Jexata.run("$keys({'a': 1})", %{}) == {:ok, ["a"]}
+    assert {:error, %Jexata.Error{code: "T0410"}} = Jexata.run("$spread(function($x){$x})", %{})
   end
 end

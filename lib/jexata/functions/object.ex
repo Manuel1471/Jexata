@@ -10,7 +10,7 @@ defmodule Jexata.Functions.Object do
       value
       |> Value.items()
       |> Enum.flat_map(fn
-        map when is_map(map) -> Map.keys(map)
+        map when is_map(map) and not is_struct(map) -> Map.keys(map)
         _ -> []
       end)
       |> Enum.uniq()
@@ -23,7 +23,7 @@ defmodule Jexata.Functions.Object do
   def call("$merge", [value]) do
     items = Value.items(value)
 
-    if Enum.all?(items, &is_map/1),
+    if Enum.all?(items, &plain_map?/1),
       do: {:ok, Enum.reduce(items, %{}, &Map.merge(&2, &1))},
       else: type_error("$merge")
   end
@@ -31,7 +31,7 @@ defmodule Jexata.Functions.Object do
   def call("$spread", [value]) do
     items = Value.items(value)
 
-    if Enum.all?(items, &is_map/1) do
+    if Enum.all?(items, &plain_map?/1) do
       {:ok,
        Enum.flat_map(items, fn map -> Enum.map(map, fn {key, entry} -> %{key => entry} end) end)}
     else
@@ -40,6 +40,8 @@ defmodule Jexata.Functions.Object do
   end
 
   def call(name, _), do: type_error(name)
+
+  defp plain_map?(value), do: is_map(value) and not is_struct(value)
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 end
