@@ -4,21 +4,30 @@ defmodule Jexata.Functions do
   alias Jexata.Functions.{Array, Boolean, Datetime, NumberFormat, Numeric, Object, String, URL}
   alias Jexata.Runtime.Value
 
+  @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase)
+  @boolean ~w($boolean $not $exists)
+  @string ~w($string $length $uppercase $lowercase $trim $substring $contains $split $join $substringBefore $substringAfter $replace $pad $match $base64encode $base64decode)
+  @array ~w($append $reverse $sort $distinct $zip $shuffle)
+  @object ~w($keys $lookup $merge $spread)
+  @url ~w($encodeUrl $encodeUrlComponent $decodeUrl $decodeUrlComponent)
+  @datetime ~w($toMillis $fromMillis)
+  @builtin_modules [
+    {Numeric, @numeric},
+    {Boolean, @boolean},
+    {String, @string},
+    {Array, @array},
+    {Object, @object},
+    {URL, @url},
+    {Datetime, @datetime}
+  ]
+  @module_by_name for {module, names} <- @builtin_modules,
+                      name <- names,
+                      into: %{},
+                      do: {name, module}
+  @special_names ~w($type $error $assert $map $filter $reduce $single $each $sift $eval $formatNumber)
+
   def supported?(name) do
-    name in [
-      "$type",
-      "$error",
-      "$assert",
-      "$map",
-      "$filter",
-      "$reduce",
-      "$single",
-      "$each",
-      "$sift",
-      "$eval",
-      "$formatNumber"
-    ] or
-      Enum.any?([Numeric, Boolean, String, Array, Object, URL, Datetime], & &1.supported?(name))
+    name in @special_names or Map.has_key?(@module_by_name, name)
   end
 
   def call(name, args, context) do
@@ -47,14 +56,14 @@ defmodule Jexata.Functions do
       name == "$assert" -> assert_function(args)
       name == "$formatNumber" -> NumberFormat.call(args)
       name == "$type" -> type_of(args)
-      Numeric.supported?(name) -> Numeric.call(name, args)
-      Boolean.supported?(name) -> Boolean.call(name, args)
-      String.supported?(name) -> String.call(name, args)
-      Array.supported?(name) -> Array.call(name, args)
-      Object.supported?(name) -> Object.call(name, args)
-      URL.supported?(name) -> URL.call(name, args)
-      Datetime.supported?(name) -> Datetime.call(name, args)
-      true -> {:error, Error.new("T1006", "Unknown function #{name}")}
+      true -> dispatch_builtin(name, args)
+    end
+  end
+
+  defp dispatch_builtin(name, args) do
+    case Map.fetch(@module_by_name, name) do
+      {:ok, module} -> module.call(name, args)
+      :error -> {:error, Error.new("T1006", "Unknown function #{name}")}
     end
   end
 
