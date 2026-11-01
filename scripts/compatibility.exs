@@ -58,7 +58,7 @@ result =
             true -> read_json.(Path.join([suite, "datasets", case_data["dataset"] <> ".json"]))
           end
 
-        if not is_binary(expression) or data in [:undefined, :unreadable] or
+        if not is_binary(expression) or data == :unreadable or
              map_size(case_data["bindings"] || %{}) > 0 do
           :skipped
         else
