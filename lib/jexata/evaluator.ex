@@ -1581,6 +1581,25 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval_list([], _data, _root), do: {:ok, []}
+
+  defp eval_list([node], data, root) do
+    with {:ok, value} <- eval(node, data, root), do: {:ok, [value]}
+  end
+
+  defp eval_list([first, second], data, root) do
+    with {:ok, a} <- eval(first, data, root),
+         {:ok, b} <- eval(second, data, root),
+         do: {:ok, [a, b]}
+  end
+
+  defp eval_list([first, second, third], data, root) do
+    with {:ok, a} <- eval(first, data, root),
+         {:ok, b} <- eval(second, data, root),
+         {:ok, c} <- eval(third, data, root),
+         do: {:ok, [a, b, c]}
+  end
+
   defp eval_list(nodes, data, root) do
     Enum.reduce_while(nodes, {:ok, []}, fn node, {:ok, acc} ->
       case eval(node, data, root) do
