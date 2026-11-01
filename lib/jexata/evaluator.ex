@@ -770,38 +770,13 @@ defmodule Jexata.Evaluator do
     do: {:error, Error.new("S0212", "Binding target must be a variable")}
 
   defp higher_order("$map", [input, callback], data) do
-    input
-    |> Value.items()
-    |> Enum.with_index()
-    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
-      case invoke_callback(callback, [item, index, Value.items(input)], data) do
-        {:ok, value} ->
-          {:cont, {:ok, [value | acc]}}
-
-        error ->
-          {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
-      error -> error
-    end
+    items = Value.items(input)
+    map_items(items, callback, data, items, 0, [])
   end
 
   defp higher_order("$filter", [input, callback], data) do
-    input
-    |> Value.items()
-    |> Enum.with_index()
-    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
-      case invoke_callback(callback, [item, index, Value.items(input)], data) do
-        {:ok, value} -> {:cont, {:ok, if(Semantics.boolean(value), do: [item | acc], else: acc)}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
-      error -> error
-    end
+    items = Value.items(input)
+    filter_items(items, callback, data, items, 0, [])
   end
 
   defp higher_order("$reduce", [input, callback], data),
@@ -910,6 +885,45 @@ defmodule Jexata.Evaluator do
   defp higher_order("$sift", [_other, _callback], _data), do: {:ok, Value.undefined()}
 
   defp higher_order(name, _, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
+
+  defp map_items([], _callback, _data, _items, _index, acc),
+    do: {:ok, Value.sequence(Enum.reverse(acc))}
+
+  defp map_items([item | rest], callback, data, items, index, acc) do
+    case invoke_indexed_callback(callback, item, index, items, data) do
+      {:ok, value} -> map_items(rest, callback, data, items, index + 1, [value | acc])
+      error -> error
+    end
+  end
+
+  defp filter_items([], _callback, _data, _items, _index, acc),
+    do: {:ok, Value.sequence(Enum.reverse(acc))}
+
+  defp filter_items([item | rest], callback, data, items, index, acc) do
+    case invoke_indexed_callback(callback, item, index, items, data) do
+      {:ok, value} ->
+        next = if Semantics.boolean(value), do: [item | acc], else: acc
+        filter_items(rest, callback, data, items, index + 1, next)
+
+      error ->
+        error
+    end
+  end
+
+  defp invoke_indexed_callback(%Closure{arity: 0} = closure, _item, _index, _items, data),
+    do: invoke(closure, [], data)
+
+  defp invoke_indexed_callback(%Closure{arity: 1} = closure, item, _index, _items, data),
+    do: invoke(closure, [item], data)
+
+  defp invoke_indexed_callback(%Closure{arity: 2} = closure, item, index, _items, data),
+    do: invoke(closure, [item, index], data)
+
+  defp invoke_indexed_callback(%Closure{arity: 3} = closure, item, index, items, data),
+    do: invoke(closure, [item, index, items], data)
+
+  defp invoke_indexed_callback(callback, item, index, items, data),
+    do: invoke_callback(callback, [item, index, items], data)
 
   defp reduce_items(items, callback, initial, data) do
     if is_struct(callback, Closure) and length(callback.parameters) < 2 do

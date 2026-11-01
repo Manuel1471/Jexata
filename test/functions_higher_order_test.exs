@@ -13,8 +13,14 @@ defmodule Jexata.FunctionsHigherOrderTest do
 
   test "map filter and reduce invoke anonymous functions" do
     assert Jexata.run("$map([1,2], function($x){$x+1})", %{}) == {:ok, [2, 3]}
+
+    assert Jexata.run("$map([10,20], function($x,$i,$all){$x+$i+$count($all)})", %{}) ==
+             {:ok, [12, 23]}
+
+    assert Jexata.run("$map([10,20], function(){7})", %{}) == {:ok, [7, 7]}
     assert Jexata.run("$map([1], function($x){$x+1})", %{}) == {:ok, 2}
     assert Jexata.run("$filter([1,2,3], function($x){$x>1})", %{}) == {:ok, [2, 3]}
+    assert Jexata.run("$filter([10,20], function($x,$i){$i=1})", %{}) == {:ok, 20}
     assert Jexata.run("$reduce([1,2,3], function($a,$b){$a+$b}, 0)", %{}) == {:ok, 6}
     assert Jexata.run("$reduce([1,2,3], function($a,$b,$i){$i})", %{}) == {:ok, 2}
     assert Jexata.run("$reduce([1,2,3], $append)", %{}) == {:ok, [1, 2, 3]}
