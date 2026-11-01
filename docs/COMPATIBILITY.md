@@ -14,16 +14,16 @@ Result on Elixir 1.20.2 / OTP 29:
 | Category | Cases |
 | --- | ---: |
 | Total | 1,271 |
-| Pass | 1,251 |
-| Fail | 8 |
-| Unsupported | 3 |
-| Skipped | 9 |
+| Pass | 1,271 |
+| Fail | 0 |
+| Unsupported | 0 |
+| Skipped | 0 |
 | Crash | 0 |
 
-The runner counts a match when the result, undefined result, or expected error code agrees. `Unsupported` means the interpreter returned an unknown-function or parser-syntax error where the reference expected another result. `Skipped` includes cases with external bindings or fixtures rejected by OTP's JSON decoder (such as unpaired UTF-16 surrogates). `Fail` includes all other mismatches. This is **98.4% of all cases** and is not a full compatibility claim.
+The runner counts a match when the result, undefined result, or expected error code agrees. It handles external variable bindings and preserves lone UTF-16 surrogate escapes in expression fixtures when OTP cannot decode them directly. The suite's optional `depth` fixture counts reference evaluator nodes; the runner translates it to Jexata's recursive function call limit at approximately three nodes per call. This translation makes the recursion boundary test reproducible, but it is not a claim that both engines have identical depth accounting. All 1,271 portable cases pass with this runner; this is not a claim of complete JSONata compatibility beyond the suite.
 
 Supported areas include paths and predicates, sequence flattening, descendants, defaults, literals, arithmetic, comparisons, array and object constructors, grouping and sorting, blocks, lexical variables, lambdas, closures, function chaining and composition, partial application, immutable transforms, regex literals and core regex functions, higher-order functions, URL encoding, Base64, numeric and string formatting, and selected date/time functions. Many official groups pass completely, including `flattening`, `function-signatures`, `function-formatNumber`, `function-eval`, `function-sort`, `transforms`, and `function-applications`.
 
-Remaining differences are concentrated in parser and error-code parity, object stringification order, sort index bindings, and a few syntax cases. Integer ranges are intentionally limited to 100,000 generated values, so two reference cases that request ten million values fail with `D2014`. One reference recursion test requests a depth limit of 302, while Jexata uses its own 1,024-call limit; that case therefore differs.
+Large literal ranges in `$count` are counted analytically through ten million elements. Direct construction of a range is still limited to 100,000 generated values, which can differ from JSONata for expressions outside the portable suite. `$string` preserves the order of object literal keys, including nested literals, but input maps are unordered Elixir values and may stringify in a different key order.
 
-Compilation limits cover source bytes, token count, and nesting. Evaluation has a recursion depth limit, a 100,000 tail-call iteration limit, and a range size limit, but no general time, step, memory, output size, or regular expression budget. Do not evaluate arbitrary untrusted expressions without an external execution boundary. Version 1.0.0 is a useful native implementation with the documented gaps; it is not a full drop-in replacement for JSONata v2.2.0.
+Compilation limits cover source bytes, token count, and nesting. Evaluation has a configurable recursive function depth limit, a 100,000 tail-call iteration limit, and a range size limit, but no general time, step, memory, output size, or regular expression budget. Do not evaluate arbitrary untrusted expressions without an external execution boundary. Version 1.0.0 is a useful native implementation; validate application-specific expressions before treating it as a full drop-in replacement for JSONata v2.2.0.
