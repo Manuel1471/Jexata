@@ -5,7 +5,7 @@ defmodule Jexata do
   The implementation is under development. See `README.md` for supported syntax.
   """
 
-  alias Jexata.{Error, Expression}
+  alias Jexata.{Error, Expression, Parser}
 
   @type json ::
           nil | boolean() | number() | String.t() | [json()] | %{optional(String.t()) => json()}
@@ -16,7 +16,7 @@ defmodule Jexata do
     if String.trim(source) == "" do
       {:error, Error.new("S0201", "Expression is empty", 0)}
     else
-      {:ok, %Expression{source: source}}
+      with {:ok, ast} <- Parser.parse(source), do: {:ok, %Expression{source: source, ast: ast}}
     end
   end
 
