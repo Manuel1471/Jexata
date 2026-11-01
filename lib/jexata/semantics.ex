@@ -11,6 +11,7 @@ defmodule Jexata.Semantics do
   def boolean(""), do: false
   def boolean(%Sequence{items: items}), do: Enum.any?(items, &boolean/1)
   def boolean(%Jexata.Runtime.Closure{}), do: false
+  def boolean(%Jexata.Runtime.Builtin{}), do: false
   def boolean(map) when is_map(map), do: map_size(map) > 0
   def boolean([]), do: false
   def boolean(list) when is_list(list), do: Enum.any?(list, &boolean/1)

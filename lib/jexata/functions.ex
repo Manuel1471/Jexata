@@ -4,6 +4,11 @@ defmodule Jexata.Functions do
   alias Jexata.Functions.{Array, Boolean, Datetime, Numeric, Object, String, URL}
   alias Jexata.Runtime.Value
 
+  def supported?(name) do
+    name in ["$type", "$error", "$assert", "$map", "$filter", "$reduce"] or
+      Enum.any?([Numeric, Boolean, String, Array, Object, URL, Datetime], & &1.supported?(name))
+  end
+
   def call(name, args, context) do
     args =
       if args == [] and
@@ -17,7 +22,8 @@ defmodule Jexata.Functions do
              "$sqrt",
              "$boolean",
              "$not",
-             "$exists"
+             "$exists",
+             "$string"
            ],
          do: [context],
          else: args
@@ -40,14 +46,29 @@ defmodule Jexata.Functions do
   defp type_of([value]) do
     result =
       cond do
-        Value.undefined?(value) -> Value.undefined()
-        is_nil(value) -> "null"
-        is_boolean(value) -> "boolean"
-        is_number(value) -> "number"
-        is_binary(value) -> "string"
-        is_list(value) or is_struct(value, Value.Sequence) -> "array"
-        is_struct(value, Jexata.Runtime.Closure) -> "function"
-        is_map(value) -> "object"
+        Value.undefined?(value) ->
+          Value.undefined()
+
+        is_nil(value) ->
+          "null"
+
+        is_boolean(value) ->
+          "boolean"
+
+        is_number(value) ->
+          "number"
+
+        is_binary(value) ->
+          "string"
+
+        is_list(value) or is_struct(value, Value.Sequence) ->
+          "array"
+
+        is_struct(value, Jexata.Runtime.Closure) or is_struct(value, Jexata.Runtime.Builtin) ->
+          "function"
+
+        is_map(value) ->
+          "object"
       end
 
     {:ok, result}

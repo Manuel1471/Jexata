@@ -1,7 +1,7 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.{Closure, Value}
+  alias Jexata.Runtime.{Builtin, Closure, Value}
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
   def evaluate(ast, :undefined) do
@@ -18,8 +18,13 @@ defmodule Jexata.Evaluator do
 
   defp eval({:variable, name}, _, %{environment: environment}) do
     case Map.fetch(environment, name) do
-      {:ok, value} -> {:ok, value}
-      :error -> {:error, Error.new("T1005", "Undefined variable #{name}")}
+      {:ok, value} ->
+        {:ok, value}
+
+      :error ->
+        if Functions.supported?(name),
+          do: {:ok, %Builtin{name: name}},
+          else: {:error, Error.new("T1005", "Undefined variable #{name}")}
     end
   end
 
@@ -368,6 +373,11 @@ defmodule Jexata.Evaluator do
     context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
     eval(body, data, context)
   end
+
+  defp invoke(%Builtin{name: name}, values, data) when name in ["$map", "$filter", "$reduce"],
+    do: higher_order(name, values, data)
+
+  defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}

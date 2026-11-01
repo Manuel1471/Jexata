@@ -38,6 +38,7 @@ defmodule Jexata.Runtime.Value do
   def items(value), do: [value]
 
   def public(%Jexata.Runtime.Closure{}), do: :function
+  def public(%Jexata.Runtime.Builtin{}), do: :function
   def public(%Undefined{}), do: :undefined
   def public(%Sequence{items: items}), do: Enum.map(items, &public/1)
   def public(list) when is_list(list), do: Enum.map(list, &public/1)

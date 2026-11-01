@@ -23,6 +23,20 @@ defmodule Jexata.Functions.String do
 
   def call("$string", [value]) when is_binary(value), do: {:ok, value}
   def call("$string", [value]) when is_number(value), do: {:ok, Semantics.number_string(value)}
+  def call("$string", [%Jexata.Runtime.Closure{}]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Builtin{}]), do: {:ok, ""}
+
+  def call("$string", [value, false]), do: call("$string", [value])
+  def call("$string", [value, true]) when is_binary(value), do: {:ok, value}
+  def call("$string", [value, true]) when is_number(value), do: call("$string", [value])
+  def call("$string", [%Jexata.Runtime.Closure{}, true]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Builtin{}, true]), do: {:ok, ""}
+
+  def call("$string", [value, true]) do
+    if Value.undefined?(value),
+      do: {:ok, Value.undefined()},
+      else: {:ok, value |> Value.public() |> json_value() |> pretty_json(0)}
+  end
 
   def call("$string", [value]) do
     if Value.undefined?(value) do
@@ -216,12 +230,39 @@ defmodule Jexata.Functions.String do
   end
 
   defp json_value(nil), do: :null
+  defp json_value(:function), do: ""
   defp json_value(list) when is_list(list), do: Enum.map(list, &json_value/1)
 
   defp json_value(map) when is_map(map),
     do: Map.new(map, fn {key, value} -> {key, json_value(value)} end)
 
   defp json_value(value), do: value
+
+  defp pretty_json(value, level) when is_map(value) do
+    entries =
+      Enum.map(value, fn {key, item} ->
+        String.duplicate("  ", level + 1) <>
+          encode_json(key) <> ": " <> pretty_json(item, level + 1)
+      end)
+
+    if entries == [],
+      do: "{}",
+      else: "{\n" <> Enum.join(entries, ",\n") <> "\n" <> String.duplicate("  ", level) <> "}"
+  end
+
+  defp pretty_json(value, level) when is_list(value) do
+    entries =
+      Enum.map(value, fn item ->
+        String.duplicate("  ", level + 1) <> pretty_json(item, level + 1)
+      end)
+
+    if entries == [],
+      do: "[]",
+      else: "[\n" <> Enum.join(entries, ",\n") <> "\n" <> String.duplicate("  ", level) <> "]"
+  end
+
+  defp pretty_json(value, _level), do: encode_json(value)
+  defp encode_json(value), do: value |> :json.encode() |> IO.iodata_to_binary()
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 end

@@ -34,4 +34,9 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$string(1e-6)", %{}) == {:ok, "0.000001"}
     assert Jexata.run("$string(1e-7)", %{}) == {:ok, "1e-7"}
   end
+
+  test "built-in functions are values and stringify to an empty string" do
+    assert Jexata.run("$string($string)", %{}) == {:ok, ""}
+    assert Jexata.run("$type($sum)", %{}) == {:ok, "function"}
+  end
 end
