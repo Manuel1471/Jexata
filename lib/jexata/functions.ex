@@ -1,11 +1,11 @@
 defmodule Jexata.Functions do
   @moduledoc false
   alias Jexata.Error
-  alias Jexata.Functions.{Array, Boolean, Datetime, Numeric, Object, String, URL}
+  alias Jexata.Functions.{Array, Boolean, Datetime, NumberFormat, Numeric, Object, String, URL}
   alias Jexata.Runtime.Value
 
   def supported?(name) do
-    name in ["$type", "$error", "$assert", "$map", "$filter", "$reduce", "$eval"] or
+    name in ["$type", "$error", "$assert", "$map", "$filter", "$reduce", "$eval", "$formatNumber"] or
       Enum.any?([Numeric, Boolean, String, Array, Object, URL, Datetime], & &1.supported?(name))
   end
 
@@ -31,6 +31,7 @@ defmodule Jexata.Functions do
     cond do
       name == "$error" -> error_function(args)
       name == "$assert" -> assert_function(args)
+      name == "$formatNumber" -> NumberFormat.call(args)
       name == "$type" -> type_of(args)
       Numeric.supported?(name) -> Numeric.call(name, args)
       Boolean.supported?(name) -> Boolean.call(name, args)
