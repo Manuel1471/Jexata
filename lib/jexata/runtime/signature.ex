@@ -4,8 +4,8 @@ defmodule Jexata.Runtime.Signature do
   alias Jexata.Runtime.Value
 
   def bind(nil, parameters, values, _context) do
-    if length(parameters) == length(values),
-      do: {:ok, values},
+    if length(values) <= length(parameters),
+      do: {:ok, values ++ List.duplicate(Value.undefined(), length(parameters) - length(values))},
       else: {:error, Error.new("T1006", "Invalid function arity")}
   end
 

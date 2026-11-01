@@ -174,7 +174,7 @@ defmodule Jexata.Evaluator do
          {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
         {:ok, closure} ->
-          invoke(closure, [value | values], data)
+          invoke(with_recursive_bindings(closure, context.environment), [value | values], data)
 
         :error ->
           if name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"],
@@ -270,7 +270,7 @@ defmodule Jexata.Evaluator do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, "$replace") do
         {:ok, closure} ->
-          invoke(closure, values, data)
+          invoke(with_recursive_bindings(closure, context.environment), values, data)
 
         :error ->
           case values do
@@ -292,7 +292,7 @@ defmodule Jexata.Evaluator do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
         {:ok, closure} ->
-          invoke_or_partial(closure, values, data)
+          invoke_or_partial(with_recursive_bindings(closure, context.environment), values, data)
 
         :error ->
           if Enum.any?(values, &is_struct(&1, Placeholder)) do
@@ -318,7 +318,7 @@ defmodule Jexata.Evaluator do
 
         {:error, Error.new(code, "Partial application requires a function")}
       else
-        invoke_or_partial(function, values, data)
+        invoke_or_partial(with_recursive_bindings(function, context.environment), values, data)
       end
     end
   end
@@ -504,18 +504,44 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp with_recursive_bindings(%Closure{} = closure, environment) do
+    additions =
+      Map.filter(environment, fn {name, value} ->
+        not Map.has_key?(closure.environment, name) and
+          (is_struct(value, Closure) or is_struct(value, Builtin) or is_struct(value, Partial))
+      end)
+
+    %{closure | environment: Map.merge(additions, closure.environment)}
+  end
+
+  defp with_recursive_bindings(function, _environment), do: function
+
   defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data) do
-    case Signature.bind(closure.signature, parameters, values, data) do
-      {:ok, bound} ->
-        bindings = Enum.zip(parameters, bound) |> Map.new()
-        context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
-        eval(body, data, context)
+    depth = Process.get({__MODULE__, :closure_depth}, 0)
 
-      {:undefined} ->
-        {:ok, Value.undefined()}
+    if depth >= 1024 do
+      {:error, Error.new("U1001", "Function recursion limit exceeded")}
+    else
+      Process.put({__MODULE__, :closure_depth}, depth + 1)
 
-      error ->
-        error
+      try do
+        case Signature.bind(closure.signature, parameters, values, data) do
+          {:ok, bound} ->
+            bindings = Enum.zip(parameters, bound) |> Map.new()
+            context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
+            eval(body, data, context)
+
+          {:undefined} ->
+            {:ok, Value.undefined()}
+
+          error ->
+            error
+        end
+      after
+        if depth == 0,
+          do: Process.delete({__MODULE__, :closure_depth}),
+          else: Process.put({__MODULE__, :closure_depth}, depth)
+      end
     end
   end
 
@@ -678,11 +704,11 @@ defmodule Jexata.Evaluator do
       case {op, b} do
         {"/", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
         {"%", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
-        {"+", _} -> {:ok, a + b}
-        {"-", _} -> {:ok, a - b}
-        {"*", _} -> {:ok, a * b}
+        {"+", _} -> {:ok, number_result(a + b)}
+        {"-", _} -> {:ok, number_result(a - b)}
+        {"*", _} -> {:ok, number_result(a * b)}
         {"/", _} -> {:ok, a / b}
-        {"%", _} when is_integer(a) and is_integer(b) -> {:ok, rem(a, b)}
+        {"%", _} when is_integer(a) and is_integer(b) -> {:ok, number_result(rem(a, b))}
         {"%", _} -> {:ok, :math.fmod(a, b)}
       end
     else
@@ -710,6 +736,11 @@ defmodule Jexata.Evaluator do
 
   defp order_operand?(value),
     do: is_number(value) or is_binary(value) or Value.undefined?(value)
+
+  defp number_result(value) when is_integer(value) and abs(value) > 9_007_199_254_740_991,
+    do: value * 1.0
+
+  defp number_result(value), do: value
 
   defp string(nil), do: "null"
   defp string(true), do: "true"

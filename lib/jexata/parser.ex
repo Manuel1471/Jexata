@@ -79,6 +79,9 @@ defmodule Jexata.Parser do
   defp prefix([%Token{value: "["} | rest]), do: collection(rest, "]", :array)
   defp prefix([%Token{value: "{"} | rest]), do: collection(rest, "}", :object)
 
+  defp prefix([%Token{value: "("}, %Token{value: ")"} | rest]),
+    do: {:ok, {:literal, Jexata.Runtime.Value.undefined()}, rest}
+
   defp prefix([%Token{value: "("} | rest]) do
     with {:ok, first, tail} <- expression(rest, 0) do
       block([first], tail)
