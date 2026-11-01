@@ -1,0 +1,45 @@
+defmodule Jexata.Functions.Object do
+  @moduledoc false
+  alias Jexata.{Error, Semantics}
+  alias Jexata.Runtime.Value
+
+  def supported?(name), do: name in ["$keys", "$lookup", "$merge", "$spread"]
+
+  def call("$keys", [value]) do
+    keys =
+      value
+      |> Value.items()
+      |> Enum.flat_map(fn
+        map when is_map(map) -> Map.keys(map)
+        _ -> []
+      end)
+      |> Enum.uniq()
+
+    {:ok, keys}
+  end
+
+  def call("$lookup", [value, key]) when is_binary(key), do: {:ok, Semantics.select(value, key)}
+
+  def call("$merge", [value]) do
+    items = Value.items(value)
+
+    if Enum.all?(items, &is_map/1),
+      do: {:ok, Enum.reduce(items, %{}, &Map.merge(&2, &1))},
+      else: type_error("$merge")
+  end
+
+  def call("$spread", [value]) do
+    items = Value.items(value)
+
+    if Enum.all?(items, &is_map/1) do
+      {:ok,
+       Enum.flat_map(items, fn map -> Enum.map(map, fn {key, entry} -> %{key => entry} end) end)}
+    else
+      type_error("$spread")
+    end
+  end
+
+  def call(name, _), do: type_error(name)
+
+  defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
+end
