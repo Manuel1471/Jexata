@@ -28,6 +28,22 @@ defmodule Jexata.Optimizer do
     end
   end
 
+  defp optimize_node({:path, left, right} = original, _fold?) do
+    {left, left_changed?} = optimize_node(left, true)
+    {right, right_changed?} = optimize_node(right, true)
+
+    if (match?({:variable, "$"}, left) and match?({:object, _}, right)) or
+         match?({:filter, _, _}, left) do
+      if left_changed? or right_changed?,
+        do: {{:path, left, right}, true},
+        else: {original, false}
+    else
+      left = path_name(left)
+      right = right |> path_name() |> contextual_path_call()
+      {{:compiled_path, left, right, indexed_path?(left)}, true}
+    end
+  end
+
   defp optimize_node({:binary, op, left, right} = original, _fold?)
        when op in ["+", "-", "*", "/", "%", "&"] do
     {left, left_changed?} = optimize_node(left, true)
@@ -134,4 +150,28 @@ defmodule Jexata.Optimizer do
     do: Enum.reduce(ast, acc, &referenced_variables/2)
 
   defp referenced_variables(_, acc), do: acc
+
+  defp path_name({:literal, name}) when is_binary(name), do: {:name, name}
+  defp path_name(other), do: other
+
+  defp indexed_path?({:index_bind, _, _}), do: true
+  defp indexed_path?({:compiled_path, _, _, indexed?}), do: indexed?
+  defp indexed_path?({:path, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
+  defp indexed_path?(_), do: false
+
+  defp contextual_path_call({:call, {:variable, name}, args} = call) do
+    needs_context =
+      (name in ["$substringBefore", "$substringAfter", "$contains", "$split", "$match", "$pad"] and
+         length(args) == 1) or
+        (name == "$substring" and length(args) == 1) or
+        (name == "$replace" and length(args) == 2)
+
+    if needs_context,
+      do: {:call, {:variable, name}, [{:variable, "$"} | args]},
+      else: call
+  end
+
+  defp contextual_path_call(other), do: other
 end

@@ -67,6 +67,14 @@ defmodule Jexata.Evaluator do
   defp eval({:path, {:variable, "$"} = left, {:object, pairs}}, data, context),
     do: eval({:group, left, pairs}, data, context)
 
+  defp eval({:compiled_path, _left, _right, true} = path, data, context) do
+    with {:ok, frames} <- eval_indexed(path, data, context),
+         do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+  end
+
+  defp eval({:compiled_path, left, right, false}, data, context),
+    do: eval_path_steps(left, right, data, context)
+
   defp eval({:path, left, _} = path, data, context) do
     if indexed_path?(left) do
       with {:ok, frames} <- eval_indexed(path, data, context),
@@ -576,6 +584,10 @@ defmodule Jexata.Evaluator do
 
     right = contextual_path_call(right)
 
+    eval_path_steps(left, right, data, root)
+  end
+
+  defp eval_path_steps(left, right, data, root) do
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
@@ -619,6 +631,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp indexed_path?({:index_bind, _, _}), do: true
+  defp indexed_path?({:compiled_path, _, _, indexed?}), do: indexed?
   defp indexed_path?({:path, left, _}), do: indexed_path?(left)
   defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
   defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
@@ -646,23 +659,11 @@ defmodule Jexata.Evaluator do
         do: {:name, elem(right, 1)},
         else: contextual_path_call(right)
 
-    with {:ok, frames} <- eval_indexed(left, data, context) do
-      Enum.reduce_while(frames, {:ok, []}, fn {item, environment}, {:ok, acc} ->
-        case eval(right, item, %{context | environment: environment}) do
-          {:ok, value} ->
-            next = Enum.map(Value.items(value), &{&1, environment})
-            {:cont, {:ok, [next | acc]}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, values} -> {:ok, values |> Enum.reverse() |> List.flatten()}
-        error -> error
-      end
-    end
+    eval_indexed_path(left, right, data, context)
   end
+
+  defp eval_indexed({:compiled_path, left, right, _}, data, context),
+    do: eval_indexed_path(left, right, data, context)
 
   defp eval_indexed({:sort, left, terms}, data, context) do
     with {:ok, frames} <- eval_indexed(left, data, context) do
@@ -692,6 +693,25 @@ defmodule Jexata.Evaluator do
   defp eval_indexed(ast, data, context) do
     with {:ok, value} <- eval(ast, data, context),
          do: {:ok, [{value, context.environment}]}
+  end
+
+  defp eval_indexed_path(left, right, data, context) do
+    with {:ok, frames} <- eval_indexed(left, data, context) do
+      Enum.reduce_while(frames, {:ok, []}, fn {item, environment}, {:ok, acc} ->
+        case eval(right, item, %{context | environment: environment}) do
+          {:ok, value} ->
+            next = Enum.map(Value.items(value), &{&1, environment})
+            {:cont, {:ok, [next | acc]}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, values} -> {:ok, values |> Enum.reverse() |> List.flatten()}
+        error -> error
+      end
+    end
   end
 
   defp eval_string_call({:call, _, args}, data, context) do
@@ -1376,6 +1396,9 @@ defmodule Jexata.Evaluator do
     do: selected_paths(ast, refs, context)
 
   defp selected_paths({:path, left, right}, refs, context),
+    do: selected_paths(right, selected_paths(left, refs, context), context)
+
+  defp selected_paths({:compiled_path, left, right, _}, refs, context),
     do: selected_paths(right, selected_paths(left, refs, context), context)
 
   defp selected_paths({:name, name}, refs, _context) do
