@@ -1,18 +1,22 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.Value
+  alias Jexata.Runtime.{Closure, Value}
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def evaluate(ast, data), do: eval(ast, data, data)
+  def evaluate(ast, data), do: eval(ast, data, %{root: data, environment: %{}})
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
   defp eval({:name, name}, data, _), do: {:ok, Semantics.select(data, name)}
   defp eval({:variable, "$"}, data, _), do: {:ok, data}
-  defp eval({:variable, "$$"}, _, root), do: {:ok, root}
+  defp eval({:variable, "$$"}, _, %{root: root}), do: {:ok, root}
 
-  defp eval({:variable, name}, _, _),
-    do: {:error, Error.new("T1005", "Undefined variable #{name}")}
+  defp eval({:variable, name}, _, %{environment: environment}) do
+    case Map.fetch(environment, name) do
+      {:ok, value} -> {:ok, value}
+      :error -> {:error, Error.new("T1005", "Undefined variable #{name}")}
+    end
+  end
 
   defp eval(:wildcard, data, _root) when is_map(data), do: {:ok, Value.sequence(Map.values(data))}
   defp eval(:wildcard, data, _root), do: {:ok, Value.sequence(Value.items(data))}
@@ -88,8 +92,21 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:binary, ":=", {:variable, name}, right}, data, context)
+       when name not in ["$", "$$"], do: eval(right, data, context)
+
   defp eval({:binary, ":=", _, _}, _, _),
-    do: {:error, Error.new("T1007", "Bindings are not implemented yet")}
+    do: {:error, Error.new("S0212", "Binding target must be a variable")}
+
+  defp eval({:lambda, parameters, body}, _, context) do
+    {:ok,
+     %Closure{
+       parameters: parameters,
+       body: body,
+       environment: context.environment,
+       root: context.root
+     }}
+  end
 
   defp eval({:binary, op, left, right}, data, root) do
     with {:ok, a} <- eval(left, data, root),
@@ -104,14 +121,120 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp eval({:call, {:variable, name}, args}, data, root) do
-    with {:ok, values} <- eval_list(args, data, root), do: Functions.call(name, values, data)
+  defp eval({:call, {:variable, name}, args}, data, context)
+       when name in ["$map", "$filter", "$reduce"] do
+    with {:ok, values} <- eval_list(args, data, context), do: higher_order(name, values, data)
   end
 
-  defp eval({:call, _, _}, _, _),
-    do: {:error, Error.new("T1006", "Only named built-in functions can be called")}
+  defp eval({:call, {:variable, name}, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context) do
+      case Map.fetch(context.environment, name) do
+        {:ok, closure} -> invoke(closure, values, data)
+        :error -> Functions.call(name, values, data)
+      end
+    end
+  end
 
-  defp eval({:block, _}, _, _), do: {:error, Error.new("T1007", "Blocks are not implemented yet")}
+  defp eval({:call, target, args}, data, context) do
+    with {:ok, function} <- eval(target, data, context),
+         {:ok, values} <- eval_list(args, data, context) do
+      invoke(function, values, data)
+    end
+  end
+
+  defp eval({:block, nodes}, data, context) do
+    Enum.reduce_while(nodes, {:ok, Value.undefined(), context}, fn
+      {:binary, ":=", {:variable, name}, right}, {:ok, _, current} when name not in ["$", "$$"] ->
+        case eval(right, data, current) do
+          {:ok, value} -> {:cont, {:ok, value, put_in(current.environment[name], value)}}
+          error -> {:halt, error}
+        end
+
+      node, {:ok, _, current} ->
+        case eval(node, data, current) do
+          {:ok, value} -> {:cont, {:ok, value, current}}
+          error -> {:halt, error}
+        end
+    end)
+    |> case do
+      {:ok, value, _} -> {:ok, value}
+      error -> error
+    end
+  end
+
+  defp higher_order("$map", [input, %Closure{} = callback], data) do
+    input
+    |> Value.items()
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
+      case invoke_callback(callback, [item, index, Value.items(input)], data) do
+        {:ok, value} -> {:cont, {:ok, [value | acc]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
+      error -> error
+    end
+  end
+
+  defp higher_order("$filter", [input, %Closure{} = callback], data) do
+    input
+    |> Value.items()
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
+      case invoke_callback(callback, [item, index, Value.items(input)], data) do
+        {:ok, value} -> {:cont, {:ok, if(Semantics.boolean(value), do: [item | acc], else: acc)}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
+      error -> error
+    end
+  end
+
+  defp higher_order("$reduce", [input, %Closure{} = callback], data),
+    do: reduce_items(Value.items(input), callback, Value.undefined(), data)
+
+  defp higher_order("$reduce", [input, %Closure{} = callback, initial], data),
+    do: reduce_items(Value.items(input), callback, initial, data)
+
+  defp higher_order(name, _, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
+
+  defp reduce_items(items, callback, initial, data) do
+    {first, rest} =
+      if Value.undefined?(initial) do
+        case items do
+          [] -> {Value.undefined(), []}
+          [head | tail] -> {head, tail}
+        end
+      else
+        {initial, items}
+      end
+
+    rest
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, first}, fn {item, index}, {:ok, accumulator} ->
+      case invoke_callback(callback, [accumulator, item, index, items], data) do
+        {:ok, value} -> {:cont, {:ok, value}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp invoke_callback(%Closure{parameters: parameters} = closure, args, data),
+    do: invoke(closure, Enum.take(args, length(parameters)), data)
+
+  defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data)
+       when length(parameters) == length(values) do
+    bindings = Enum.zip(parameters, values) |> Map.new()
+    context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
+    eval(body, data, context)
+  end
+
+  defp invoke(_, _, _),
+    do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
 
   defp eval_each(items, ast, root) do
     Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->

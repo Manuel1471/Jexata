@@ -43,6 +43,9 @@ defmodule Jexata.Parser do
        when type in [:literal, :number, :string],
        do: {:ok, {:literal, value}, rest}
 
+  defp prefix([%Token{type: :name, value: "function"}, %Token{value: "("} | rest]),
+    do: lambda_parameters([], rest)
+
   defp prefix([%Token{type: :name, value: name} | rest]), do: {:ok, {:name, name}, rest}
   defp prefix([%Token{type: :variable, value: name} | rest]), do: {:ok, {:variable, name}, rest}
 
@@ -139,6 +142,29 @@ defmodule Jexata.Parser do
 
   defp object_items(items, tokens) do
     with {:ok, tail} <- expect(tokens, "}"), do: {:ok, {:object, Enum.reverse(items)}, tail}
+  end
+
+  defp lambda_parameters(parameters, [%Token{value: ")"} | rest]) do
+    with {:ok, tail} <- expect(rest, "{"),
+         {:ok, body, tail} <- expression(tail, 0),
+         {:ok, tail} <- expect(tail, "}") do
+      {:ok, {:lambda, Enum.reverse(parameters), body}, tail}
+    end
+  end
+
+  defp lambda_parameters(parameters, [%Token{type: :variable, value: name} | rest])
+       when name not in ["$", "$$"] do
+    case rest do
+      [%Token{value: ","} | tail] -> lambda_parameters([name | parameters], tail)
+      _ -> lambda_parameters_finish([name | parameters], rest)
+    end
+  end
+
+  defp lambda_parameters(_, [token | _]), do: {:error, syntax("Expected a parameter", token)}
+
+  defp lambda_parameters_finish(parameters, tokens) do
+    with {:ok, tail} <- expect(tokens, ")"),
+         do: lambda_parameters(parameters, [%Token{type: :op, value: ")", position: 0} | tail])
   end
 
   defp arguments([%Token{value: ")"} | rest]), do: {:ok, [], rest}
