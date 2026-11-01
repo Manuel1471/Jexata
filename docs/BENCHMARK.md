@@ -6,11 +6,11 @@ Measurement environment: Mac16,12 (arm64), Elixir 1.20.2, OTP 29, 10 online sche
 
 | Expression | Orders | Compile | Evaluate compiled | Run |
 | --- | ---: | ---: | ---: | ---: |
-| `customer.name` | 10 | 1.118 | 0.509 | 1.012 |
-| `orders[price > 50].price` | 100 | 3.131 | 8.753 | 12.048 |
-| `$sum(orders.price)` | 100 | 1.767 | 3.753 | 5.388 |
-| `orders[price > 50].price` | 1,000 | 3.134 | 130.630 | 140.976 |
-| `$sum(orders.price)` | 1,000 | 1.684 | 35.598 | 47.807 |
+| `customer.name` | 10 | 1.535 | 0.468 | 1.046 |
+| `orders[price > 50].price` | 100 | 3.493 | 9.151 | 12.443 |
+| `$sum(orders.price)` | 100 | 1.860 | 3.438 | 5.139 |
+| `orders[price > 50].price` | 1,000 | 3.549 | 139.573 | 154.229 |
+| `$sum(orders.price)` | 1,000 | 1.972 | 32.579 | 38.450 |
 
 The script reports all 45 measurements. Repeated runs may vary with system load and BEAM runtime state. The benchmark does not measure memory use, tail latency, or adversarial expressions.
 
@@ -34,4 +34,4 @@ The script first compares exact tokenizer results, including errors and position
 | `orders[price > 50].price` | 21.601 | 2.995 | 21.971 | 3.052 | 7.21× |
 | `añb.日本語` | 7.347 | 2.615 | 7.448 | 2.687 | 2.81× |
 
-The official compatibility suite remains at 1,204 passing, 42 failing, 16 unsupported, and 9 skipped cases. Full compilation of `customer.name` measured 8.421 µs per call before the tokenizer optimization and 1.153 µs per call in a later run on this host; these are separate runs and should be treated as indicative rather than a controlled compiler comparison.
+The official compatibility suite now passes 1,239 cases, with 13 failures, 10 unsupported cases, and 9 skipped. Full compilation of `customer.name` measured 8.421 µs per call before the tokenizer optimization and 1.535 µs per call in this run on the same host; these are separate runs and should be treated as indicative rather than a controlled compiler comparison. A direct field selection path reduced compiled `$sum(orders.price)` on 1,000 orders from 35.598 to 32.579 µs per operation across separate local runs; the filter measurement increased from 130.630 to 139.573 µs, so this change is not a universal speedup.

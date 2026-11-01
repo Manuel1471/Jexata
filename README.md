@@ -1,6 +1,6 @@
 # Jexata
 
-Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. It passes 1,204 of 1,271 cases in the portable JSONata v2.2.0 test suite; see the [compatibility report](docs/COMPATIBILITY.md) for exact results and gaps.
+Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. It passes 1,239 of 1,271 cases in the portable JSONata v2.2.0 test suite; see the [compatibility report](docs/COMPATIBILITY.md) for exact results and gaps.
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 
@@ -41,7 +41,7 @@ Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., m
 
 The interpreter supports literals, quoted field names, comments, field paths, wildcards, array predicates, descendants, arithmetic, comparisons, `and`/`or`, concatenation, bounded integer ranges, conditional/default/coalescing expressions, array and object constructors, grouping and order-by, blocks, local variable bindings, lambdas, closures, chaining and composition, partial application, immutable transforms, and higher-order functions. It includes numeric, text, regex, array, object, boolean, URL, Base64, and selected date/time functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
 
-It does **not** yet implement the complete JSONata grammar or function library. Some higher-order callbacks, wildcard paths, error codes, sort-key cases, nested-function stringification, and advanced date/time behavior differ from the reference implementation. Do not use it as a drop-in replacement without checking the expressions your application needs.
+It does **not** yet implement the complete JSONata grammar or function library. Some parser and error codes, sort bindings, and object stringification order differ from the reference implementation. Do not use it as a drop-in replacement without checking the expressions your application needs.
 
 ## Limits and trust
 
@@ -51,7 +51,7 @@ It does **not** yet implement the complete JSONata grammar or function library. 
 Jexata.compile("orders.price", max_source_bytes: 1_000, max_tokens: 100)
 ```
 
-There is a function recursion depth limit of 1,024, but no general evaluation time, step, memory, output size, or regular expression limit. These compilation checks do not make execution of arbitrary user expressions sandbox safe. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
+There is a function recursion depth limit of 1,024 for ordinary calls and a 100,000 iteration limit for supported tail calls, but no general evaluation time, step, memory, output size, or regular expression limit. These compilation checks do not make execution of arbitrary user expressions sandbox safe. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
 
 ## Development
 
