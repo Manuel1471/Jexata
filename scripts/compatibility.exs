@@ -82,6 +82,10 @@ result =
               Map.has_key?(case_data, "result") and actual == {:ok, case_data["result"]} ->
                 :pass
 
+              case_data["unordered"] == true and match?({:ok, values} when is_list(values), actual) and
+                  is_list(case_data["result"]) and Enum.sort(elem(actual, 1)) == Enum.sort(case_data["result"]) ->
+                :pass
+
               case_data["undefinedResult"] == true and actual == {:ok, :undefined} ->
                 :pass
 
@@ -96,6 +100,12 @@ result =
                 :unsupported
 
               true ->
+                if "--mismatches" in System.argv(),
+                  do:
+                    IO.inspect({expression, actual, case_data["result"], expected_code},
+                      label: "ACTUAL"
+                    )
+
                 :fail
             end
           rescue
