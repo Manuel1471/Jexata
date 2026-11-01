@@ -1493,6 +1493,11 @@ defmodule Jexata.Evaluator do
 
   defp binary("in", a, b), do: {:ok, Semantics.compare("in", a, b)}
 
+  defp binary(op, a, b)
+       when op in ["=", "!="] and
+              (is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined)),
+       do: {:ok, false}
+
   defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
     do: {:ok, Value.undefined()}
 
