@@ -42,6 +42,12 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("items[-1].x", data) == {:ok, [3, 4]}
   end
 
+  test "folds scalar array literals at compilation without changing nested arrays" do
+    assert Jexata.compile!("[1, 'a', null]").ast == {:literal, [1, "a", nil]}
+    assert Jexata.run("[[1, 2], [3]]", %{}) == {:ok, [[1, 2], [3]]}
+    assert Jexata.run("[1, [2, 3]]", %{}) == {:ok, [1, [2, 3]]}
+  end
+
   test "supports filters, constructors and conditions" do
     data = %{"items" => [%{"price" => 1}, %{"price" => 3}]}
     assert Jexata.run("items[price > 2].price", data) == {:ok, 3}

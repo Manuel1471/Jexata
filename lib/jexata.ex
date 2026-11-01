@@ -5,7 +5,7 @@ defmodule Jexata do
   See `README.md` and `docs/COMPATIBILITY.md` for supported syntax and known gaps.
   """
 
-  alias Jexata.{Error, Evaluator, Expression, Parser}
+  alias Jexata.{Error, Evaluator, Expression, Optimizer, Parser}
   alias Jexata.Runtime.Limits
 
   @type json ::
@@ -30,7 +30,7 @@ defmodule Jexata do
         {:error, Error.new("S0201", "Expression is empty", 0)}
       else
         with {:ok, ast} <- Parser.parse(source, limits),
-             do: {:ok, %Expression{source: source, ast: ast}}
+             do: {:ok, %Expression{source: source, ast: Optimizer.optimize(ast)}}
       end
     else
       false -> {:error, Error.new("J0001", "Expression must be valid UTF-8")}
