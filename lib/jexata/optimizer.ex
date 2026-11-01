@@ -1,6 +1,7 @@
 defmodule Jexata.Optimizer do
   @moduledoc false
   alias Jexata.{Evaluator, Semantics}
+  alias Jexata.Runtime.Signature
 
   # Scalar array constructors are immutable across evaluations. Nested array
   # constructors retain their node so the parent preserves explicit nesting.
@@ -61,6 +62,14 @@ defmodule Jexata.Optimizer do
     end
   end
 
+  defp optimize_node({:lambda, parameters, signature, body}, _fold?) do
+    {body, _changed?} = optimize_node(body, true)
+    references = body |> referenced_variables(MapSet.new()) |> MapSet.to_list()
+
+    {{:compiled_lambda, parameters, Signature.prepare(signature, length(parameters)), body,
+      references}, true}
+  end
+
   defp optimize_node(ast, _fold?) when is_tuple(ast),
     do: optimize_tuple(ast, 0, tuple_size(ast), ast, false)
 
@@ -112,4 +121,17 @@ defmodule Jexata.Optimizer do
   end
 
   defp fold_small_range(_), do: :no
+
+  defp referenced_variables({:variable, name}, acc), do: MapSet.put(acc, name)
+
+  defp referenced_variables({:compiled_lambda, _, _, _, references}, acc),
+    do: Enum.reduce(references, acc, &MapSet.put(&2, &1))
+
+  defp referenced_variables(ast, acc) when is_tuple(ast),
+    do: ast |> Tuple.to_list() |> Enum.reduce(acc, &referenced_variables/2)
+
+  defp referenced_variables(ast, acc) when is_list(ast),
+    do: Enum.reduce(ast, acc, &referenced_variables/2)
+
+  defp referenced_variables(_, acc), do: acc
 end

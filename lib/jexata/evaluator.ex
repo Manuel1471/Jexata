@@ -315,6 +315,20 @@ defmodule Jexata.Evaluator do
      }}
   end
 
+  defp eval({:compiled_lambda, parameters, signature, body, references}, data, context) do
+    {:ok,
+     %Closure{
+       parameters: parameters,
+       arity: length(parameters),
+       body: body,
+       environment: context.environment,
+       root: context.root,
+       context_value: data,
+       signature: signature,
+       references: expand_closure_references(MapSet.new(references), context.environment)
+     }}
+  end
+
   defp eval({:binary, op, left, right}, data, root) do
     with {:ok, a} <- eval(left, data, root),
          {:ok, b} <- eval(right, data, root) do

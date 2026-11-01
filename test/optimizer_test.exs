@@ -14,7 +14,9 @@ defmodule Jexata.OptimizerTest do
       {"[1..5]", %{}},
       {"1 + 2 * 3", %{}},
       {"'a' & 'b'", %{}},
-      {"true ? [1,2] : [3]", %{}}
+      {"true ? [1,2] : [3]", %{}},
+      {"$map([1,2,3], function($x)<n:n>{$x*2})", %{}},
+      {"($f := function($n){$n=0 ? 1 : $n*$f($n-1)}; $f(5))", %{}}
     ]
 
     for {source, data} <- cases do
