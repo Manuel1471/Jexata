@@ -427,6 +427,39 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:call, {:variable, "$string"}, [{:object, _} = object | rest]} = ast, data, context)
+       when length(rest) <= 1 do
+    if Map.has_key?(context.environment, "$string") do
+      eval_string_call(ast, data, context)
+    else
+      with {:ok, pretty} <- string_pretty_option(rest, data, context),
+           {:ok, ordered} <- eval_ordered_value(object, data, context) do
+        {:ok, Jexata.Functions.String.stringify_ordered(ordered, pretty)}
+      end
+    end
+  end
+
+  defp eval({:call, {:variable, "$string"}, args} = ast, data, context) do
+    if Map.has_key?(context.environment, "$string") do
+      eval_string_call(ast, data, context)
+    else
+      case eval_list(args, data, context) do
+        {:ok, values} ->
+          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+            {:ok, %Partial{function: %Builtin{name: "$string"}, arguments: values}}
+          else
+            Functions.call("$string", values, data)
+          end
+
+        {:error, %Error{code: "D1001"}} ->
+          {:error, Error.new("D3001", "Non-finite number")}
+
+        error ->
+          error
+      end
+    end
+  end
+
   defp eval({:call, {:variable, "$match"}, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, "$match") do
@@ -531,6 +564,72 @@ defmodule Jexata.Evaluator do
       error -> error
     end
   end
+
+  defp eval_string_call({:call, _, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context),
+         do: invoke(context.environment["$string"], values, data)
+  end
+
+  defp string_pretty_option([], _data, _context), do: {:ok, false}
+
+  defp string_pretty_option([option], data, context) do
+    case eval(option, data, context) do
+      {:ok, pretty} when is_boolean(pretty) -> {:ok, pretty}
+      {:ok, _} -> {:error, Error.new("T0410", "Invalid arguments for $string")}
+      error -> error
+    end
+  end
+
+  defp eval_ordered_value({:object, pairs}, data, context) do
+    Enum.reduce_while(pairs, {:ok, %{}, []}, fn {key_ast, value_ast}, {:ok, values, keys} ->
+      with {:ok, key} <- eval(key_ast, data, context),
+           true <- is_binary(key),
+           {:ok, value} <- eval_ordered_value(value_ast, data, context) do
+        if Value.undefined?(value) do
+          {:cont, {:ok, values, keys}}
+        else
+          keys = if Map.has_key?(values, key), do: keys, else: [key | keys]
+          {:cont, {:ok, Map.put(values, key, value), keys}}
+        end
+      else
+        false -> {:halt, {:error, Error.new("T1003", "Object key must be a string")}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, values, keys} ->
+        {:ok, {:ordered_object, Enum.map(Enum.reverse(keys), &{&1, values[&1]})}}
+
+      error ->
+        error
+    end
+  end
+
+  defp eval_ordered_value({:array, expressions}, data, context) do
+    Enum.reduce_while(expressions, {:ok, []}, fn expression, {:ok, values} ->
+      case eval_ordered_value(expression, data, context) do
+        {:ok, value} -> {:cont, {:ok, [value | values]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, values} ->
+        {:ok,
+         expressions
+         |> Enum.zip(Enum.reverse(values))
+         |> Enum.flat_map(fn
+           {{:array, _}, value} -> [value]
+           {_, %Value.Sequence{items: items}} -> items
+           {_, value} when is_list(value) -> value
+           {_, value} -> if Value.undefined?(value), do: [], else: [value]
+         end)}
+
+      error ->
+        error
+    end
+  end
+
+  defp eval_ordered_value(ast, data, context), do: eval(ast, data, context)
 
   defp eval_binding({:binary, ":=", {:variable, name}, right}, data, context)
        when name not in ["$", "$$"] do

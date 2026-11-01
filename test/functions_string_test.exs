@@ -43,6 +43,17 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$type($sum)", %{}) == {:ok, "function"}
   end
 
+  test "object literals stringify in source order, including nested objects" do
+    assert Jexata.run(~S|$string({'b': 2, 'a': {'z': 1, 'y': 0}})|, %{}) ==
+             {:ok, ~s({"b":2,"a":{"z":1,"y":0}})}
+
+    assert Jexata.run(~S|$string({'b': 2, 'a': 1}, true)|, %{}) ==
+             {:ok, "{\n  \"b\": 2,\n  \"a\": 1\n}"}
+
+    assert match?({:error, %Jexata.Error{code: "D3001"}}, Jexata.run("$string(1/0)", %{}))
+    assert Jexata.run("($f := $string(?); $f(2))", %{}) == {:ok, "2"}
+  end
+
   test "base64 functions encode and decode UTF-8 bytes" do
     assert Jexata.run("$base64encode('hello:world')", %{}) == {:ok, "aGVsbG86d29ybGQ="}
     assert Jexata.run("$base64decode('aGVsbG86d29ybGQ=')", %{}) == {:ok, "hello:world"}
