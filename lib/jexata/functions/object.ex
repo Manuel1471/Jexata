@@ -20,6 +20,8 @@ defmodule Jexata.Functions.Object do
 
   def call("$lookup", [value, key]) when is_binary(key), do: {:ok, Semantics.select(value, key)}
 
+  def call("$merge", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
   def call("$merge", [value]) do
     items = Value.items(value)
 

@@ -23,6 +23,9 @@ defmodule Jexata.Functions.Numeric do
     end
   end
 
+  def call(name, [value]) when name in @unary and is_struct(value, Value.Undefined),
+    do: {:ok, value}
+
   def call(name, [value]) when name in @unary do
     if is_number(value) do
       result =
@@ -73,6 +76,8 @@ defmodule Jexata.Functions.Numeric do
 
   def call("$sqrt", [value]) when is_number(value) and value >= 0, do: {:ok, :math.sqrt(value)}
 
+  def call("$sqrt", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
   def call("$sqrt", [value]) when is_number(value),
     do: {:error, Error.new("D3060", "Square root of a negative number")}
 
@@ -80,9 +85,12 @@ defmodule Jexata.Functions.Numeric do
     try do
       {:ok, :math.pow(base, exponent)}
     rescue
-      ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+      ArithmeticError -> {:error, Error.new("D3061", "Numeric result is not finite")}
     end
   end
+
+  def call("$power", [base, _exponent]) when is_struct(base, Value.Undefined),
+    do: {:ok, base}
 
   def call("$formatBase", [value]), do: call("$formatBase", [value, 10])
 

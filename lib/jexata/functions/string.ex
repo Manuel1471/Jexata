@@ -69,6 +69,12 @@ defmodule Jexata.Functions.String do
   def call("$length", [value]) when is_binary(value), do: {:ok, length(String.codepoints(value))}
   def call("$length", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
   def call("$length", []), do: {:error, Error.new("T0411", "$length requires a string")}
+
+  def call(name, [value])
+      when name in ["$uppercase", "$lowercase", "$trim"] and
+             is_struct(value, Value.Undefined),
+      do: {:ok, value}
+
   def call("$uppercase", [value]) when is_binary(value), do: {:ok, String.upcase(value)}
   def call("$lowercase", [value]) when is_binary(value), do: {:ok, String.downcase(value)}
 
@@ -133,6 +139,21 @@ defmodule Jexata.Functions.String do
      )}
   end
 
+  def call("$replace", [_value, _token, _replacement, limit])
+      when is_number(limit) and limit < 0,
+      do: {:error, Error.new("D3011", "$replace limit must not be negative")}
+
+  def call("$replace", [_value, "", _replacement]),
+    do: {:error, Error.new("D3010", "$replace pattern must not be empty")}
+
+  def call("$replace", [value, _token, _replacement])
+      when is_struct(value, Value.Undefined),
+      do: {:ok, value}
+
+  def call("$replace", [value, _token, _replacement, _limit])
+      when is_struct(value, Value.Undefined),
+      do: {:ok, value}
+
   def call("$replace", [value, %Regex{} = pattern, replacement])
       when is_binary(value) and is_binary(replacement),
       do: regex_replace(value, pattern, replacement, :all)
@@ -170,6 +191,12 @@ defmodule Jexata.Functions.String do
 
   def call("$substring", [value, start]) when is_binary(value) and is_integer(start),
     do: substring(value, start, nil)
+
+  def call("$substring", [value, _start]) when is_struct(value, Value.Undefined),
+    do: {:ok, value}
+
+  def call("$substring", [value, _start, _count]) when is_struct(value, Value.Undefined),
+    do: {:ok, value}
 
   def call("$substring", [value, start, count])
       when is_binary(value) and is_integer(start) and is_integer(count),

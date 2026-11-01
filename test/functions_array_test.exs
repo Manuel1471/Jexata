@@ -18,4 +18,15 @@ defmodule Jexata.FunctionsArrayTest do
     assert Jexata.run("$shuffle(missing)", %{}) == {:ok, :undefined}
     assert Jexata.run("$sort($shuffle([1,2,3]))", %{}) == {:ok, [1, 2, 3]}
   end
+
+  test "sort accepts a two-argument comparator and remains stable on ties" do
+    data = %{
+      "items" => [%{"n" => 2, "id" => "a"}, %{"n" => 1, "id" => "b"}, %{"n" => 2, "id" => "c"}]
+    }
+
+    assert Jexata.run("$sort(items, function($a,$b){$a.n > $b.n}).id", data) ==
+             {:ok, ["b", "a", "c"]}
+
+    assert Jexata.run("$sort(missing)", %{}) == {:ok, :undefined}
+  end
 end

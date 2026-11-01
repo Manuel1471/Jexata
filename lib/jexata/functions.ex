@@ -34,7 +34,7 @@ defmodule Jexata.Functions do
              "$sqrt",
              "$boolean",
              "$not",
-             "$exists",
+             "$trim",
              "$string"
            ],
          do: [context],

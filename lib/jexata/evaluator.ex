@@ -207,7 +207,7 @@ defmodule Jexata.Evaluator do
       else
         case target do
           %Builtin{name: name}
-          when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"] ->
+          when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift", "$sort"] ->
             higher_order(name, [value | values], data)
 
           _ ->
@@ -288,7 +288,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:call, {:variable, name}, args}, data, context)
-       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"] do
+       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift", "$sort"] do
     with {:ok, values} <- eval_list(args, data, context) do
       if Enum.any?(values, &is_struct(&1, Placeholder)) do
         {:ok, %Partial{function: %Builtin{name: name}, arguments: values}}
@@ -400,7 +400,7 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp higher_order("$map", [input, %Closure{} = callback], data) do
+  defp higher_order("$map", [input, callback], data) do
     input
     |> Value.items()
     |> Enum.with_index()
@@ -419,7 +419,7 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp higher_order("$filter", [input, %Closure{} = callback], data) do
+  defp higher_order("$filter", [input, callback], data) do
     input
     |> Value.items()
     |> Enum.with_index()
@@ -435,11 +435,32 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp higher_order("$reduce", [input, %Closure{} = callback], data),
+  defp higher_order("$reduce", [input, callback], data),
     do: reduce_items(Value.items(input), callback, Value.undefined(), data)
 
-  defp higher_order("$reduce", [input, %Closure{} = callback, initial], data),
+  defp higher_order("$reduce", [input, callback, initial], data),
     do: reduce_items(Value.items(input), callback, initial, data)
+
+  defp higher_order("$sort", [input], data), do: Functions.call("$sort", [input], data)
+
+  defp higher_order("$sort", [input, callback], data) do
+    if Value.undefined?(input) do
+      {:ok, input}
+    else
+      input
+      |> Value.items()
+      |> Enum.reduce_while({:ok, []}, fn item, {:ok, sorted} ->
+        case insert_sorted(item, sorted, callback, data) do
+          {:ok, next} -> {:cont, {:ok, next}}
+          error -> {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, sorted} -> {:ok, Value.sequence(sorted)}
+        error -> error
+      end
+    end
+  end
 
   defp higher_order("$single", [input], data), do: higher_order("$single", [input, nil], data)
 
@@ -553,6 +574,32 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(%Builtin{} = builtin, [value | _], data),
     do: invoke(builtin, [value], data)
 
+  defp invoke_callback(%Partial{} = partial, args, data),
+    do: invoke(partial, args, data)
+
+  defp invoke_callback(%Composition{} = composition, [value | _], data),
+    do: invoke(composition, [value], data)
+
+  defp invoke_callback(_, _, _),
+    do: {:error, Error.new("T1006", "Comparator or callback is not a function")}
+
+  defp insert_sorted(item, [], _callback, _data), do: {:ok, [item]}
+
+  defp insert_sorted(item, [head | tail] = sorted, callback, data) do
+    case invoke_callback(callback, [head, item], data) do
+      {:ok, result} ->
+        if Semantics.boolean(result) do
+          {:ok, [item | sorted]}
+        else
+          with {:ok, rest} <- insert_sorted(item, tail, callback, data),
+               do: {:ok, [head | rest]}
+        end
+
+      error ->
+        error
+    end
+  end
+
   defp invoke_or_partial(function, values, data) do
     if Enum.any?(values, &is_struct(&1, Placeholder)) do
       {:ok, %Partial{function: function, arguments: values}}
@@ -603,7 +650,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp invoke(%Builtin{name: name}, values, data)
-       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"],
+       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift", "$sort"],
        do: higher_order(name, values, data)
 
   defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
@@ -928,22 +975,40 @@ defmodule Jexata.Evaluator do
     ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
   end
 
-  defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
-    do: {:ok, Value.undefined()}
-
-  defp binary(op, a, b) when op in ["=", "!=", "in"], do: {:ok, Semantics.compare(op, a, b)}
-
   defp binary("&", a, b), do: {:ok, string(a) <> string(b)}
 
   defp binary("..", a, b) do
     cond do
-      not is_integer(a) -> {:error, Error.new("T2003", "Range start must be an integer")}
-      not is_integer(b) -> {:error, Error.new("T2004", "Range end must be an integer")}
-      b - a + 1 > 100_000 -> {:error, Error.new("D2014", "Range exceeds the configured limit")}
-      a > b -> {:ok, Value.undefined()}
-      true -> {:ok, Value.sequence(Enum.to_list(a..b))}
+      Value.undefined?(a) and not is_integer(b) ->
+        {:error, Error.new("T2004", "Range end must be an integer")}
+
+      Value.undefined?(b) and not is_integer(a) ->
+        {:error, Error.new("T2003", "Range start must be an integer")}
+
+      Value.undefined?(a) or Value.undefined?(b) ->
+        {:ok, Value.undefined()}
+
+      not is_integer(a) ->
+        {:error, Error.new("T2003", "Range start must be an integer")}
+
+      not is_integer(b) ->
+        {:error, Error.new("T2004", "Range end must be an integer")}
+
+      b - a + 1 > 100_000 ->
+        {:error, Error.new("D2014", "Range exceeds the configured limit")}
+
+      a > b ->
+        {:ok, Value.undefined()}
+
+      true ->
+        {:ok, Value.sequence(Enum.to_list(a..b))}
     end
   end
+
+  defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
+  defp binary(op, a, b) when op in ["=", "!=", "in"], do: {:ok, Semantics.compare(op, a, b)}
 
   defp binary(op, _, _), do: {:error, Error.new("T1007", "Unsupported operator #{op}")}
 
@@ -960,6 +1025,7 @@ defmodule Jexata.Evaluator do
   defp string(false), do: "false"
   defp string(value) when is_binary(value), do: value
   defp string(value) when is_number(value), do: Semantics.number_string(value)
+  defp string(value) when is_struct(value, Value.Undefined), do: ""
 
   defp string(value) do
     {:ok, result} = Jexata.Functions.String.call("$string", [value])

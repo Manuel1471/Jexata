@@ -48,4 +48,11 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$base64decode('aGVsbG86d29ybGQ=')", %{}) == {:ok, "hello:world"}
     assert Jexata.run("$base64encode()", %{}) == {:ok, :undefined}
   end
+
+  test "undefined string arguments propagate and concatenation treats them as empty" do
+    assert Jexata.run("$uppercase(missing)", %{}) == {:ok, :undefined}
+    assert Jexata.run("$substring(missing, 1)", %{}) == {:ok, :undefined}
+    assert Jexata.run("'x' & missing", %{}) == {:ok, "x"}
+    assert Jexata.run("missing & 'x'", %{}) == {:ok, "x"}
+  end
 end

@@ -6,7 +6,10 @@ defmodule Jexata.Functions.Array do
   def supported?(name),
     do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip", "$shuffle"]
 
+  def call("$append", [left, right]) when is_struct(left, Value.Undefined), do: {:ok, right}
+  def call("$append", [left, right]) when is_struct(right, Value.Undefined), do: {:ok, left}
   def call("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
+  def call("$reverse", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
   def call("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
   def call("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
   def call("$shuffle", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
@@ -23,13 +26,15 @@ defmodule Jexata.Functions.Array do
      )}
   end
 
+  def call("$sort", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
   def call("$sort", [value]) do
     items = Value.items(value)
 
     cond do
       Enum.all?(items, &is_number/1) -> {:ok, Enum.sort(items)}
       Enum.all?(items, &is_binary/1) -> {:ok, Enum.sort(items)}
-      true -> {:error, Error.new("T2007", "$sort requires all numbers or all strings")}
+      true -> {:error, Error.new("D3070", "$sort requires all numbers or all strings")}
     end
   end
 
