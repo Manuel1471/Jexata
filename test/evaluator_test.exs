@@ -26,6 +26,17 @@ defmodule Jexata.EvaluatorTest do
     assert {:error, %Jexata.Error{code: "T2003"}} = Jexata.run("[1.1..5]", %{})
   end
 
+  test "flattens path sequences while preserving explicit nested arrays" do
+    data = %{"a" => [1, 2], "items" => [%{"x" => [1, 2]}, %{"x" => [3, 4]}]}
+
+    assert Jexata.run("[a]", data) == {:ok, [1, 2]}
+    assert Jexata.run("[[a]]", data) == {:ok, [[1, 2]]}
+    assert Jexata.run("items.x", data) == {:ok, [1, 2, 3, 4]}
+    assert Jexata.run("items.x[0]", data) == {:ok, [1, 3]}
+    assert Jexata.run("items.x[]", data) == {:ok, [1, 2, 3, 4]}
+    assert Jexata.run("items[-1].x", data) == {:ok, [3, 4]}
+  end
+
   test "supports filters, constructors and conditions" do
     data = %{"items" => [%{"price" => 1}, %{"price" => 3}]}
     assert Jexata.run("items[price > 2].price", data) == {:ok, 3}

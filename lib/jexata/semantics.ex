@@ -16,15 +16,18 @@ defmodule Jexata.Semantics do
   def boolean(list) when is_list(list), do: Enum.any?(list, &boolean/1)
   def boolean(_), do: true
 
-  def select(value, name) do
+  def select(value, name) when is_map(value) and not is_struct(value),
+    do: Map.get(value, name, Value.undefined())
+
+  def select(value, name) when is_list(value) do
     value
-    |> Value.items()
-    |> Enum.map(fn
-      map when is_map(map) and not is_struct(map) -> Map.get(map, name, Value.undefined())
-      _ -> Value.undefined()
-    end)
+    |> Enum.map(&select(&1, name))
+    |> Enum.flat_map(&Value.items/1)
     |> Value.sequence()
   end
+
+  def select(%Sequence{items: values}, name), do: select(values, name)
+  def select(_, _), do: Value.undefined()
 
   def compare("=", left, right), do: left == right
   def compare("!=", left, right), do: left != right
