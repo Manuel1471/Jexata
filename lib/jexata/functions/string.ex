@@ -3,6 +3,8 @@ defmodule Jexata.Functions.String do
   alias Jexata.{Error, Semantics}
   alias Jexata.Runtime.Value
 
+  @max_pad_codepoints 1_000_000
+
   @supported [
     "$string",
     "$length",
@@ -66,7 +68,10 @@ defmodule Jexata.Functions.String do
     end
   end
 
-  def call("$length", [value]) when is_binary(value), do: {:ok, length(String.codepoints(value))}
+  def call("$length", [value]) when is_binary(value) do
+    {:ok, if(ascii?(value), do: byte_size(value), else: length(String.codepoints(value)))}
+  end
+
   def call("$length", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
   def call("$length", []), do: {:error, Error.new("T0411", "$length requires a string")}
 
@@ -88,10 +93,20 @@ defmodule Jexata.Functions.String do
 
   def call("$pad", [value, width, pattern])
       when is_binary(value) and is_number(width) and is_binary(pattern) do
-    missing = max(trunc(abs(width)) - length(String.codepoints(value)), 0)
-    padding = if pattern == "", do: " ", else: pattern
-    padded = padding |> String.codepoints() |> Stream.cycle() |> Enum.take(missing) |> Enum.join()
-    {:ok, if(width < 0, do: padded <> value, else: value <> padded)}
+    target = trunc(abs(width))
+
+    if target > @max_pad_codepoints do
+      {:error, Error.new("J1004", "$pad output exceeds the configured limit")}
+    else
+      current = if ascii?(value), do: byte_size(value), else: length(String.codepoints(value))
+      missing = max(target - current, 0)
+      padding = if pattern == "", do: " ", else: pattern
+
+      padded =
+        padding |> String.codepoints() |> Stream.cycle() |> Enum.take(missing) |> Enum.join()
+
+      {:ok, if(width < 0, do: padded <> value, else: value <> padded)}
+    end
   end
 
   def call("$contains", [value, token])
@@ -269,12 +284,23 @@ defmodule Jexata.Functions.String do
   def call(name, _), do: type_error(name)
 
   defp substring(value, start, count) do
-    chars = String.codepoints(value)
-    index = if start < 0, do: max(length(chars) + start, 0), else: start
-    suffix = Enum.drop(chars, index)
-    selected = if is_nil(count), do: suffix, else: Enum.take(suffix, max(count, 0))
-    {:ok, Enum.join(selected)}
+    if ascii?(value) do
+      size = byte_size(value)
+      index = if start < 0, do: max(size + start, 0), else: min(start, size)
+      length = if is_nil(count), do: size - index, else: min(max(count, 0), size - index)
+      {:ok, binary_part(value, index, length)}
+    else
+      chars = String.codepoints(value)
+      index = if start < 0, do: max(length(chars) + start, 0), else: start
+      suffix = Enum.drop(chars, index)
+      selected = if is_nil(count), do: suffix, else: Enum.take(suffix, max(count, 0))
+      {:ok, Enum.join(selected)}
+    end
   end
+
+  defp ascii?(<<>>), do: true
+  defp ascii?(<<byte, rest::binary>>) when byte < 128, do: ascii?(rest)
+  defp ascii?(_), do: false
 
   defp replace_regex(value, pattern, replacement, limit) do
     matches = Regex.scan(pattern, value, return: :index)
