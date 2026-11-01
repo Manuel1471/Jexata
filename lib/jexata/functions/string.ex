@@ -100,6 +100,9 @@ defmodule Jexata.Functions.String do
 
   def call("$substringBefore", [value, ""]) when is_binary(value), do: {:ok, ""}
 
+  def call("$substringBefore", [_value]),
+    do: {:error, Error.new("T0411", "$substringBefore requires a separator")}
+
   def call("$substringBefore", [value, _token]) when is_struct(value, Value.Undefined),
     do: {:ok, Value.undefined()}
 
@@ -111,6 +114,9 @@ defmodule Jexata.Functions.String do
   end
 
   def call("$substringAfter", [value, ""]) when is_binary(value), do: {:ok, value}
+
+  def call("$substringAfter", [_value]),
+    do: {:error, Error.new("T0411", "$substringAfter requires a separator")}
 
   def call("$substringAfter", [value, _token]) when is_struct(value, Value.Undefined),
     do: {:ok, Value.undefined()}
@@ -189,8 +195,8 @@ defmodule Jexata.Functions.String do
     {:ok, Value.sequence(results)}
   end
 
-  def call("$substring", [value, start]) when is_binary(value) and is_integer(start),
-    do: substring(value, start, nil)
+  def call("$substring", [value, start]) when is_binary(value) and is_number(start),
+    do: substring(value, floor(start), nil)
 
   def call("$substring", [value, _start]) when is_struct(value, Value.Undefined),
     do: {:ok, value}
@@ -199,8 +205,8 @@ defmodule Jexata.Functions.String do
     do: {:ok, value}
 
   def call("$substring", [value, start, count])
-      when is_binary(value) and is_integer(start) and is_integer(count),
-      do: substring(value, start, count)
+      when is_binary(value) and is_number(start) and is_number(count),
+      do: substring(value, floor(start), floor(count))
 
   def call("$split", [value, separator]) when is_binary(value) and is_binary(separator),
     do:

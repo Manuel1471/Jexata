@@ -56,6 +56,8 @@ defmodule Jexata.Evaluator do
         do: {:name, elem(right, 1)},
         else: right
 
+    right = contextual_path_call(right)
+
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
@@ -392,9 +394,9 @@ defmodule Jexata.Evaluator do
 
   defp eval({:block, nodes}, data, context) do
     Enum.reduce_while(nodes, {:ok, Value.undefined(), context}, fn
-      {:binary, ":=", {:variable, name}, right}, {:ok, _, current} when name not in ["$", "$$"] ->
-        case eval(right, data, current) do
-          {:ok, value} -> {:cont, {:ok, value, put_in(current.environment[name], value)}}
+      {:binary, ":=", _, _} = binding, {:ok, _, current} ->
+        case eval_binding(binding, data, current) do
+          {:ok, value, next} -> {:cont, {:ok, value, next}}
           error -> {:halt, error}
         end
 
@@ -409,6 +411,29 @@ defmodule Jexata.Evaluator do
       error -> error
     end
   end
+
+  defp eval_binding({:binary, ":=", {:variable, name}, right}, data, context)
+       when name not in ["$", "$$"] do
+    result =
+      case right do
+        {:binary, ":=", _, _} ->
+          eval_binding(right, data, context)
+
+        _ ->
+          case eval(right, data, context) do
+            {:ok, value} -> {:ok, value, context}
+            error -> error
+          end
+      end
+
+    case result do
+      {:ok, value, next} -> {:ok, value, put_in(next.environment[name], value)}
+      error -> error
+    end
+  end
+
+  defp eval_binding(_, _, _),
+    do: {:error, Error.new("S0212", "Binding target must be a variable")}
 
   defp higher_order("$map", [input, callback], data) do
     input
@@ -1106,4 +1131,18 @@ defmodule Jexata.Evaluator do
   end
 
   defp descendants(value), do: [value]
+
+  defp contextual_path_call({:call, {:variable, name}, args} = call) do
+    needs_context =
+      (name in ["$substringBefore", "$substringAfter", "$contains", "$split", "$match", "$pad"] and
+         length(args) == 1) or
+        (name == "$substring" and length(args) == 1) or
+        (name == "$replace" and length(args) == 2)
+
+    if needs_context,
+      do: {:call, {:variable, name}, [{:variable, "$"} | args]},
+      else: call
+  end
+
+  defp contextual_path_call(other), do: other
 end

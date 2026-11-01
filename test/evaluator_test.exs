@@ -69,4 +69,12 @@ defmodule Jexata.EvaluatorTest do
 
     assert Enum.map(tasks, &Task.await/1) == ~w(Ada Bea Cal)
   end
+
+  test "chained bindings remain local to their parenthesized block" do
+    assert Jexata.run("($a := $b := 5; $a + $b)", %{}) == {:ok, 10}
+    assert Jexata.run("($x := 'outer'; ($x := missing); $x)", %{}) == {:ok, "outer"}
+
+    assert Jexata.run("($x := 'outer'; ($x := missing; $x))", %{}) ==
+             {:ok, :undefined}
+  end
 end

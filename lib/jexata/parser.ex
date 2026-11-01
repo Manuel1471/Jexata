@@ -146,7 +146,9 @@ defmodule Jexata.Parser do
         {:ok, left, tokens}
 
       bp ->
-        with {:ok, right, tail} <- expression(rest, bp) do
+        right_bp = if op == ":=", do: bp - 1, else: bp
+
+        with {:ok, right, tail} <- expression(rest, right_bp) do
           infix({:binary, op, left, right}, tail, min_bp)
         end
     end
@@ -310,7 +312,7 @@ defmodule Jexata.Parser do
   defp block(items, tokens) do
     with {:ok, tail} <- expect(tokens, ")") do
       nodes = Enum.reverse(items)
-      {:ok, if(length(nodes) == 1, do: hd(nodes), else: {:block, nodes}), tail}
+      {:ok, {:block, nodes}, tail}
     end
   end
 

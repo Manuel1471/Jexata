@@ -55,5 +55,10 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("'x' & missing", %{}) == {:ok, "x"}
     assert Jexata.run("missing & 'x'", %{}) == {:ok, "x"}
     assert Jexata.run("name.$uppercase()", %{"name" => "Ada"}) == {:ok, "ADA"}
+
+    assert Jexata.run("name.$uppercase().$substringBefore(' ')", %{"name" => "Ada Bell"}) ==
+             {:ok, "ADA"}
+
+    assert Jexata.run("$substring('Hello World', 5.5, 5)", %{}) == {:ok, " Worl"}
   end
 end

@@ -6,7 +6,8 @@ defmodule Jexata.ParserTest do
     assert {:ok, {:binary, "+", {:literal, 1}, {:binary, "*", {:literal, 2}, {:literal, 3}}}} =
              Parser.parse("1 + 2 * 3")
 
-    assert {:ok, {:binary, "*", {:binary, "+", _, _}, _}} = Parser.parse("(1 + 2) * 3")
+    assert {:ok, {:binary, "*", {:block, [{:binary, "+", _, _}]}, _}} =
+             Parser.parse("(1 + 2) * 3")
   end
 
   test "parses paths, predicates, calls, constructors and blocks" do
