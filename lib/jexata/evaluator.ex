@@ -1580,6 +1580,43 @@ defmodule Jexata.Evaluator do
   defp binary(">", a, b) when is_number(a) and is_number(b), do: {:ok, a > b}
   defp binary(">=", a, b) when is_number(a) and is_number(b), do: {:ok, a >= b}
 
+  defp binary("=", a, b)
+       when not is_struct(a, Value.Undefined) and not is_struct(b, Value.Undefined),
+       do: {:ok, a == b}
+
+  defp binary("!=", a, b)
+       when not is_struct(a, Value.Undefined) and not is_struct(b, Value.Undefined),
+       do: {:ok, a != b}
+
+  defp binary("+", a, b)
+       when is_integer(a) and is_integer(b) and abs(a) <= 9_007_199_254_740_991 and
+              abs(b) <= 9_007_199_254_740_991,
+       do: {:ok, number_result(a + b)}
+
+  defp binary("-", a, b)
+       when is_integer(a) and is_integer(b) and abs(a) <= 9_007_199_254_740_991 and
+              abs(b) <= 9_007_199_254_740_991,
+       do: {:ok, number_result(a - b)}
+
+  defp binary("*", a, b)
+       when is_integer(a) and is_integer(b) and abs(a) <= 9_007_199_254_740_991 and
+              abs(b) <= 9_007_199_254_740_991,
+       do: {:ok, number_result(a * b)}
+
+  defp binary("%", a, b)
+       when is_integer(a) and is_integer(b) and b != 0 and
+              abs(a) <= 9_007_199_254_740_991 and abs(b) <= 9_007_199_254_740_991,
+       do: {:ok, number_result(rem(a, b))}
+
+  defp binary("/", a, b) when is_number(a) and is_number(b) and b == 0,
+    do: {:error, Error.new("D1001", "Division by zero")}
+
+  defp binary("/", a, b) when is_number(a) and is_number(b) do
+    {:ok, a / b}
+  rescue
+    ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+  end
+
   defp binary("+", a, b) when is_number(a) and is_number(b) do
     {:ok, number_result(a + b)}
   rescue
