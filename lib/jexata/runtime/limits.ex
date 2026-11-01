@@ -32,11 +32,11 @@ defmodule Jexata.Runtime.Limits do
 
   defp nesting([], _, _), do: :ok
 
-  defp nesting([%{value: value, position: position} | rest], max, depth) do
+  defp nesting([%{type: type, value: value, position: position} | rest], max, depth) do
     next =
       cond do
-        value in ["(", "[", "{"] -> depth + 1
-        value in [")", "]", "}"] -> depth - 1
+        type == :op and value in ["(", "[", "{"] -> depth + 1
+        type == :op and value in [")", "]", "}"] -> depth - 1
         true -> depth
       end
 

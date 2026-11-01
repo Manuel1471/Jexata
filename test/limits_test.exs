@@ -11,4 +11,12 @@ defmodule Jexata.LimitsTest do
     assert {:error, %Jexata.Error{code: "J0005"}} = Jexata.compile("1", max_tokens: 0)
     assert {:error, %Jexata.Error{code: "J0001"}} = Jexata.compile(<<255>>)
   end
+
+  test "quoted delimiters do not consume or evade nesting depth" do
+    assert {:ok, _} = Jexata.compile("['(', ')']", max_nesting: 1)
+    assert {:ok, _} = Jexata.compile("[')']", max_nesting: 1)
+
+    assert {:error, %Jexata.Error{code: "J1003"}} =
+             Jexata.compile("[')', [1]]", max_nesting: 1)
+  end
 end
