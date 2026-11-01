@@ -1,0 +1,62 @@
+name: CI and Hex
+
+on:
+  push:
+    branches: [master, "release/**"]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.2"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - run: mix compile --warnings-as-errors
+      - run: mix test
+      - run: mix hex.publish --dry-run --yes
+
+  publish:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: hex-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.2"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - name: Publish new version to Hex
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HEX_API_KEY" ]; then
+            echo "Configure the HEX_API_KEY repository secret with publish permission" >&2
+            exit 1
+          fi
+
+          version="$(mix run --no-compile --no-start -e 'IO.puts(Mix.Project.config()[:version])')"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            "https://hex.pm/api/packages/jexata/releases/$version")"
+
+          case "$status" in
+            200) echo "jexata $version is already published; skipping" ;;
+            404) mix hex.publish --yes ;;
+            *) echo "Hex version check returned HTTP $status" >&2; exit 1 ;;
+          esac

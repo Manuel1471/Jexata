@@ -4,9 +4,34 @@ defmodule Jexata.MixProject do
   def project do
     [
       app: :jexata,
-      version: "0.1.0-dev",
+      version: "1.0.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
+      description: "Native JSONata expression compiler and evaluator for Elixir",
+      source_url: "https://github.com/Manuel1471/Jexata",
+      docs: [
+        main: "readme",
+        extras: [
+          "README.md",
+          "CONTRIBUTING.md",
+          "docs/COMPATIBILITY.md",
+          "docs/BENCHMARK.md",
+          "docs/ARCHITECTURE.md"
+        ]
+      ],
+      package: [
+        files: [
+          "lib",
+          "mix.exs",
+          "README.md",
+          "CHANGELOG.md",
+          "CONTRIBUTING.md",
+          "LICENSE",
+          "docs"
+        ],
+        licenses: ["MIT"],
+        links: %{"GitHub" => "https://github.com/Manuel1471/Jexata"}
+      ],
       deps: deps()
     ]
   end
@@ -18,6 +43,8 @@ defmodule Jexata.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:ex_doc, "~> 0.40.4", only: :dev, runtime: false}
+    ]
   end
 end

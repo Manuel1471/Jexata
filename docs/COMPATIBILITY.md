@@ -14,14 +14,16 @@ Result on Elixir 1.20.2 / OTP 29:
 | Category | Cases |
 | --- | ---: |
 | Total | 1,271 |
-| Pass | 655 |
-| Fail | 281 |
-| Unsupported | 326 |
+| Pass | 1,204 |
+| Fail | 42 |
+| Unsupported | 16 |
 | Skipped | 9 |
 | Crash | 0 |
 
-The runner counts a match when the result, undefined result, or expected error code agrees. `Unsupported` currently means the interpreter returned an unknown-function or parser-syntax error where the reference expected another result. `Skipped` includes cases with external bindings or fixtures rejected by OTP's JSON decoder (such as unpaired UTF-16 surrogates). `Fail` includes all other mismatches. These categories are coarse; the result is a baseline, not a compliance claim.
+The runner counts a match when the result, undefined result, or expected error code agrees. `Unsupported` means the interpreter returned an unknown-function or parser-syntax error where the reference expected another result. `Skipped` includes cases with external bindings or fixtures rejected by OTP's JSON decoder (such as unpaired UTF-16 surrogates). `Fail` includes all other mismatches. This is **94.7% of all cases** and is not a full compatibility claim.
 
-Current supported areas include basic paths and predicates, descendants, defaults, literals, arithmetic, comparisons, array and object constructors, basic grouping and sorting, blocks, lexical variables, lambdas, chaining of values into functions, a small higher-order subset, and selected built-ins. Major remaining areas include complete grouping and sorting behavior, regex literals and functions, transforms, function chaining/composition, date/time functions, the full built-in library, complete error-code parity, and edge cases in sequence and numeric semantics.
+Supported areas include paths and predicates, sequence flattening, descendants, defaults, literals, arithmetic, comparisons, array and object constructors, grouping and sorting, blocks, lexical variables, lambdas, closures, function chaining and composition, partial application, immutable transforms, regex literals and core regex functions, higher-order functions, URL encoding, Base64, numeric and string formatting, and selected date/time functions. Many official groups pass completely, including `flattening`, `function-signatures`, `function-formatNumber`, `function-eval`, `function-sort`, `transforms`, and `function-applications`.
 
-Compilation limits cover source bytes, token count, and nesting. Evaluation does not yet have a general resource budget. Stable 1.0 compatibility has not been achieved.
+Remaining differences are concentrated in error-code parity, some higher-order callback and closure cases, path wildcard and descendant edge cases, sort-key handling, stringification of nested functions, and advanced date/time or matcher behavior. Integer ranges are intentionally limited to 100,000 generated values, so two reference cases that request ten million values fail with `D2014`.
+
+Compilation limits cover source bytes, token count, and nesting. Evaluation has a recursion depth limit and a range size limit, but no general time, step, memory, output size, or regular expression budget. Do not evaluate arbitrary untrusted expressions without an external execution boundary. Version 1.0.0 is a useful native implementation with the documented gaps; it is not a full drop-in replacement for JSONata v2.2.0.

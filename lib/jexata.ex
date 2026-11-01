@@ -2,7 +2,7 @@ defmodule Jexata do
   @moduledoc """
   Compile JSONata expressions and evaluate them against native Elixir values.
 
-  The implementation is under development. See `README.md` for supported syntax.
+  See `README.md` and `docs/COMPATIBILITY.md` for supported syntax and known gaps.
   """
 
   alias Jexata.{Error, Evaluator, Expression, Parser}
