@@ -243,6 +243,17 @@ defmodule Jexata.Evaluator do
     with {:ok, values} <- eval_list(args, data, context), do: higher_order(name, values, data)
   end
 
+  defp eval({:call, {:variable, "$eval"}, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context) do
+      case values do
+        [source] when is_binary(source) -> evaluate_source(source, data, context)
+        [source, input] when is_binary(source) -> evaluate_source(source, input, context)
+        [source] when is_struct(source, Value.Undefined) -> {:ok, Value.undefined()}
+        _ -> {:error, Error.new("T0410", "Invalid arguments for $eval")}
+      end
+    end
+  end
+
   defp eval({:call, {:variable, "$replace"}, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, "$replace") do
@@ -390,6 +401,22 @@ defmodule Jexata.Evaluator do
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
+
+  defp evaluate_source(source, data, context) do
+    case Jexata.Parser.parse(source) do
+      {:ok, ast} ->
+        case eval(ast, data, %{context | root: data}) do
+          {:error, %Error{code: code}} when code in ["T1006", "T1005"] ->
+            {:error, Error.new("D3121", "Error evaluating expression supplied to $eval")}
+
+          result ->
+            result
+        end
+
+      {:error, _} ->
+        {:error, Error.new("D3120", "Invalid expression supplied to $eval")}
+    end
+  end
 
   defp replace_callback(value, pattern, callback, limit, data) do
     if Regex.match?(pattern, "") do
