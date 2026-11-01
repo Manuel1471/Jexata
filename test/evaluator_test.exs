@@ -101,6 +101,9 @@ defmodule Jexata.EvaluatorTest do
 
     assert {:error, %Jexata.Error{code: "J0006"}} =
              Jexata.evaluate(expression, %{}, %{}, max_function_depth: 0)
+
+    assert {:error, %Jexata.Error{code: "J0003"}} =
+             Jexata.evaluate(%Jexata.Expression{source: ""}, %{}, %{}, max_function_depth: 4)
   end
 
   test "chained bindings remain local to their parenthesized block" do

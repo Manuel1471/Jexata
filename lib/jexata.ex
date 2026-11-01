@@ -70,6 +70,9 @@ defmodule Jexata do
   @doc "Evaluates with a positive `:max_function_depth` limit for recursive calls."
   @spec evaluate(Expression.t(), input(), map(), keyword()) ::
           {:ok, result()} | {:error, Error.t()}
+  def evaluate(%Expression{ast: nil}, _data, _bindings, _options),
+    do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
   def evaluate(%Expression{ast: ast}, data, bindings, options)
       when is_map(bindings) and is_list(options) do
     max_depth = Keyword.get(options, :max_function_depth, 1024)
