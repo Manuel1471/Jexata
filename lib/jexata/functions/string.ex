@@ -40,6 +40,7 @@ defmodule Jexata.Functions.String do
   def call("$string", [%Jexata.Runtime.Closure{}]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Builtin{}]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Partial{}]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Transform{}]), do: {:ok, ""}
 
   def call("$string", [value, false]), do: call("$string", [value])
   def call("$string", [value, true]) when is_binary(value), do: {:ok, value}
@@ -47,6 +48,7 @@ defmodule Jexata.Functions.String do
   def call("$string", [%Jexata.Runtime.Closure{}, true]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Builtin{}, true]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Partial{}, true]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Transform{}, true]), do: {:ok, ""}
 
   def call("$string", [value, true]) do
     if Value.undefined?(value),

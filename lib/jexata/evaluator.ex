@@ -1,7 +1,7 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.{Builtin, Closure, Partial, Signature, Value}
+  alias Jexata.Runtime.{Builtin, Closure, Partial, Signature, Transform, Value}
   alias Jexata.Runtime.Partial.Placeholder
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -14,6 +14,17 @@ defmodule Jexata.Evaluator do
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
   defp eval(:placeholder, _, _), do: {:ok, %Placeholder{}}
+
+  defp eval({:transform, pattern, update, delete}, _, context),
+    do:
+      {:ok,
+       %Transform{
+         pattern: pattern,
+         update: update,
+         delete: delete,
+         environment: context.environment
+       }}
+
   defp eval({:name, name}, data, _), do: {:ok, Semantics.select(data, name)}
   defp eval({:variable, "$"}, data, _), do: {:ok, data}
   defp eval({:variable, "$$"}, _, %{root: root}), do: {:ok, root}
@@ -551,6 +562,8 @@ defmodule Jexata.Evaluator do
 
   defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
 
+  defp invoke(%Transform{} = transform, [input], _data), do: apply_transform(transform, input)
+
   defp invoke(%Partial{function: function, arguments: arguments}, values, data) do
     {filled, remaining} =
       Enum.map_reduce(arguments, values, fn
@@ -581,6 +594,142 @@ defmodule Jexata.Evaluator do
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
+
+  defp apply_transform(%Transform{} = transform, input) do
+    context = %{root: input, environment: transform.environment}
+
+    paths =
+      transform.pattern
+      |> selected_paths([{[], input}], context)
+      |> Enum.flat_map(&expand_reference/1)
+      |> Enum.filter(fn {_path, value} -> is_map(value) and not is_struct(value) end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.uniq()
+
+    Enum.reduce_while(paths, {:ok, input}, fn path, {:ok, document} ->
+      selected = get_path(document, path)
+
+      with {:ok, update} <- eval(transform.update, selected, context),
+           {:ok, update} <- transform_update(update),
+           {:ok, delete} <- transform_delete(transform.delete, selected, context) do
+        changed = selected |> Map.merge(update) |> Map.drop(delete)
+        {:cont, {:ok, put_path(document, path, changed)}}
+      else
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp transform_update(update) when is_map(update) and not is_struct(update), do: {:ok, update}
+  defp transform_update(update) when is_struct(update, Value.Undefined), do: {:ok, %{}}
+  defp transform_update(_), do: {:error, Error.new("T2011", "Transform update must be an object")}
+
+  defp transform_delete(nil, _selected, _context), do: {:ok, []}
+
+  defp transform_delete(ast, selected, context) do
+    case eval(ast, selected, context) do
+      {:ok, value} when is_binary(value) ->
+        {:ok, [value]}
+
+      {:ok, values} when is_list(values) ->
+        if Enum.all?(values, &is_binary/1),
+          do: {:ok, values},
+          else: {:error, Error.new("T2012", "Transform delete must contain strings")}
+
+      {:ok, value} when is_struct(value, Value.Undefined) ->
+        {:ok, []}
+
+      {:ok, _} ->
+        {:error, Error.new("T2012", "Transform delete must contain strings")}
+
+      error ->
+        error
+    end
+  end
+
+  defp selected_paths({:variable, "$"}, refs, _context), do: refs
+
+  defp selected_paths({:path, left, right}, refs, context),
+    do: selected_paths(right, selected_paths(left, refs, context), context)
+
+  defp selected_paths({:name, name}, refs, _context) do
+    refs
+    |> Enum.flat_map(&expand_reference/1)
+    |> Enum.flat_map(fn
+      {path, map} when is_map(map) and not is_struct(map) ->
+        if Map.has_key?(map, name), do: [{path ++ [name], Map.get(map, name)}], else: []
+
+      _ ->
+        []
+    end)
+  end
+
+  defp selected_paths({:filter, left, predicate}, refs, context) do
+    candidates = left |> selected_paths(refs, context) |> Enum.flat_map(&expand_reference/1)
+    count = length(candidates)
+
+    candidates
+    |> Enum.with_index()
+    |> Enum.filter(fn {{_path, value}, index} ->
+      case eval(predicate, value, context) do
+        {:ok, result} -> predicate_matches?(result, index, count)
+        _ -> false
+      end
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp selected_paths(:wildcard, refs, _context) do
+    refs
+    |> Enum.flat_map(&expand_reference/1)
+    |> Enum.flat_map(fn
+      {path, map} when is_map(map) and not is_struct(map) ->
+        Enum.map(map, fn {key, value} -> {path ++ [key], value} end)
+
+      _ ->
+        []
+    end)
+  end
+
+  defp selected_paths(:descendants, refs, _context),
+    do: refs ++ Enum.flat_map(refs, &descendant_references/1)
+
+  defp selected_paths(_, _refs, _context), do: []
+
+  defp descendant_references({path, map}) when is_map(map) and not is_struct(map) do
+    Enum.flat_map(map, fn {key, value} ->
+      reference = {path ++ [key], value}
+      [reference | descendant_references(reference)]
+    end)
+  end
+
+  defp descendant_references({path, values}) when is_list(values) do
+    values
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {value, index} ->
+      reference = {path ++ [index], value}
+      [reference | descendant_references(reference)]
+    end)
+  end
+
+  defp descendant_references(_), do: []
+
+  defp expand_reference({path, values}) when is_list(values),
+    do: Enum.with_index(values) |> Enum.map(fn {value, index} -> {path ++ [index], value} end)
+
+  defp expand_reference(reference), do: [reference]
+
+  defp get_path(value, []), do: value
+  defp get_path(map, [key | tail]) when is_map(map), do: get_path(Map.fetch!(map, key), tail)
+  defp get_path(list, [index | tail]) when is_list(list), do: get_path(Enum.at(list, index), tail)
+
+  defp put_path(_old, [], value), do: value
+
+  defp put_path(map, [key | tail], value) when is_map(map),
+    do: Map.update!(map, key, &put_path(&1, tail, value))
+
+  defp put_path(list, [index | tail], value) when is_list(list),
+    do: List.update_at(list, index, &put_path(&1, tail, value))
 
   defp evaluate_source(source, data, context) do
     case Jexata.Parser.parse(source) do

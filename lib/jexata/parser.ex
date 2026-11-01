@@ -74,6 +74,16 @@ defmodule Jexata.Parser do
 
   defp prefix([%Token{value: "?"} | rest]), do: {:ok, :placeholder, rest}
 
+  defp prefix([%Token{value: "|"} | rest]) do
+    with {:ok, pattern, tail} <- expression(rest, 0),
+         {:ok, tail} <- expect(tail, "|"),
+         {:ok, update, tail} <- expression(tail, 0),
+         {:ok, delete, tail} <- transform_delete(tail),
+         {:ok, tail} <- expect(tail, "|") do
+      {:ok, {:transform, pattern, update, delete}, tail}
+    end
+  end
+
   defp prefix([%Token{value: "*"} | rest]), do: {:ok, :wildcard, rest}
   defp prefix([%Token{value: "**"} | rest]), do: {:ok, :descendants, rest}
   defp prefix([%Token{value: "["} | rest]), do: collection(rest, "]", :array)
@@ -146,6 +156,9 @@ defmodule Jexata.Parser do
 
   defp path_prefix([%Token{type: :string, value: name} | rest]), do: {:ok, {:name, name}, rest}
   defp path_prefix(tokens), do: prefix(tokens)
+
+  defp transform_delete([%Token{value: ","} | rest]), do: expression(rest, 0)
+  defp transform_delete(rest), do: {:ok, nil, rest}
 
   defp optional_alternate([%Token{value: ":"} | rest]), do: expression(rest, 19)
   defp optional_alternate(tail), do: {:ok, {:literal, Jexata.Runtime.Value.undefined()}, tail}
