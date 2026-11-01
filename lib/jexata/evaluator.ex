@@ -1,6 +1,6 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
-  alias Jexata.{Error, Semantics}
+  alias Jexata.{Error, Functions, Semantics}
   alias Jexata.Runtime.Value
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -104,8 +104,12 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:call, {:variable, name}, args}, data, root) do
+    with {:ok, values} <- eval_list(args, data, root), do: Functions.call(name, values)
+  end
+
   defp eval({:call, _, _}, _, _),
-    do: {:error, Error.new("T1006", "Function calls are not implemented yet")}
+    do: {:error, Error.new("T1006", "Only named built-in functions can be called")}
 
   defp eval({:block, _}, _, _), do: {:error, Error.new("T1007", "Blocks are not implemented yet")}
 
