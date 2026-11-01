@@ -38,6 +38,21 @@ These are separate local runs; microsecond values are affected by host load. The
 
 The transform benchmark uses a list of 1,000 objects. Independent paths are updated together; overlapping paths retain sequential evaluation. Returning an unchanged nested 1,000-object subtree measured 106.474 to 72.807 µs and 51,203 to 46,161 reductions per call in a dedicated comparison. These timings come from separate runs and are indicative; the reduction counts are more stable.
 
+### Latest 1.0.0 candidate
+
+After static path dispatch, prepared lambda metadata, short argument evaluation, arity-aware `$map`/`$filter`, one-pass numeric aggregates, and builtin registry dispatch, a local `MIX_ENV=prod mix run scripts/benchmark.exs` run measured the following compiled evaluation workloads. These are current values, not paired before/after trials.
+
+| Workload on 1,000 orders | µs/op | Reductions/op |
+| --- | ---: | ---: |
+| `orders[price > 50].price` | 78.043 | 27,587 |
+| `$sum(orders.price)` | 25.208 | 15,116 |
+| `$map(orders, function($o){$o.price * 2})` | 208.101 | 63,173 |
+| Recursive `$reduce` | 1,610.960 | 380,876 |
+| `$sort` with comparator | 1,205.560 | 471,920 |
+| `$number($string(price))` across orders | 486.940 | 106,760 |
+
+The reduction guard baselines were refreshed from the median of three identical local runs after these changes. The guard retains its 25% ceiling.
+
 CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks twelve representative 1,000-order workloads and fails when a measurement exceeds 125% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
 
 ## Tokenizer comparison
