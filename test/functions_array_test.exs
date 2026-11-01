@@ -7,4 +7,10 @@ defmodule Jexata.FunctionsArrayTest do
     assert Jexata.run("$distinct([1,2,1])", %{}) == {:ok, [1, 2]}
     assert Jexata.run("$sort([3,1,2])", %{}) == {:ok, [1, 2, 3]}
   end
+
+  test "zip truncates to the shortest input" do
+    assert Jexata.run("$zip([1,2,3], [4,5])", %{}) == {:ok, [[1, 4], [2, 5]]}
+    assert Jexata.run("$zip(1,2,3)", %{}) == {:ok, [[1, 2, 3]]}
+    assert Jexata.run("$zip([1,2], missing)", %{}) == {:ok, []}
+  end
 end

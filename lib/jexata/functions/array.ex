@@ -3,10 +3,21 @@ defmodule Jexata.Functions.Array do
   alias Jexata.Error
   alias Jexata.Runtime.Value
 
-  def supported?(name), do: name in ["$append", "$reverse", "$sort", "$distinct"]
+  def supported?(name), do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip"]
   def call("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
   def call("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
   def call("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
+
+  def call("$zip", args) when args != [] do
+    lists = Enum.map(args, &Value.items/1)
+    count = lists |> Enum.map(&length/1) |> Enum.min()
+
+    {:ok,
+     if(count == 0,
+       do: [],
+       else: for(index <- 0..(count - 1), do: Enum.map(lists, &Enum.at(&1, index)))
+     )}
+  end
 
   def call("$sort", [value]) do
     items = Value.items(value)
