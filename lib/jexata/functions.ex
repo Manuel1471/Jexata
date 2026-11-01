@@ -1,7 +1,7 @@
 defmodule Jexata.Functions do
   @moduledoc false
   alias Jexata.Error
-  alias Jexata.Functions.{Array, Boolean, Numeric, Object, String}
+  alias Jexata.Functions.{Array, Boolean, Numeric, Object, String, URL}
   alias Jexata.Runtime.Value
 
   def call(name, args, context) do
@@ -31,6 +31,7 @@ defmodule Jexata.Functions do
       String.supported?(name) -> String.call(name, args)
       Array.supported?(name) -> Array.call(name, args)
       Object.supported?(name) -> Object.call(name, args)
+      URL.supported?(name) -> URL.call(name, args)
       true -> {:error, Error.new("T1006", "Unknown function #{name}")}
     end
   end
