@@ -70,12 +70,11 @@ result =
             true -> read_json.(Path.join([suite, "datasets", case_data["dataset"] <> ".json"]))
           end
 
-        if not is_binary(expression) or data == :unreadable or
-             map_size(case_data["bindings"] || %{}) > 0 do
+        if not is_binary(expression) or data == :unreadable do
           :skipped
         else
           try do
-            actual = Jexata.run(expression, data)
+            actual = Jexata.run(expression, data, case_data["bindings"] || %{})
             expected_code = case_data["code"] || get_in(case_data, ["error", "code"])
 
             cond do

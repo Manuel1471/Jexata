@@ -15,9 +15,13 @@ Jason decodes or encodes JSON. Jexata queries and transforms already decoded Eli
   })
 
 {:ok, "Ada"} = Jexata.run("customer.name", %{"customer" => %{"name" => "Ada"}})
+
+{:ok, 45} = Jexata.run("$price.foo.bar", %{}, %{"price" => %{"foo" => %{"bar" => 45}}})
 ```
 
 Compile once and reuse the returned `%Jexata.Expression{}` for repeated evaluations. The expression is immutable and evaluations keep their own state, including when called from multiple processes. `compile!/1`, `evaluate!/2`, and `run!/2` raise `Jexata.Error` instead of returning an error tuple.
+
+Use `evaluate/3` or `run/3` for external variable bindings. Keys omit the leading `$`; bindings are local to that evaluation.
 
 `run/2` recompiles its source on every call. For dynamic expressions used repeatedly, keep compiled expressions in an application-owned cache with a bounded number of entries, keyed by source and compilation options. Jexata itself does not maintain global mutable cache state.
 

@@ -5,12 +5,16 @@ defmodule Jexata.Evaluator do
   alias Jexata.Runtime.Partial.Placeholder
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
-  def evaluate(ast, :undefined) do
+  def evaluate(ast, data), do: evaluate(ast, data, %{})
+
+  @spec evaluate(Jexata.AST.t(), term(), map()) :: {:ok, term()} | {:error, Error.t()}
+  def evaluate(ast, :undefined, environment) do
     missing = Value.undefined()
-    eval(ast, missing, %{root: missing, environment: %{}})
+    eval(ast, missing, %{root: missing, environment: environment})
   end
 
-  def evaluate(ast, data), do: eval(ast, data, %{root: data, environment: %{}})
+  def evaluate(ast, data, environment),
+    do: eval(ast, data, %{root: data, environment: environment})
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
   defp eval(:placeholder, _, _), do: {:ok, %Placeholder{}}
@@ -1136,6 +1140,20 @@ defmodule Jexata.Evaluator do
       end)
 
     {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
+  end
+
+  defp eval_each(items, {:variable, _} = ast, context, _flatten_arrays?, keep_array?) do
+    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
+      case eval(ast, item, context) do
+        {:ok, []} -> {:cont, {:ok, values}}
+        {:ok, value} -> {:cont, {:ok, [value | values]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
+      error -> error
+    end
   end
 
   defp eval_each(items, ast, root, _flatten_arrays?, keep_array?) do
