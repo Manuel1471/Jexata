@@ -16,11 +16,7 @@ defmodule Jexata.Functions.Numeric do
   def call(name, [input]) when name in @aggregates do
     values = Value.items(input)
 
-    cond do
-      name == "$count" -> {:ok, length(values)}
-      Enum.all?(values, &is_number/1) -> aggregate(name, values)
-      true -> {:error, Error.new("T0412", "#{name} requires numbers")}
-    end
+    if name == "$count", do: {:ok, length(values)}, else: aggregate(name, values)
   end
 
   def call(name, [value]) when name in @unary and is_struct(value, Value.Undefined),
@@ -128,13 +124,38 @@ defmodule Jexata.Functions.Numeric do
     end
   end
 
-  defp aggregate("$sum", values), do: {:ok, Enum.sum(values)}
-  defp aggregate("$max", []), do: {:ok, Value.undefined()}
-  defp aggregate("$max", values), do: {:ok, Enum.max(values)}
-  defp aggregate("$min", []), do: {:ok, Value.undefined()}
-  defp aggregate("$min", values), do: {:ok, Enum.min(values)}
-  defp aggregate("$average", []), do: {:ok, Value.undefined()}
-  defp aggregate("$average", values), do: {:ok, Enum.sum(values) / length(values)}
+  defp aggregate("$sum" = name, values), do: sum(values, 0, name)
+  defp aggregate("$average" = name, values), do: average(values, 0, 0, name)
+  defp aggregate("$max" = name, values), do: extremum(values, nil, :max, name)
+  defp aggregate("$min" = name, values), do: extremum(values, nil, :min, name)
+
+  defp sum([], total, _name), do: {:ok, total}
+  defp sum([value | rest], total, name) when is_number(value), do: sum(rest, total + value, name)
+  defp sum(_, _, name), do: aggregate_type_error(name)
+
+  defp average([], _total, 0, _name), do: {:ok, Value.undefined()}
+  defp average([], total, count, _name), do: {:ok, total / count}
+
+  defp average([value | rest], total, count, name) when is_number(value),
+    do: average(rest, total + value, count + 1, name)
+
+  defp average(_, _, _, name), do: aggregate_type_error(name)
+
+  defp extremum([], nil, _direction, _name), do: {:ok, Value.undefined()}
+  defp extremum([], current, _direction, _name), do: {:ok, current}
+
+  defp extremum([value | rest], nil, direction, name) when is_number(value),
+    do: extremum(rest, value, direction, name)
+
+  defp extremum([value | rest], current, :max, name) when is_number(value),
+    do: extremum(rest, max(value, current), :max, name)
+
+  defp extremum([value | rest], current, :min, name) when is_number(value),
+    do: extremum(rest, min(value, current), :min, name)
+
+  defp extremum(_, _, _, name), do: aggregate_type_error(name)
+
+  defp aggregate_type_error(name), do: {:error, Error.new("T0412", "#{name} requires numbers")}
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
   defp invalid_number, do: {:error, Error.new("D3030", "Cannot cast string to number")}
