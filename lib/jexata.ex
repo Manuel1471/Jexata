@@ -11,10 +11,14 @@ defmodule Jexata do
   @type json ::
           nil | boolean() | number() | String.t() | [json()] | %{optional(String.t()) => json()}
 
+  @type input :: json() | :undefined
+  @type result :: json() | :undefined | :function
+
   @doc "Compiles a JSONata source string into an immutable expression.
 
   `max_source_bytes`, `max_tokens`, and `max_nesting` may be set as positive integers.
   "
+  @spec compile(String.t()) :: {:ok, Expression.t()} | {:error, Error.t()}
   @spec compile(String.t(), keyword()) :: {:ok, Expression.t()} | {:error, Error.t()}
   def compile(source, options \\ [])
 
@@ -37,7 +41,7 @@ defmodule Jexata do
   def compile(_, _), do: {:error, Error.new("J0001", "Expression must be a string")}
 
   @doc "Evaluates a compiled expression against JSON-like Elixir data."
-  @spec evaluate(Expression.t(), json()) :: {:ok, json()} | {:error, Error.t()}
+  @spec evaluate(Expression.t(), input()) :: {:ok, result()} | {:error, Error.t()}
   def evaluate(%Expression{ast: nil}, _data),
     do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
@@ -49,7 +53,7 @@ defmodule Jexata do
   def evaluate(_, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
   @doc "Compiles and evaluates a JSONata expression in one call."
-  @spec run(String.t(), json()) :: {:ok, json()} | {:error, Error.t()}
+  @spec run(String.t(), input()) :: {:ok, result()} | {:error, Error.t()}
   def run(source, data) do
     with {:ok, expression} <- compile(source), do: evaluate(expression, data)
   end
@@ -59,11 +63,11 @@ defmodule Jexata do
   def compile!(source), do: unwrap!(compile(source))
 
   @doc "Like `evaluate/2`, but raises on errors."
-  @spec evaluate!(Expression.t(), json()) :: json()
+  @spec evaluate!(Expression.t(), input()) :: result()
   def evaluate!(expression, data), do: unwrap!(evaluate(expression, data))
 
   @doc "Like `run/2`, but raises on errors."
-  @spec run!(String.t(), json()) :: json()
+  @spec run!(String.t(), input()) :: result()
   def run!(source, data), do: unwrap!(run(source, data))
 
   defp unwrap!({:ok, value}), do: value

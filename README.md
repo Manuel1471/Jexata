@@ -29,7 +29,7 @@ Jexata requires Elixir 1.20 or later. It was checked on Elixir 1.20.2 and OTP 29
 
 ## Results and errors
 
-Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., message: ..., position: ...}}`. An expression that selects nothing returns `{:ok, :undefined}`. Explicit JSON `null` is Elixir `nil`. A JSONata sequence with one item returns that item; a sequence with multiple items returns a list. An explicit array stays a list even when it contains one item. A top-level function result is represented as `:function`.
+Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., message: ..., position: ...}}`. Pass `:undefined` as the input data when there is no root JSON value. An expression that selects nothing returns `{:ok, :undefined}`. Explicit JSON `null` is Elixir `nil`. A JSONata sequence with one item returns that item; a sequence with multiple items returns a list. An explicit array stays a list even when it contains one item. A top-level function result is represented as `:function`.
 
 ```elixir
 {:ok, :undefined} = Jexata.run("missing", %{})
@@ -39,9 +39,9 @@ Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., m
 
 ## Supported scope
 
-The current interpreter supports literals, quoted field names, comments, field paths, immediate wildcards, array predicates, arithmetic, basic comparisons, `and`/`or`, concatenation, integer ranges, conditional expressions, array and object constructors, blocks, local variable bindings, lambdas, closures, and `$map`/`$filter`/`$reduce`. It includes selected numeric, text, array, object, and boolean functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
+The current interpreter supports literals, quoted field names, comments, field paths, immediate wildcards, array predicates, descendants, arithmetic, basic comparisons, `and`/`or`, concatenation, integer ranges, conditional/default/coalescing expressions, array and object constructors, basic grouping and order-by, blocks, local variable bindings, lambdas, closures, value-to-function chaining, and `$map`/`$filter`/`$reduce`. It includes selected numeric, text, array, object, and boolean functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
 
-It does **not** yet implement the complete JSONata grammar or function library. In particular, descendant paths, grouping, expression sorting, regular expressions, transforms, function composition, date/time functions, and several operators and built-ins remain incomplete. Do not use it as a drop-in replacement for the reference implementation.
+It does **not** yet implement the complete JSONata grammar or function library. In particular, full grouping and sorting semantics, regular expressions, transforms, function composition, date/time functions, and several operators and built-ins remain incomplete. Do not use it as a drop-in replacement for the reference implementation.
 
 ## Limits and trust
 
