@@ -29,6 +29,16 @@ defmodule Jexata.AdvancedOperatorsTest do
 
     assert Jexata.run("items^(price).id", missing) == {:ok, ["a", "b", "missing"]}
 
+    ties = %{
+      "items" => [
+        %{"id" => "first", "price" => 1},
+        %{"id" => "second", "price" => 1},
+        %{"id" => "last", "price" => 2}
+      ]
+    }
+
+    assert Jexata.run("items^(price).id", ties) == {:ok, ["first", "second", "last"]}
+
     mixed = %{"items" => [%{"price" => 1}, %{"price" => "two"}]}
     assert {:error, %Jexata.Error{code: "T2007"}} = Jexata.run("items^(price)", mixed)
   end

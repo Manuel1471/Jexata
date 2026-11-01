@@ -631,7 +631,7 @@ defmodule Jexata.Evaluator do
       |> case do
         {:ok, decorated, _types} ->
           decorated = Enum.reverse(decorated)
-          sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+          sorted = sort_decorated(decorated, terms)
           {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
 
         error ->
@@ -697,7 +697,7 @@ defmodule Jexata.Evaluator do
 
           {:ok,
            decorated
-           |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+           |> sort_decorated(terms)
            |> Enum.map(&elem(&1, 0))}
 
         error ->
@@ -1907,6 +1907,19 @@ defmodule Jexata.Evaluator do
       true -> left > right
     end
   end
+
+  defp sort_decorated(decorated, [{:asc, _}]) do
+    decorated
+    |> Enum.map(fn {_, [{_, value}]} = row ->
+      key = if Value.undefined?(value), do: {1, nil}, else: {0, value}
+      {key, row}
+    end)
+    |> then(&:lists.keysort(1, &1))
+    |> Enum.map(&elem(&1, 1))
+  end
+
+  defp sort_decorated(decorated, _terms),
+    do: Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
 
   defp update_sort_types([], []), do: {:ok, []}
 
