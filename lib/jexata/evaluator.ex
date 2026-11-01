@@ -41,7 +41,9 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp eval(:wildcard, data, _root) when is_map(data), do: {:ok, Value.sequence(Map.values(data))}
+  defp eval(:wildcard, data, _root) when is_map(data),
+    do: {:ok, Value.sequence(Enum.flat_map(Map.values(data), &Value.items/1))}
+
   defp eval(:wildcard, data, _root), do: {:ok, Value.sequence(Value.items(data))}
   defp eval(:descendants, data, _context), do: {:ok, Value.sequence(descendants(data))}
 
@@ -110,12 +112,16 @@ defmodule Jexata.Evaluator do
       end)
       |> case do
         {:ok, decorated} ->
-          sorted =
-            decorated
-            |> Enum.reverse()
-            |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+          decorated = Enum.reverse(decorated)
 
-          {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
+          case validate_sort_keys(decorated) do
+            :ok ->
+              sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+              {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
+
+            error ->
+              error
+          end
 
         error ->
           error
@@ -1098,7 +1104,8 @@ defmodule Jexata.Evaluator do
   defp eval_sort_keys(terms, item, context) do
     Enum.reduce_while(terms, {:ok, []}, fn {direction, ast}, {:ok, keys} ->
       case eval(ast, item, context) do
-        {:ok, value} when is_number(value) or is_binary(value) ->
+        {:ok, value}
+        when is_number(value) or is_binary(value) or is_struct(value, Value.Undefined) ->
           {:cont, {:ok, [{direction, value} | keys]}}
 
         {:ok, _} ->
@@ -1118,10 +1125,30 @@ defmodule Jexata.Evaluator do
 
   defp compare_sort_keys([{direction, left} | rest_a], [{_, right} | rest_b]) do
     cond do
+      Value.undefined?(left) and Value.undefined?(right) -> compare_sort_keys(rest_a, rest_b)
+      Value.undefined?(left) -> false
+      Value.undefined?(right) -> true
       left == right -> compare_sort_keys(rest_a, rest_b)
       direction == :asc -> left < right
       true -> left > right
     end
+  end
+
+  defp validate_sort_keys([]), do: :ok
+
+  defp validate_sort_keys(decorated) do
+    key_count = decorated |> hd() |> elem(1) |> length()
+
+    if Enum.any?(0..(key_count - 1), fn index ->
+         decorated
+         |> Enum.map(fn {_, keys} -> keys |> Enum.at(index) |> elem(1) end)
+         |> Enum.reject(&Value.undefined?/1)
+         |> Enum.map(fn value -> if is_number(value), do: :number, else: :string end)
+         |> Enum.uniq()
+         |> length() > 1
+       end),
+       do: {:error, Error.new("T2007", "Sort keys have incompatible types")},
+       else: :ok
   end
 
   defp descendants(value) when is_list(value), do: Enum.flat_map(value, &descendants/1)

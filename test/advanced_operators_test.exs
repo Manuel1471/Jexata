@@ -18,6 +18,24 @@ defmodule Jexata.AdvancedOperatorsTest do
     data = %{"items" => [%{"price" => 3}, %{"price" => 1}, %{"price" => 2}]}
     assert Jexata.run("items^(price).price", data) == {:ok, [1, 2, 3]}
     assert Jexata.run("items^(>price).price", data) == {:ok, [3, 2, 1]}
+
+    missing = %{
+      "items" => [
+        %{"id" => "missing"},
+        %{"id" => "b", "price" => 2},
+        %{"id" => "a", "price" => 1}
+      ]
+    }
+
+    assert Jexata.run("items^(price).id", missing) == {:ok, ["a", "b", "missing"]}
+
+    mixed = %{"items" => [%{"price" => 1}, %{"price" => "two"}]}
+    assert {:error, %Jexata.Error{code: "T2007"}} = Jexata.run("items^(price)", mixed)
+  end
+
+  test "wildcards flatten array-valued object fields" do
+    data = %{"foo" => %{"list" => [%{"x" => 1}, %{"x" => 2}], "other" => 3}}
+    assert Jexata.run("foo.*.x", data) == {:ok, [1, 2]}
   end
 
   test "grouping evaluates values over each group" do
