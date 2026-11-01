@@ -308,7 +308,9 @@ defmodule Jexata.Evaluator do
        environment: context.environment,
        root: context.root,
        context_value: data,
-       signature: signature
+       signature: signature,
+       references:
+         body |> referenced_variables() |> expand_closure_references(context.environment)
      }}
   end
 
@@ -995,16 +997,53 @@ defmodule Jexata.Evaluator do
   end
 
   defp with_recursive_bindings(%Closure{} = closure, environment) do
-    additions =
-      Map.filter(environment, fn {name, value} ->
-        not Map.has_key?(closure.environment, name) and
-          (is_struct(value, Closure) or is_struct(value, Builtin) or is_struct(value, Partial))
+    bound =
+      Enum.reduce(closure.references, closure.environment, fn name, acc ->
+        case Map.fetch(environment, name) do
+          {:ok, value}
+          when not is_map_key(acc, name) and
+                 (is_struct(value, Closure) or is_struct(value, Builtin) or
+                    is_struct(value, Partial)) ->
+            Map.put(acc, name, value)
+
+          _ ->
+            acc
+        end
       end)
 
-    %{closure | environment: Map.merge(additions, closure.environment)}
+    %{closure | environment: bound}
   end
 
   defp with_recursive_bindings(function, _environment), do: function
+
+  defp referenced_variables(ast), do: referenced_variables(ast, MapSet.new())
+
+  defp expand_closure_references(references, environment),
+    do: expand_closure_references(MapSet.to_list(references), environment, references)
+
+  defp expand_closure_references([], _environment, references), do: MapSet.to_list(references)
+
+  defp expand_closure_references([name | rest], environment, references) do
+    dependencies =
+      case Map.get(environment, name) do
+        %Closure{references: names} -> names
+        _ -> []
+      end
+
+    new = Enum.reject(dependencies, &MapSet.member?(references, &1))
+    references = Enum.reduce(new, references, &MapSet.put(&2, &1))
+    expand_closure_references(rest ++ new, environment, references)
+  end
+
+  defp referenced_variables({:variable, name}, acc), do: MapSet.put(acc, name)
+
+  defp referenced_variables(ast, acc) when is_tuple(ast),
+    do: ast |> Tuple.to_list() |> Enum.reduce(acc, &referenced_variables/2)
+
+  defp referenced_variables(ast, acc) when is_list(ast),
+    do: Enum.reduce(ast, acc, &referenced_variables/2)
+
+  defp referenced_variables(_, acc), do: acc
 
   defp invoke(%Closure{} = closure, values, data) do
     depth = Process.get({__MODULE__, :closure_depth}, 0)
