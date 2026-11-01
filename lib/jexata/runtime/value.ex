@@ -17,12 +17,7 @@ defmodule Jexata.Runtime.Value do
   def undefined?(_), do: false
 
   def sequence(values, keep_array \\ false) do
-    items =
-      Enum.flat_map(values, fn
-        %Undefined{} -> []
-        %Sequence{items: nested} -> nested
-        item -> [item]
-      end)
+    items = sequence_items(values, [])
 
     case {items, keep_array} do
       {items, true} -> %Sequence{items: items, keep_array: true}
@@ -31,6 +26,14 @@ defmodule Jexata.Runtime.Value do
       {many, false} -> %Sequence{items: many}
     end
   end
+
+  defp sequence_items([], acc), do: Enum.reverse(acc)
+  defp sequence_items([%Undefined{} | rest], acc), do: sequence_items(rest, acc)
+
+  defp sequence_items([%Sequence{items: nested} | rest], acc),
+    do: sequence_items(rest, Enum.reverse(nested, acc))
+
+  defp sequence_items([item | rest], acc), do: sequence_items(rest, [item | acc])
 
   def items(%Undefined{}), do: []
   def items(%Sequence{items: items}), do: items
