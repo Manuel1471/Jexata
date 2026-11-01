@@ -46,8 +46,26 @@ defmodule Jexata.Runtime.Value do
   def public(%Jexata.Runtime.Transform{}), do: :function
   def public(%Jexata.Runtime.Composition{}), do: :function
   def public(%Undefined{}), do: :undefined
-  def public(%Sequence{items: items}), do: Enum.map(items, &public/1)
-  def public(list) when is_list(list), do: Enum.map(list, &public/1)
-  def public(map) when is_map(map), do: Map.new(map, fn {key, value} -> {key, public(value)} end)
+  def public(%Sequence{items: items}), do: public(items)
+  def public(list) when is_list(list), do: elem(public_list(list), 0)
+
+  def public(map) when is_map(map) do
+    Enum.reduce(map, map, fn {key, value}, result ->
+      converted = public(value)
+      if converted === value, do: result, else: Map.put(result, key, converted)
+    end)
+  end
+
   def public(value), do: value
+
+  defp public_list([]), do: {[], false}
+
+  defp public_list([head | tail] = original) do
+    converted = public(head)
+    {converted_tail, tail_changed?} = public_list(tail)
+
+    if converted === head and not tail_changed?,
+      do: {original, false},
+      else: {[converted | converted_tail], true}
+  end
 end

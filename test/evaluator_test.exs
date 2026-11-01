@@ -26,6 +26,14 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("[items.x]", %{"items" => [%{"x" => 1}, %{"x" => 2}]}) == {:ok, [1, 2]}
   end
 
+  test "public values preserve native subtrees and convert internal sentinels" do
+    input = %{"items" => [%{"value" => 1}, %{"value" => 2}]}
+    assert Jexata.run("$", input) == {:ok, input}
+
+    internal = %{"items" => [%Jexata.Runtime.Value.Undefined{}, %{"value" => 2}]}
+    assert Jexata.Runtime.Value.public(internal) == %{"items" => [:undefined, %{"value" => 2}]}
+  end
+
   test "ranges flatten into array constructors and validate endpoints" do
     assert Jexata.run("[0..3]", %{}) == {:ok, [0, 1, 2, 3]}
     assert Jexata.run("[5..2]", %{}) == {:ok, []}
