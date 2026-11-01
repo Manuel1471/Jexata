@@ -17,13 +17,7 @@ defmodule Jexata.Functions.Array do
 
   def call("$zip", args) when args != [] do
     lists = Enum.map(args, &Value.items/1)
-    count = lists |> Enum.map(&length/1) |> Enum.min()
-
-    {:ok,
-     if(count == 0,
-       do: [],
-       else: for(index <- 0..(count - 1), do: Enum.map(lists, &Enum.at(&1, index)))
-     )}
+    {:ok, lists |> Enum.zip() |> Enum.map(&Tuple.to_list/1)}
   end
 
   def call("$sort", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
