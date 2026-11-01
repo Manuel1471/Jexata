@@ -15,7 +15,7 @@ defmodule Jexata.Functions.Object do
       end)
       |> Enum.uniq()
 
-    {:ok, keys}
+    {:ok, Value.sequence(keys)}
   end
 
   def call("$lookup", [value, key]) when is_binary(key), do: {:ok, Semantics.select(value, key)}
@@ -29,13 +29,19 @@ defmodule Jexata.Functions.Object do
   end
 
   def call("$spread", [value]) do
-    items = Value.items(value)
-
-    if Enum.all?(items, &plain_map?/1) do
-      {:ok,
-       Enum.flat_map(items, fn map -> Enum.map(map, fn {key, entry} -> %{key => entry} end) end)}
+    if Value.undefined?(value) or is_struct(value, Jexata.Runtime.Closure) or
+         is_struct(value, Jexata.Runtime.Builtin) or
+         (not is_map(value) and not is_list(value)) do
+      {:ok, value}
     else
-      type_error("$spread")
+      items = Value.items(value)
+
+      if Enum.all?(items, &plain_map?/1) do
+        {:ok,
+         Enum.flat_map(items, fn map -> Enum.map(map, fn {key, entry} -> %{key => entry} end) end)}
+      else
+        type_error("$spread")
+      end
     end
   end
 
