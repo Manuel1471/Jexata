@@ -41,4 +41,10 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$string($string)", %{}) == {:ok, ""}
     assert Jexata.run("$type($sum)", %{}) == {:ok, "function"}
   end
+
+  test "base64 functions encode and decode UTF-8 bytes" do
+    assert Jexata.run("$base64encode('hello:world')", %{}) == {:ok, "aGVsbG86d29ybGQ="}
+    assert Jexata.run("$base64decode('aGVsbG86d29ybGQ=')", %{}) == {:ok, "hello:world"}
+    assert Jexata.run("$base64encode()", %{}) == {:ok, :undefined}
+  end
 end

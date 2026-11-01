@@ -17,11 +17,25 @@ defmodule Jexata.Functions.String do
     "$substringAfter",
     "$replace",
     "$pad",
-    "$match"
+    "$match",
+    "$base64encode",
+    "$base64decode"
   ]
   def supported?(name), do: name in @supported
 
   def call("$string", [value]) when is_binary(value), do: {:ok, value}
+
+  def call("$base64encode", []), do: {:ok, Value.undefined()}
+  def call("$base64decode", []), do: {:ok, Value.undefined()}
+  def call("$base64encode", [value]) when is_binary(value), do: {:ok, Base.encode64(value)}
+
+  def call("$base64decode", [value]) when is_binary(value) do
+    case Base.decode64(value) do
+      {:ok, decoded} when is_binary(decoded) -> {:ok, decoded}
+      :error -> {:error, Error.new("D3140", "Invalid Base64 input")}
+    end
+  end
+
   def call("$string", [value]) when is_number(value), do: {:ok, Semantics.number_string(value)}
   def call("$string", [%Jexata.Runtime.Closure{}]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Builtin{}]), do: {:ok, ""}
