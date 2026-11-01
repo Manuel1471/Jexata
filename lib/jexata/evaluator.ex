@@ -386,11 +386,16 @@ defmodule Jexata.Evaluator do
 
   defp binary("&", a, b), do: {:ok, string(a) <> string(b)}
 
-  defp binary("..", a, b) when is_integer(a) and is_integer(b) and b - a <= 100_000 do
-    {:ok, if(a > b, do: [], else: Enum.to_list(a..b))}
+  defp binary("..", a, b) do
+    cond do
+      not is_integer(a) -> {:error, Error.new("T2003", "Range start must be an integer")}
+      not is_integer(b) -> {:error, Error.new("T2004", "Range end must be an integer")}
+      b - a + 1 > 100_000 -> {:error, Error.new("D2014", "Range exceeds the configured limit")}
+      a > b -> {:ok, Value.undefined()}
+      true -> {:ok, Value.sequence(Enum.to_list(a..b))}
+    end
   end
 
-  defp binary("..", _, _), do: type_error("Range requires integers with at most 100000 values")
   defp binary(op, _, _), do: {:error, Error.new("T1007", "Unsupported operator #{op}")}
 
   defp string(nil), do: "null"
