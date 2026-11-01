@@ -304,6 +304,7 @@ defmodule Jexata.Evaluator do
     {:ok,
      %Closure{
        parameters: parameters,
+       arity: length(parameters),
        body: body,
        environment: context.environment,
        root: context.root,
@@ -941,8 +942,19 @@ defmodule Jexata.Evaluator do
     end)
   end
 
-  defp invoke_callback(%Closure{parameters: parameters} = closure, args, data),
-    do: invoke(closure, Enum.take(args, length(parameters)), data)
+  defp invoke_callback(%Closure{arity: 0} = closure, _args, data), do: invoke(closure, [], data)
+
+  defp invoke_callback(%Closure{arity: 1} = closure, [a | _], data),
+    do: invoke(closure, [a], data)
+
+  defp invoke_callback(%Closure{arity: 2} = closure, [a, b | _], data),
+    do: invoke(closure, [a, b], data)
+
+  defp invoke_callback(%Closure{arity: 3} = closure, [a, b, c | _], data),
+    do: invoke(closure, [a, b, c], data)
+
+  defp invoke_callback(%Closure{arity: arity} = closure, args, data),
+    do: invoke(closure, Enum.take(args, arity), data)
 
   defp invoke_callback(%Builtin{name: "$append"} = builtin, [left, right | _], data),
     do: invoke(builtin, [left, right], data)
@@ -995,6 +1007,8 @@ defmodule Jexata.Evaluator do
       invoke(function, values, data)
     end
   end
+
+  defp with_recursive_bindings(%Closure{references: []} = closure, _environment), do: closure
 
   defp with_recursive_bindings(%Closure{} = closure, environment) do
     bound =
@@ -1118,7 +1132,7 @@ defmodule Jexata.Evaluator do
        ) do
     case Signature.bind(closure.signature, parameters, values, data) do
       {:ok, bound} ->
-        bindings = Enum.zip(parameters, bound) |> Map.new()
+        bindings = bind_parameters(parameters, bound)
         context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
 
         case tail_expression(body, closure.context_value, context) do
@@ -1139,6 +1153,15 @@ defmodule Jexata.Evaluator do
         error
     end
   end
+
+  defp bind_parameters([], []), do: %{}
+  defp bind_parameters([name], [value]), do: %{name => value}
+  defp bind_parameters([a, b], [first, second]), do: %{a => first, b => second}
+
+  defp bind_parameters([a, b, c], [first, second, third]),
+    do: %{a => first, b => second, c => third}
+
+  defp bind_parameters(parameters, values), do: Enum.zip(parameters, values) |> Map.new()
 
   defp tail_expression({:conditional, test, yes, no}, data, context) do
     case eval(test, data, context) do
