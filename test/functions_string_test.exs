@@ -18,6 +18,8 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$split('a,b,c', ',', 2)", %{}) == {:ok, ["a", "b"]}
     assert Jexata.run("$replace('aba', 'a', 'x', 1)", %{}) == {:ok, "xba"}
     assert Jexata.run("$contains('abc', missing)", %{}) == {:ok, :undefined}
+    assert Jexata.run("$split('Hello', '')", %{}) == {:ok, ["H", "e", "l", "l", "o"]}
+    assert Jexata.run("$join('hello')", %{}) == {:ok, "hello"}
   end
 
   test "pad repeats Unicode patterns on either side" do

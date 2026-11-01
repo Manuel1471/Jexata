@@ -150,20 +150,47 @@ defmodule Jexata.Functions.String do
       do: substring(value, start, count)
 
   def call("$split", [value, separator]) when is_binary(value) and is_binary(separator),
-    do: {:ok, String.split(value, separator)}
+    do:
+      {:ok,
+       if(separator == "", do: String.codepoints(value), else: String.split(value, separator))}
+
+  def call("$split", [value, _separator]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
 
   def call("$split", [value, %Regex{} = pattern]) when is_binary(value),
     do: {:ok, Regex.split(pattern, value)}
 
   def call("$split", [value, separator, limit])
-      when is_binary(value) and is_binary(separator) and is_integer(limit) and limit >= 0,
-      do: {:ok, value |> String.split(separator) |> Enum.take(limit)}
+      when is_binary(value) and is_binary(separator) and is_number(limit) and limit >= 0,
+      do:
+        {:ok,
+         value
+         |> then(
+           &if(separator == "", do: String.codepoints(&1), else: String.split(&1, separator))
+         )
+         |> Enum.take(trunc(limit))}
+
+  def call("$split", [_value, _separator, limit]) when is_number(limit) and limit < 0,
+    do: {:error, Error.new("D3020", "$split limit must not be negative")}
 
   def call("$split", [value, %Regex{} = pattern, limit])
       when is_binary(value) and is_integer(limit) and limit >= 0,
       do: {:ok, pattern |> Regex.split(value) |> Enum.take(limit)}
 
   def call("$join", [values]) when is_list(values), do: call("$join", [values, ""])
+  def call("$join", [value]) when is_binary(value), do: {:ok, value}
+  def call("$join", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
+  def call("$join", [value, separator]) when is_binary(value) and is_binary(separator),
+    do: {:ok, value}
+
+  def call("$join", [value, _separator]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
+  def call("$join", [%Value.Sequence{items: values}, separator]),
+    do: call("$join", [values, separator])
+
+  def call("$join", [%Value.Sequence{items: values}]), do: call("$join", [values, ""])
 
   def call("$join", [values, separator])
       when is_list(values) and is_struct(separator, Value.Undefined),
@@ -172,8 +199,13 @@ defmodule Jexata.Functions.String do
   def call("$join", [values, separator]) when is_list(values) and is_binary(separator) do
     if Enum.all?(values, &is_binary/1),
       do: {:ok, Enum.join(values, separator)},
-      else: type_error("$join")
+      else: {:error, Error.new("T0412", "$join requires strings")}
   end
+
+  def call("$join", [values, _separator]) when is_list(values),
+    do: {:error, Error.new("T0410", "$join separator must be a string")}
+
+  def call("$join", [_, _]), do: {:error, Error.new("T0412", "$join requires strings")}
 
   def call(name, _), do: type_error(name)
 
