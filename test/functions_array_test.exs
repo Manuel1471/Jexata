@@ -13,4 +13,9 @@ defmodule Jexata.FunctionsArrayTest do
     assert Jexata.run("$zip(1,2,3)", %{}) == {:ok, [[1, 2, 3]]}
     assert Jexata.run("$zip([1,2], missing)", %{}) == {:ok, []}
   end
+
+  test "shuffle preserves the array members" do
+    assert Jexata.run("$shuffle(missing)", %{}) == {:ok, :undefined}
+    assert Jexata.run("$sort($shuffle([1,2,3]))", %{}) == {:ok, [1, 2, 3]}
+  end
 end

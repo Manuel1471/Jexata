@@ -3,10 +3,14 @@ defmodule Jexata.Functions.Array do
   alias Jexata.Error
   alias Jexata.Runtime.Value
 
-  def supported?(name), do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip"]
+  def supported?(name),
+    do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip", "$shuffle"]
+
   def call("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
   def call("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
   def call("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
+  def call("$shuffle", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  def call("$shuffle", [value]), do: {:ok, value |> Value.items() |> Enum.shuffle()}
 
   def call("$zip", args) when args != [] do
     lists = Enum.map(args, &Value.items/1)
