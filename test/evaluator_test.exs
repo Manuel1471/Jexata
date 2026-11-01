@@ -15,6 +15,7 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("[missing, null, 1]", %{}) == {:ok, [nil, 1]}
     assert Jexata.run("values", %{"values" => [1]}) == {:ok, [1]}
     assert Jexata.run("items.x", %{"items" => [%{"x" => 1}]}) == {:ok, 1}
+    assert Jexata.run("[items.x]", %{"items" => [%{"x" => 1}, %{"x" => 2}]}) == {:ok, [1, 2]}
   end
 
   test "supports filters, constructors and conditions" do

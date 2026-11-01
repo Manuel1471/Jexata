@@ -49,7 +49,11 @@ defmodule Jexata.Evaluator do
 
   defp eval({:array, expressions}, data, root) do
     with {:ok, values} <- eval_list(expressions, data, root) do
-      {:ok, Enum.reject(values, &Value.undefined?/1)}
+      {:ok,
+       Enum.flat_map(values, fn
+         %Value.Sequence{items: items} -> items
+         value -> if Value.undefined?(value), do: [], else: [value]
+       end)}
     end
   end
 
@@ -147,7 +151,8 @@ defmodule Jexata.Evaluator do
         {"-", _} -> {:ok, a - b}
         {"*", _} -> {:ok, a * b}
         {"/", _} -> {:ok, a / b}
-        {"%", _} -> {:ok, rem(trunc(a), trunc(b))}
+        {"%", _} when is_integer(a) and is_integer(b) -> {:ok, rem(a, b)}
+        {"%", _} -> {:ok, :math.fmod(a, b)}
       end
     else
       type_error("Arithmetic operands must be numbers")

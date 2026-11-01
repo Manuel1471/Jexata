@@ -10,6 +10,7 @@ defmodule Jexata.Semantics do
   def boolean(value) when is_float(value) and value == 0.0, do: false
   def boolean(""), do: false
   def boolean(%Sequence{items: items}), do: Enum.any?(items, &boolean/1)
+  def boolean(map) when is_map(map), do: map_size(map) > 0
   def boolean([]), do: false
   def boolean(list) when is_list(list), do: Enum.any?(list, &boolean/1)
   def boolean(_), do: true
