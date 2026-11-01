@@ -5,7 +5,7 @@ defmodule Jexata.FunctionsHigherOrderTest do
     assert Jexata.run("($x := 2; $x + 1)", %{}) == {:ok, 3}
     assert Jexata.run("(function($x){$x + 1})(2)", %{}) == {:ok, 3}
     assert Jexata.run("($x := 10; $f := function($y){$x + $y}; $f(5))", %{}) == {:ok, 15}
-    assert Jexata.run("$x", %{}) == {:error, Jexata.Error.new("T1005", "Undefined variable $x")}
+    assert Jexata.run("$x", %{}) == {:ok, :undefined}
   end
 
   test "map filter and reduce invoke anonymous functions" do

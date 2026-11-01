@@ -26,7 +26,7 @@ defmodule Jexata.Evaluator do
       :error ->
         if Functions.supported?(name),
           do: {:ok, %Builtin{name: name}},
-          else: {:error, Error.new("T1005", "Undefined variable #{name}")}
+          else: {:ok, Value.undefined()}
     end
   end
 
@@ -654,6 +654,22 @@ defmodule Jexata.Evaluator do
     with {:ok, value} <- eval(ast, data, root), do: {:ok, Semantics.boolean(value)}
   end
 
+  defp binary(op, a, b) when op in ["<", "<=", ">", ">="] do
+    cond do
+      not order_operand?(a) or not order_operand?(b) ->
+        {:error, Error.new("T2010", "Ordering requires strings or numbers")}
+
+      Value.undefined?(a) or Value.undefined?(b) ->
+        {:ok, Value.undefined()}
+
+      (is_number(a) and is_number(b)) or (is_binary(a) and is_binary(b)) ->
+        {:ok, Semantics.compare(op, a, b)}
+
+      true ->
+        {:error, Error.new("T2009", "Ordering operands must have the same type")}
+    end
+  end
+
   defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
     do: {:ok, Value.undefined()}
 
@@ -676,14 +692,7 @@ defmodule Jexata.Evaluator do
     ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
   end
 
-  defp binary(op, a, b) when op in ["=", "!=", "<", "<=", ">", ">=", "in"] do
-    if op in ["=", "!=", "in"] or (is_number(a) and is_number(b)) or
-         (is_binary(a) and is_binary(b)) do
-      {:ok, Semantics.compare(op, a, b)}
-    else
-      type_error("Comparison operands must have compatible types")
-    end
-  end
+  defp binary(op, a, b) when op in ["=", "!=", "in"], do: {:ok, Semantics.compare(op, a, b)}
 
   defp binary("&", a, b), do: {:ok, string(a) <> string(b)}
 
@@ -698,6 +707,9 @@ defmodule Jexata.Evaluator do
   end
 
   defp binary(op, _, _), do: {:error, Error.new("T1007", "Unsupported operator #{op}")}
+
+  defp order_operand?(value),
+    do: is_number(value) or is_binary(value) or Value.undefined?(value)
 
   defp string(nil), do: "null"
   defp string(true), do: "true"
