@@ -24,7 +24,7 @@ defmodule Jexata.TokenizerTest do
   end
 
   test "rejects malformed lexical input" do
-    assert {:error, %Jexata.Error{code: "S0101", position: 0}} = Tokenizer.tokenize("!")
+    assert {:error, %Jexata.Error{code: "S0204", position: 0}} = Tokenizer.tokenize("!")
     assert {:error, %Jexata.Error{code: "S0101"}} = Tokenizer.tokenize("'oops")
     assert {:error, %Jexata.Error{code: "S0103"}} = Tokenizer.tokenize("'\\x'")
     assert {:error, %Jexata.Error{code: "S0106"}} = Tokenizer.tokenize("/* oops")

@@ -376,9 +376,16 @@ defmodule Jexata.Evaluator do
           invoke(with_recursive_bindings(function, context.environment), values, data)
 
         :error ->
-          case values do
-            [value, %Closure{} = matcher] when is_binary(value) -> match_callback(matcher, value)
-            _ -> Functions.call("$match", values, data)
+          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+            {:ok, %Partial{function: %Builtin{name: "$match"}, arguments: values}}
+          else
+            case values do
+              [value, %Closure{} = matcher] when is_binary(value) ->
+                match_callback(matcher, value)
+
+              _ ->
+                Functions.call("$match", values, data)
+            end
           end
       end
     end

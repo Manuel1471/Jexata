@@ -26,4 +26,12 @@ defmodule Jexata.ParserTest do
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("[1,")
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("(1")
   end
+
+  test "reports invalid grouped steps and numeric path segments" do
+    assert {:error, %Jexata.Error{code: "S0213"}} = Parser.parse("$.7")
+    assert {:error, %Jexata.Error{code: "S0201"}} = Parser.parse("$.7a")
+    assert {:error, %Jexata.Error{code: "S0210"}} = Parser.parse("[1]{'n':$}{'n':$}")
+    assert {:error, %Jexata.Error{code: "S0209"}} = Parser.parse("[1]{'n':$}[true]")
+    assert {:error, %Jexata.Error{code: "S0207"}} = Parser.parse("1=")
+  end
 end

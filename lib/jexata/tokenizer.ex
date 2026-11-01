@@ -112,10 +112,15 @@ defmodule Jexata.Tokenizer do
         <<character::utf8, _::binary>> = source
         symbol = <<character::utf8>>
 
-        if symbol in @single do
-          emit(source, symbol, :op, symbol, position, acc)
-        else
-          {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
+        cond do
+          symbol in @single ->
+            emit(source, symbol, :op, symbol, position, acc)
+
+          symbol == "!" ->
+            {:error, Error.new("S0204", "Unexpected operator !", position)}
+
+          true ->
+            {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
         end
     end
   end

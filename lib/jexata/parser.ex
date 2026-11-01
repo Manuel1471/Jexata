@@ -34,8 +34,14 @@ defmodule Jexata.Parser do
          :ok <- Limits.tokens(tokens, limits),
          {:ok, ast, rest} <- expression(tokens, 0) do
       case rest do
-        [%Token{type: :eof}] -> {:ok, ast}
-        [token | _] -> {:error, syntax("Unexpected token", token)}
+        [%Token{type: :eof}] ->
+          {:ok, ast}
+
+        [%Token{value: ";", position: position} | _] ->
+          {:error, Error.new("S0201", "Unexpected trailing semicolon", position)}
+
+        [token | _] ->
+          {:error, syntax("Unexpected token", token)}
       end
     end
   end
@@ -98,6 +104,9 @@ defmodule Jexata.Parser do
     end
   end
 
+  defp prefix([%Token{type: :op, position: position} | _]),
+    do: {:error, Error.new("S0211", "Unexpected operator", position)}
+
   defp prefix([token | _]), do: {:error, syntax("Expected an expression", token)}
   defp prefix([]), do: {:error, Error.new("S0201", "Expected an expression")}
 
@@ -111,6 +120,10 @@ defmodule Jexata.Parser do
     with {:ok, args, tail} <- arguments(rest), do: infix({:call, left, args}, tail, min_bp)
   end
 
+  defp infix({:group, _, _}, [%Token{value: "{"} = token | _], min_bp)
+       when min_bp < 100,
+       do: {:error, Error.new("S0210", "Grouping cannot be applied twice", token.position)}
+
   defp infix(left, [%Token{value: "{"} | rest], min_bp) when min_bp < 100 do
     with {:ok, {:object, pairs}, tail} <- collection(rest, "}", :object),
          do: infix({:group, left, pairs}, tail, min_bp)
@@ -122,6 +135,11 @@ defmodule Jexata.Parser do
 
   defp infix(left, [%Token{value: "["}, %Token{value: "]"} | rest], min_bp) when min_bp < 100,
     do: infix({:keep_array, left}, rest, min_bp)
+
+  defp infix({:group, _, _}, [%Token{value: "["} = token | _], min_bp)
+       when min_bp < 100,
+       do:
+         {:error, Error.new("S0209", "Predicate cannot follow a grouped object", token.position)}
 
   defp infix(left, [%Token{value: "["} | rest], min_bp) when min_bp < 100 do
     with {:ok, predicate, tail} <- expression(rest, 0),
@@ -136,6 +154,10 @@ defmodule Jexata.Parser do
       infix({:conditional, left, consequent, alternate}, tail, min_bp)
     end
   end
+
+  defp infix(_left, [%Token{value: "=", position: position}, %Token{type: :eof}], min_bp)
+       when min_bp < 50,
+       do: {:error, Error.new("S0207", "Missing right operand", position)}
 
   defp infix(left, [%Token{type: type, value: op} | rest] = tokens, min_bp)
        when type in [:op, :name] do
@@ -158,6 +180,13 @@ defmodule Jexata.Parser do
   defp infix(left, tokens, _), do: {:ok, left, tokens}
 
   defp path_prefix([%Token{type: :string, value: name} | rest]), do: {:ok, {:name, name}, rest}
+
+  defp path_prefix([%Token{type: :number, position: position}, %Token{type: :name} | _]),
+    do: {:error, Error.new("S0201", "Expected a field name", position)}
+
+  defp path_prefix([%Token{type: :number, position: position} | _]),
+    do: {:error, Error.new("S0213", "Numeric path step is invalid", position)}
+
   defp path_prefix(tokens), do: prefix(tokens)
 
   defp transform_delete([%Token{value: ","} | rest]), do: expression(rest, 0)
@@ -255,7 +284,8 @@ defmodule Jexata.Parser do
     end
   end
 
-  defp lambda_parameters(_, [token | _]), do: {:error, syntax("Expected a parameter", token)}
+  defp lambda_parameters(_, [token | _]),
+    do: {:error, Error.new("S0208", "Function parameter must be a variable", token.position)}
 
   defp lambda_parameters_finish(parameters, tokens) do
     with {:ok, tail} <- expect(tokens, ")"),

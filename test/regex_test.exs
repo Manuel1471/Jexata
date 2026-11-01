@@ -18,5 +18,7 @@ defmodule Jexata.RegexTest do
 
     assert Jexata.run("$match('John Smith', /(\\w+)\\s(\\w+)/).groups", %{}) ==
              {:ok, ["John", "Smith"]}
+
+    assert Jexata.run("$map(['Ada'], $match(?, /A/)).match", %{}) == {:ok, "A"}
   end
 end
