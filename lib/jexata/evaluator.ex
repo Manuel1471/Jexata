@@ -105,7 +105,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:call, {:variable, name}, args}, data, root) do
-    with {:ok, values} <- eval_list(args, data, root), do: Functions.call(name, values)
+    with {:ok, values} <- eval_list(args, data, root), do: Functions.call(name, values, data)
   end
 
   defp eval({:call, _, _}, _, _),
