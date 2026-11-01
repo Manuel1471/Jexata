@@ -67,6 +67,8 @@ defmodule Jexata.Functions.String do
   end
 
   def call("$length", [value]) when is_binary(value), do: {:ok, length(String.codepoints(value))}
+  def call("$length", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  def call("$length", []), do: {:error, Error.new("T0411", "$length requires a string")}
   def call("$uppercase", [value]) when is_binary(value), do: {:ok, String.upcase(value)}
   def call("$lowercase", [value]) when is_binary(value), do: {:ok, String.downcase(value)}
 
