@@ -13,43 +13,57 @@ defmodule Jexata.Runtime.Signature do
     end
   end
 
-  def bind(signature, parameters, values, context) do
-    with {:ok, descriptors} <- parse(signature),
-         descriptors <- expand_repeating(descriptors, length(parameters)),
-         true <- length(descriptors) == length(parameters) do
-      values =
-        if length(values) < length(parameters) do
-          case Enum.find_index(descriptors, &(&1.modifier == ?-)) do
-            nil -> values
-            index -> List.insert_at(values, index, context)
-          end
-        else
-          values
+  def bind({:prepared, descriptors}, parameters, values, context) do
+    arity = length(parameters)
+
+    values =
+      if length(values) < arity do
+        case Enum.find_index(descriptors, &(&1.modifier == ?-)) do
+          nil -> values
+          index -> List.insert_at(values, index, context)
         end
-
-      supplied = values
-      values = Enum.take(values, length(parameters))
-
-      cond do
-        length(values) < required_count(descriptors) ->
-          {:error, Error.new("T1006", "Invalid function arity")}
-
-        Enum.any?(Enum.drop(supplied, length(parameters)), fn value ->
-          not Enum.any?(descriptors, &(&1.modifier == ?+ and matches?(&1.type, value)))
-        end) ->
-          {:error, Error.new("T0410", "Argument does not match function signature")}
-
-        true ->
-          bound =
-            Enum.with_index(descriptors)
-            |> Enum.map(fn {descriptor, index} ->
-              {descriptor, Enum.at(values, index, Value.undefined())}
-            end)
-
-          validate(bound, [])
+      else
+        values
       end
+
+    supplied = values
+    values = Enum.take(values, arity)
+
+    cond do
+      length(values) < required_count(descriptors) ->
+        {:error, Error.new("T1006", "Invalid function arity")}
+
+      Enum.any?(Enum.drop(supplied, arity), fn value ->
+        not Enum.any?(descriptors, &(&1.modifier == ?+ and matches?(&1.type, value)))
+      end) ->
+        {:error, Error.new("T0410", "Argument does not match function signature")}
+
+      true ->
+        bound =
+          Enum.with_index(descriptors)
+          |> Enum.map(fn {descriptor, index} ->
+            {descriptor, Enum.at(values, index, Value.undefined())}
+          end)
+
+        validate(bound, [])
+    end
+  end
+
+  def bind(:invalid, _parameters, _values, _context),
+    do: {:error, Error.new("S0401", "Invalid function signature")}
+
+  def bind(signature, parameters, values, context),
+    do: bind(prepare(signature, length(parameters)), parameters, values, context)
+
+  def prepare(nil, _arity), do: nil
+
+  def prepare(signature, arity) when is_binary(signature) do
+    with {:ok, descriptors} <- parse(signature),
+         descriptors <- expand_repeating(descriptors, arity),
+         true <- length(descriptors) == arity do
+      {:prepared, descriptors}
     else
-      _ -> {:error, Error.new("S0401", "Invalid function signature")}
+      _ -> :invalid
     end
   end
 

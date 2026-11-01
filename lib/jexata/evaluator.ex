@@ -309,7 +309,7 @@ defmodule Jexata.Evaluator do
        environment: context.environment,
        root: context.root,
        context_value: data,
-       signature: signature,
+       signature: Signature.prepare(signature, length(parameters)),
        references:
          body |> referenced_variables() |> expand_closure_references(context.environment)
      }}
