@@ -53,7 +53,7 @@ defmodule Jexata.Evaluator do
   defp eval({:path, {:filter, left, predicate}, {:name, name}}, data, context) do
     with {:ok, source} <- eval(left, data, context) do
       items = Value.items(source)
-      count = length(items)
+      count = if boolean_predicate?(predicate), do: 0, else: length(items)
       keep_array? = is_struct(source, Value.Sequence) and source.keep_array
 
       Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
@@ -184,7 +184,7 @@ defmodule Jexata.Evaluator do
   defp eval({:filter, left, predicate}, data, root) do
     with {:ok, source} <- eval(left, data, root) do
       items = Value.items(source)
-      count = length(items)
+      count = if boolean_predicate?(predicate), do: 0, else: length(items)
 
       items
       |> Enum.with_index()
@@ -1300,6 +1300,14 @@ defmodule Jexata.Evaluator do
   end
 
   defp predicate_matches?(value, _index, _count), do: Semantics.boolean(value)
+
+  defp boolean_predicate?({:literal, value}) when is_boolean(value), do: true
+
+  defp boolean_predicate?({:binary, op, _, _})
+       when op in ["=", "!=", "<", "<=", ">", ">=", "in", "and", "or"],
+       do: true
+
+  defp boolean_predicate?(_), do: false
 
   defp eval_sort_keys(terms, item, context) do
     Enum.reduce_while(terms, {:ok, []}, fn {direction, ast}, {:ok, keys} ->
