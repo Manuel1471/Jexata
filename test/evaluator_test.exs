@@ -27,6 +27,8 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("[0..3]", %{}) == {:ok, [0, 1, 2, 3]}
     assert Jexata.run("[5..2]", %{}) == {:ok, []}
     assert {:error, %Jexata.Error{code: "T2003"}} = Jexata.run("[1.1..5]", %{})
+    assert Jexata.run("[1..10000000] ~> $count()", %{}) == {:ok, 10_000_000}
+    assert {:error, %Jexata.Error{code: "D2014"}} = Jexata.run("[1..10000000]", %{})
   end
 
   test "flattens path sequences while preserving explicit nested arrays" do

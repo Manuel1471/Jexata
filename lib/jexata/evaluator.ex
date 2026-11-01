@@ -253,6 +253,24 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval(
+         {:binary, "~>",
+          {:array, [{:binary, "..", {:literal, start}, {:literal, finish}}]} = left,
+          {:call, {:variable, "$count"}, []}},
+         data,
+         context
+       )
+       when is_integer(start) and is_integer(finish) and finish - start + 1 > 100_000 do
+    if Map.has_key?(context.environment, "$count") do
+      with {:ok, value} <- eval(left, data, context),
+           do: invoke(context.environment["$count"], [value], data)
+    else
+      if finish - start + 1 > 10_000_000,
+        do: {:error, Error.new("D2014", "Range exceeds the configured limit")},
+        else: {:ok, finish - start + 1}
+    end
+  end
+
   defp eval({:binary, "~>", left, {:keep_array, {:call, _, _} = call}}, data, context) do
     with {:ok, value} <- eval({:binary, "~>", left, call}, data, context),
          do: {:ok, Value.sequence(Value.items(value), true)}
