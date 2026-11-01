@@ -170,17 +170,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:array, expressions}, data, root) do
-    with {:ok, values} <- eval_list(expressions, data, root) do
-      {:ok,
-       expressions
-       |> Enum.zip(values)
-       |> Enum.flat_map(fn
-         {{:array, _}, value} -> [value]
-         {_, %Value.Sequence{items: items}} -> items
-         {_, value} when is_list(value) -> value
-         {_, value} -> if Value.undefined?(value), do: [], else: [value]
-       end)}
-    end
+    eval_array_items(expressions, data, root, [])
   end
 
   defp eval({:object, pairs}, data, root) do
@@ -1598,6 +1588,24 @@ defmodule Jexata.Evaluator do
       error -> error
     end
   end
+
+  defp eval_array_items([], _data, _context, acc), do: {:ok, Enum.reverse(acc)}
+
+  defp eval_array_items([expression | rest], data, context, acc) do
+    case eval(expression, data, context) do
+      {:ok, value} ->
+        eval_array_items(rest, data, context, append_array_item(expression, value, acc))
+
+      error ->
+        error
+    end
+  end
+
+  defp append_array_item({:array, _}, value, acc), do: [value | acc]
+  defp append_array_item(_, %Value.Sequence{items: items}, acc), do: Enum.reverse(items, acc)
+  defp append_array_item(_, value, acc) when is_list(value), do: Enum.reverse(value, acc)
+  defp append_array_item(_, %Value.Undefined{}, acc), do: acc
+  defp append_array_item(_, value, acc), do: [value | acc]
 
   defp eval_list([], _data, _root), do: {:ok, []}
 
