@@ -5,7 +5,7 @@ defmodule Jexata do
   The implementation is under development. See `README.md` for supported syntax.
   """
 
-  alias Jexata.{Error, Expression, Parser}
+  alias Jexata.{Error, Evaluator, Expression, Parser}
 
   @type json ::
           nil | boolean() | number() | String.t() | [json()] | %{optional(String.t()) => json()}
@@ -24,8 +24,10 @@ defmodule Jexata do
 
   @doc "Evaluates a compiled expression against JSON-like Elixir data."
   @spec evaluate(Expression.t(), json()) :: {:ok, json()} | {:error, Error.t()}
-  def evaluate(%Expression{}, _data),
-    do: {:error, Error.new("J0002", "Expression evaluation is not implemented yet")}
+  def evaluate(%Expression{ast: ast}, data) do
+    with {:ok, value} <- Evaluator.evaluate(ast, data),
+         do: {:ok, Jexata.Runtime.Value.public(value)}
+  end
 
   def evaluate(_, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
