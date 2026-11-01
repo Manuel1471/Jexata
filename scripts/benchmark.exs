@@ -11,6 +11,9 @@ expressions = [
   {:map_lambda, "$map(orders, function($o){$o.price * 2})", 1_000},
   {:map_string, "$map(orders, function($o){$uppercase($string($o.price))})", 1_000},
   {:reduce_lambda, "$reduce(orders, function($acc,$o){$acc+$o.price}, 0)", 1_000},
+  {:reduce_recursive,
+   "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
+   100},
   {:sort_comparator, "$sort(orders, function($a,$b){$a.price > $b.price})", 100}
 ]
 
