@@ -26,7 +26,7 @@ defmodule Jexata do
     with {:ok, limits} <- Limits.validate(options),
          true <- String.valid?(source),
          :ok <- Limits.source(source, limits) do
-      if String.trim(source) == "" do
+      if String.trim_leading(source) == "" do
         {:error, Error.new("S0201", "Expression is empty", 0)}
       else
         with {:ok, ast} <- Parser.parse(source, limits),
