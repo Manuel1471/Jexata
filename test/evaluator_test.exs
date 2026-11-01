@@ -72,6 +72,23 @@ defmodule Jexata.EvaluatorTest do
     assert Enum.map(tasks, &Task.await/1) == ~w(Ada Bea Cal)
   end
 
+  test "index bindings follow items through paths and sorting" do
+    data = %{
+      "orders" => [
+        %{"products" => [%{"id" => 3}, %{"id" => 1}]},
+        %{"products" => [%{"id" => 2}]}
+      ]
+    }
+
+    assert Jexata.run("orders#$i.products^(id).{'order': $i, 'id': id}", data) ==
+             {:ok,
+              [
+                %{"order" => 0, "id" => 1},
+                %{"order" => 1, "id" => 2},
+                %{"order" => 0, "id" => 3}
+              ]}
+  end
+
   test "chained bindings remain local to their parenthesized block" do
     assert Jexata.run("($a := $b := 5; $a + $b)", %{}) == {:ok, 10}
     assert Jexata.run("($x := 'outer'; ($x := missing); $x)", %{}) == {:ok, "outer"}

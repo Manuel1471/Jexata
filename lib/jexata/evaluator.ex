@@ -54,66 +54,18 @@ defmodule Jexata.Evaluator do
   defp eval({:path, {:variable, "$"} = left, {:object, pairs}}, data, context),
     do: eval({:group, left, pairs}, data, context)
 
-  defp eval({:path, {:filter, left, predicate}, {:name, name}}, data, context) do
-    with {:ok, source} <- eval(left, data, context) do
-      items = Value.items(source)
-      count = if boolean_predicate?(predicate), do: 0, else: length(items)
-      keep_array? = is_struct(source, Value.Sequence) and source.keep_array
-
-      Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
-        case eval(predicate, item, context) do
-          {:ok, result} ->
-            if predicate_matches?(result, index, count) do
-              {:cont, {:ok, [Semantics.select(item, name) | selected], index + 1, kept + 1}}
-            else
-              {:cont, {:ok, selected, index + 1, kept}}
-            end
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, selected, _, kept} ->
-          selected = Enum.reverse(selected)
-
-          values =
-            if kept > 1 or keep_array?,
-              do: Enum.flat_map(selected, &Value.items/1),
-              else: selected
-
-          {:ok, Value.sequence(values, keep_array?)}
-
-        error ->
-          error
-      end
+  defp eval({:path, left, _} = path, data, context) do
+    if indexed_path?(left) do
+      with {:ok, frames} <- eval_indexed(path, data, context),
+           do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+    else
+      eval_regular_path(path, data, context)
     end
   end
 
-  defp eval({:path, left, right}, data, root) do
-    left =
-      if match?({:literal, name} when is_binary(name), left),
-        do: {:name, elem(left, 1)},
-        else: left
-
-    right =
-      if match?({:literal, name} when is_binary(name), right),
-        do: {:name, elem(right, 1)},
-        else: right
-
-    right = contextual_path_call(right)
-
-    with {:ok, source} <- eval(left, data, root) do
-      source
-      |> Value.items()
-      |> eval_each(
-        right,
-        root,
-        is_list(source) or is_struct(source, Value.Sequence),
-        (is_struct(source, Value.Sequence) and source.keep_array) or
-          match?({:keep_array, _}, right)
-      )
-    end
+  defp eval({:index_bind, _, _} = path, data, context) do
+    with {:ok, frames} <- eval_indexed(path, data, context),
+         do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
   end
 
   defp eval({:group, left, pairs}, data, context) do
@@ -152,31 +104,11 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:sort, left, terms}, data, context) do
-    with {:ok, source} <- eval(left, data, context) do
-      source
-      |> Value.items()
-      |> Enum.reduce_while({:ok, []}, fn item, {:ok, acc} ->
-        case eval_sort_keys(terms, item, context) do
-          {:ok, keys} -> {:cont, {:ok, [{item, keys} | acc]}}
-          error -> {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, decorated} ->
-          decorated = Enum.reverse(decorated)
-
-          case validate_sort_keys(decorated) do
-            :ok ->
-              sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
-              {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
-
-            error ->
-              error
-          end
-
-        error ->
-          error
-      end
+    if indexed_path?(left) do
+      with {:ok, frames} <- eval_indexed({:sort, left, terms}, data, context),
+           do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+    else
+      eval_regular_sort(left, terms, data, context)
     end
   end
 
@@ -563,6 +495,173 @@ defmodule Jexata.Evaluator do
       {:ok, value, _} -> {:ok, value}
       error -> error
     end
+  end
+
+  defp eval_regular_path({:path, {:filter, left, predicate}, {:name, name}}, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      items = Value.items(source)
+      count = if boolean_predicate?(predicate), do: 0, else: length(items)
+      keep_array? = is_struct(source, Value.Sequence) and source.keep_array
+
+      Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
+        case eval(predicate, item, context) do
+          {:ok, result} ->
+            if predicate_matches?(result, index, count) do
+              {:cont, {:ok, [Semantics.select(item, name) | selected], index + 1, kept + 1}}
+            else
+              {:cont, {:ok, selected, index + 1, kept}}
+            end
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, selected, _, kept} ->
+          selected = Enum.reverse(selected)
+
+          values =
+            if kept > 1 or keep_array?,
+              do: Enum.flat_map(selected, &Value.items/1),
+              else: selected
+
+          {:ok, Value.sequence(values, keep_array?)}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp eval_regular_path({:path, left, right}, data, root) do
+    left =
+      if match?({:literal, name} when is_binary(name), left),
+        do: {:name, elem(left, 1)},
+        else: left
+
+    right =
+      if match?({:literal, name} when is_binary(name), right),
+        do: {:name, elem(right, 1)},
+        else: right
+
+    right = contextual_path_call(right)
+
+    with {:ok, source} <- eval(left, data, root) do
+      source
+      |> Value.items()
+      |> eval_each(
+        right,
+        root,
+        is_list(source) or is_struct(source, Value.Sequence),
+        (is_struct(source, Value.Sequence) and source.keep_array) or
+          match?({:keep_array, _}, right)
+      )
+    end
+  end
+
+  defp eval_regular_sort(left, terms, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      source
+      |> Value.items()
+      |> Enum.reduce_while({:ok, []}, fn item, {:ok, acc} ->
+        case eval_sort_keys(terms, item, context) do
+          {:ok, keys} -> {:cont, {:ok, [{item, keys} | acc]}}
+          error -> {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, decorated} ->
+          decorated = Enum.reverse(decorated)
+
+          case validate_sort_keys(decorated) do
+            :ok ->
+              sorted = Enum.sort(decorated, fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+              {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
+
+            error ->
+              error
+          end
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp indexed_path?({:index_bind, _, _}), do: true
+  defp indexed_path?({:path, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
+  defp indexed_path?(_), do: false
+
+  defp eval_indexed({:index_bind, left, name}, data, context) do
+    with {:ok, frames} <- eval_indexed(left, data, context) do
+      {:ok,
+       frames
+       |> Enum.flat_map(fn {value, environment} ->
+         value
+         |> Value.items()
+         |> Enum.map(&{&1, environment})
+       end)
+       |> Enum.with_index()
+       |> Enum.map(fn {{item, environment}, index} ->
+         {item, Map.put(environment, name, index)}
+       end)}
+    end
+  end
+
+  defp eval_indexed({:path, left, right}, data, context) do
+    right =
+      if match?({:literal, name} when is_binary(name), right),
+        do: {:name, elem(right, 1)},
+        else: contextual_path_call(right)
+
+    with {:ok, frames} <- eval_indexed(left, data, context) do
+      Enum.reduce_while(frames, {:ok, []}, fn {item, environment}, {:ok, acc} ->
+        case eval(right, item, %{context | environment: environment}) do
+          {:ok, value} ->
+            next = Enum.map(Value.items(value), &{&1, environment})
+            {:cont, {:ok, [next | acc]}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, values} -> {:ok, values |> Enum.reverse() |> List.flatten()}
+        error -> error
+      end
+    end
+  end
+
+  defp eval_indexed({:sort, left, terms}, data, context) do
+    with {:ok, frames} <- eval_indexed(left, data, context) do
+      Enum.reduce_while(frames, {:ok, []}, fn {item, environment} = frame, {:ok, acc} ->
+        case eval_sort_keys(terms, item, %{context | environment: environment}) do
+          {:ok, keys} -> {:cont, {:ok, [{frame, keys} | acc]}}
+          error -> {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, decorated} ->
+          decorated = Enum.reverse(decorated)
+
+          with :ok <- validate_sort_keys(decorated) do
+            {:ok,
+             decorated
+             |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+             |> Enum.map(&elem(&1, 0))}
+          end
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp eval_indexed(ast, data, context) do
+    with {:ok, value} <- eval(ast, data, context),
+         do: {:ok, [{value, context.environment}]}
   end
 
   defp eval_string_call({:call, _, args}, data, context) do

@@ -116,6 +116,10 @@ defmodule Jexata.Parser do
          do: infix({:path, left, right}, tail, min_bp)
   end
 
+  defp infix(left, [%Token{value: "#"}, %Token{type: :variable, value: name} | rest], min_bp)
+       when min_bp < 100 and name not in ["$", "$$"],
+       do: infix({:index_bind, left, name}, rest, min_bp)
+
   defp infix(left, [%Token{value: "("} | rest], min_bp) when min_bp < 100 do
     with {:ok, args, tail} <- arguments(rest), do: infix({:call, left, args}, tail, min_bp)
   end
