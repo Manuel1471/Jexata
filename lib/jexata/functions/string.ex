@@ -163,6 +163,10 @@ defmodule Jexata.Functions.String do
 
   def call("$join", [values]) when is_list(values), do: call("$join", [values, ""])
 
+  def call("$join", [values, separator])
+      when is_list(values) and is_struct(separator, Value.Undefined),
+      do: call("$join", [values, ""])
+
   def call("$join", [values, separator]) when is_list(values) and is_binary(separator) do
     if Enum.all?(values, &is_binary/1),
       do: {:ok, Enum.join(values, separator)},

@@ -1,7 +1,7 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.{Builtin, Closure, Value}
+  alias Jexata.Runtime.{Builtin, Closure, Signature, Value}
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
   def evaluate(ast, :undefined) do
@@ -214,13 +214,14 @@ defmodule Jexata.Evaluator do
   defp eval({:binary, ":=", _, _}, _, _),
     do: {:error, Error.new("S0212", "Binding target must be a variable")}
 
-  defp eval({:lambda, parameters, body}, _, context) do
+  defp eval({:lambda, parameters, signature, body}, _, context) do
     {:ok,
      %Closure{
        parameters: parameters,
        body: body,
        environment: context.environment,
-       root: context.root
+       root: context.root,
+       signature: signature
      }}
   end
 
@@ -367,11 +368,19 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(%Closure{parameters: parameters} = closure, args, data),
     do: invoke(closure, Enum.take(args, length(parameters)), data)
 
-  defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data)
-       when length(parameters) == length(values) do
-    bindings = Enum.zip(parameters, values) |> Map.new()
-    context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
-    eval(body, data, context)
+  defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data) do
+    case Signature.bind(closure.signature, parameters, values, data) do
+      {:ok, bound} ->
+        bindings = Enum.zip(parameters, bound) |> Map.new()
+        context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
+        eval(body, data, context)
+
+      {:undefined} ->
+        {:ok, Value.undefined()}
+
+      error ->
+        error
+    end
   end
 
   defp invoke(%Builtin{name: name}, values, data) when name in ["$map", "$filter", "$reduce"],

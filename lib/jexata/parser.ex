@@ -218,10 +218,11 @@ defmodule Jexata.Parser do
   end
 
   defp lambda_parameters(parameters, [%Token{value: ")"} | rest]) do
-    with {:ok, tail} <- expect(rest, "{"),
+    with {:ok, signature, rest} <- lambda_signature(rest),
+         {:ok, tail} <- expect(rest, "{"),
          {:ok, body, tail} <- expression(tail, 0),
          {:ok, tail} <- expect(tail, "}") do
-      {:ok, {:lambda, Enum.reverse(parameters), body}, tail}
+      {:ok, {:lambda, Enum.reverse(parameters), signature, body}, tail}
     end
   end
 
@@ -239,6 +240,33 @@ defmodule Jexata.Parser do
     with {:ok, tail} <- expect(tokens, ")"),
          do: lambda_parameters(parameters, [%Token{type: :op, value: ")", position: 0} | tail])
   end
+
+  defp lambda_signature([%Token{value: "<"} | rest]), do: signature_tokens(rest, [], 0)
+  defp lambda_signature(rest), do: {:ok, nil, rest}
+
+  defp signature_tokens([%Token{value: ">"} | rest], tokens, 0) do
+    signature = tokens |> Enum.reverse() |> Enum.join()
+
+    case Jexata.Runtime.Signature.parse(signature) do
+      {:ok, _} -> {:ok, signature, rest}
+      {:error, :invalid_union} -> {:error, Error.new("S0402", "Invalid union type in signature")}
+      _ -> {:error, Error.new("S0401", "Invalid function signature")}
+    end
+  end
+
+  defp signature_tokens([%Token{value: "<"} | rest], tokens, depth),
+    do: signature_tokens(rest, ["<" | tokens], depth + 1)
+
+  defp signature_tokens([%Token{value: ">"} | rest], tokens, depth),
+    do: signature_tokens(rest, [">" | tokens], depth - 1)
+
+  defp signature_tokens([%Token{value: value} | rest], tokens, depth) when is_binary(value),
+    do: signature_tokens(rest, [value | tokens], depth)
+
+  defp signature_tokens([token | _], _, _),
+    do: {:error, Error.new("S0401", "Invalid function signature", token.position)}
+
+  defp signature_tokens([], _, _), do: {:error, Error.new("S0401", "Unclosed function signature")}
 
   defp arguments([%Token{value: ")"} | rest]), do: {:ok, [], rest}
 
