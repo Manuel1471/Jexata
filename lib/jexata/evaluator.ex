@@ -980,15 +980,33 @@ defmodule Jexata.Evaluator do
         {initial, items}
       end
 
-    rest
-    |> Enum.with_index(index_offset)
-    |> Enum.reduce_while({:ok, first}, fn {item, index}, {:ok, accumulator} ->
-      case invoke_callback(callback, [accumulator, item, index, items], data) do
-        {:ok, value} -> {:cont, {:ok, value}}
-        error -> {:halt, error}
-      end
-    end)
+    reduce_items(rest, callback, first, index_offset, items, data)
   end
+
+  defp reduce_items([], _callback, accumulator, _index, _items, _data),
+    do: {:ok, accumulator}
+
+  defp reduce_items([item | rest], callback, accumulator, index, items, data) do
+    case invoke_reduce_callback(callback, accumulator, item, index, items, data) do
+      {:ok, value} -> reduce_items(rest, callback, value, index + 1, items, data)
+      error -> error
+    end
+  end
+
+  defp invoke_reduce_callback(%Closure{arity: 0} = callback, _, _, _, _, data),
+    do: invoke(callback, [], data)
+
+  defp invoke_reduce_callback(%Closure{arity: 1} = callback, accumulator, _, _, _, data),
+    do: invoke(callback, [accumulator], data)
+
+  defp invoke_reduce_callback(%Closure{arity: 2} = callback, accumulator, item, _, _, data),
+    do: invoke(callback, [accumulator, item], data)
+
+  defp invoke_reduce_callback(%Closure{arity: 3} = callback, accumulator, item, index, _, data),
+    do: invoke(callback, [accumulator, item, index], data)
+
+  defp invoke_reduce_callback(callback, accumulator, item, index, items, data),
+    do: invoke_callback(callback, [accumulator, item, index, items], data)
 
   defp invoke_callback(%Closure{arity: 0} = closure, _args, data), do: invoke(closure, [], data)
 
