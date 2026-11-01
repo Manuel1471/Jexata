@@ -30,7 +30,7 @@ defmodule Jexata.Parser do
   def parse(source, options \\ []) do
     with {:ok, limits} <- Limits.validate(options),
          :ok <- Limits.source(source, limits),
-         {:ok, tokens} <- Tokenizer.tokenize(source),
+         {:ok, tokens} <- tokenize_with_prior_syntax_error(source),
          :ok <- Limits.tokens(tokens, limits),
          {:ok, ast, rest} <- expression(tokens, 0) do
       case rest do
@@ -44,6 +44,40 @@ defmodule Jexata.Parser do
           {:error, syntax("Unexpected token", token)}
       end
     end
+  end
+
+  defp tokenize_with_prior_syntax_error(source) do
+    case Tokenizer.tokenize(source) do
+      {:error, %Error{code: "S0101"} = lexical_error} ->
+        source
+        |> last_quote_offset()
+        |> case do
+          nil ->
+            {:error, lexical_error}
+
+          offset ->
+            prefix = binary_part(source, 0, offset)
+
+            case parse(prefix) do
+              {:error, %Error{code: "S0202", position: position} = syntax_error}
+              when position < offset ->
+                {:error, syntax_error}
+
+              _ ->
+                {:error, lexical_error}
+            end
+        end
+
+      result ->
+        result
+    end
+  end
+
+  defp last_quote_offset(source) do
+    ["\"", "'", "`"]
+    |> Enum.flat_map(&:binary.matches(source, &1))
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.max(fn -> nil end)
   end
 
   defp expression(tokens, min_bp) do
