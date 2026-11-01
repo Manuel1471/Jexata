@@ -2,9 +2,8 @@ defmodule Jexata.Tokenizer do
   @moduledoc false
   alias Jexata.{Error, Token}
 
-  @number ~r/\A(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
   @name ~r/\A[\p{L}_][\p{L}\p{N}_]*/u
-  @operators ["~>", ":=", "!=", "<=", ">=", "**", "..", "??", "?:"]
+  @unicode_space ~r/\A\s/u
   @single [
     ".",
     "[",
@@ -38,11 +37,14 @@ defmodule Jexata.Tokenizer do
   defp scan(<<>>, position, acc), do: {:ok, Enum.reverse([token(:eof, nil, position) | acc])}
 
   defp scan(source, position, acc) do
-    cond do
-      String.match?(source, ~r/\A\s/u) ->
-        [space] = Regex.run(~r/\A\s/u, source)
-        consume(source, space, position, acc)
+    case whitespace_length(source) do
+      0 -> scan_non_space(source, position, acc)
+      size -> consume(source, binary_part(source, 0, size), position, acc)
+    end
+  end
 
+  defp scan_non_space(source, position, acc) do
+    cond do
       String.starts_with?(source, "/*") ->
         case :binary.match(source, "*/") do
           {offset, 2} -> consume(source, binary_part(source, 0, offset + 2), position, acc)
@@ -66,7 +68,7 @@ defmodule Jexata.Tokenizer do
   end
 
   defp scan_token(source, position, acc) do
-    multi = Enum.find(@operators, &String.starts_with?(source, &1))
+    multi = operator(source)
 
     cond do
       multi ->
@@ -81,8 +83,8 @@ defmodule Jexata.Tokenizer do
       String.starts_with?(source, "/") and regex_position?(acc) ->
         scan_regex(source, position, acc)
 
-      Regex.match?(@number, source) ->
-        [lexeme] = Regex.run(@number, source)
+      (number_size = number_length(source)) > 0 ->
+        lexeme = binary_part(source, 0, number_size)
 
         if String.contains?(lexeme, [".", "e", "E"]) do
           case Float.parse(lexeme) do
@@ -93,8 +95,8 @@ defmodule Jexata.Tokenizer do
           emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
         end
 
-      Regex.match?(@name, source) ->
-        [name] = Regex.run(@name, source)
+      (name_size = name_length(source)) > 0 ->
+        name = binary_part(source, 0, name_size)
 
         {type, value} =
           case name do
@@ -124,11 +126,7 @@ defmodule Jexata.Tokenizer do
   defp scan_variable(source, position, acc) do
     rest = binary_part(source, 1, byte_size(source) - 1)
 
-    name =
-      case Regex.run(@name, rest) do
-        [value] -> value
-        _ -> ""
-      end
+    name = binary_part(rest, 0, name_length(rest))
 
     lexeme = "$" <> name
     emit(source, lexeme, :variable, lexeme, position, acc)
@@ -187,6 +185,102 @@ defmodule Jexata.Tokenizer do
 
   defp regex_body(<<character, tail::binary>>, acc, in_class),
     do: regex_body(tail, [<<character>> | acc], in_class)
+
+  # --- Escaneo sin regex para el caso ASCII (el caso frecuente) -------------
+  # Para bytes >= 0x80 se delega en las mismas regex Unicode de antes, de modo
+  # que el comportamiento no cambia.
+
+  defp operator(<<"~>", _::binary>>), do: "~>"
+  defp operator(<<":=", _::binary>>), do: ":="
+  defp operator(<<"!=", _::binary>>), do: "!="
+  defp operator(<<"<=", _::binary>>), do: "<="
+  defp operator(<<">=", _::binary>>), do: ">="
+  defp operator(<<"**", _::binary>>), do: "**"
+  defp operator(<<"..", _::binary>>), do: ".."
+  defp operator(<<"??", _::binary>>), do: "??"
+  defp operator(<<"?:", _::binary>>), do: "?:"
+  defp operator(_), do: nil
+
+  # Longitud en bytes del espacio en blanco inicial (un solo carácter) o 0.
+  defp whitespace_length(<<c, _::binary>>) when c in [?\s, ?\t, ?\n, ?\r, ?\v, ?\f], do: 1
+
+  defp whitespace_length(<<c, _::binary>> = source) when c >= 0x80 do
+    case Regex.run(@unicode_space, source) do
+      [space] -> byte_size(space)
+      _ -> 0
+    end
+  end
+
+  defp whitespace_length(_), do: 0
+
+  # Equivale a ~r/\A(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
+  defp number_length(<<?0, rest::binary>>), do: 1 + fraction_exponent_length(rest)
+
+  defp number_length(<<d, _::binary>> = source) when d in ?1..?9 do
+    int = digit_run(source)
+    rest = binary_part(source, int, byte_size(source) - int)
+    int + fraction_exponent_length(rest)
+  end
+
+  defp number_length(_), do: 0
+
+  defp fraction_exponent_length(rest) do
+    fraction = fraction_length(rest)
+    after_fraction = binary_part(rest, fraction, byte_size(rest) - fraction)
+    fraction + exponent_length(after_fraction)
+  end
+
+  defp fraction_length(<<?., tail::binary>>) do
+    case digit_run(tail) do
+      0 -> 0
+      n -> 1 + n
+    end
+  end
+
+  defp fraction_length(_), do: 0
+
+  defp exponent_length(<<e, rest::binary>>) when e in [?e, ?E] do
+    {sign, digits} =
+      case rest do
+        <<s, tail::binary>> when s in [?+, ?-] -> {1, tail}
+        _ -> {0, rest}
+      end
+
+    case digit_run(digits) do
+      0 -> 0
+      n -> 1 + sign + n
+    end
+  end
+
+  defp exponent_length(_), do: 0
+
+  defp digit_run(binary, count \\ 0)
+  defp digit_run(<<d, rest::binary>>, count) when d in ?0..?9, do: digit_run(rest, count + 1)
+  defp digit_run(_, count), do: count
+
+  # Equivale a ~r/\A[\p{L}_][\p{L}\p{N}_]*/u
+  defp name_length(<<d, _::binary>>) when d in ?0..?9, do: 0
+
+  defp name_length(source) do
+    case ascii_name_run(source, 0) do
+      {:done, size} -> size
+      :non_ascii -> unicode_name_length(source)
+    end
+  end
+
+  defp ascii_name_run(<<c, rest::binary>>, size)
+       when c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_,
+       do: ascii_name_run(rest, size + 1)
+
+  defp ascii_name_run(<<c, _::binary>>, _size) when c >= 0x80, do: :non_ascii
+  defp ascii_name_run(_, size), do: {:done, size}
+
+  defp unicode_name_length(source) do
+    case Regex.run(@name, source) do
+      [name] -> byte_size(name)
+      _ -> 0
+    end
+  end
 
   defp emit(source, lexeme, type, value, position, acc) do
     tail = binary_part(source, byte_size(lexeme), byte_size(source) - byte_size(lexeme))
