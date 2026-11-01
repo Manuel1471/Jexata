@@ -366,12 +366,15 @@ defmodule Jexata.Tokenizer do
                 quoted(rest, quote, position + 12, [<<codepoint::utf8>> | acc])
 
               _ ->
-                {:error, Error.new("S0104", "Invalid Unicode surrogate pair", position)}
+                quoted(tail, quote, position + 6, [surrogate_bytes(high) | acc])
             end
 
           _ ->
-            {:error, Error.new("S0104", "Invalid Unicode surrogate pair", position)}
+            quoted(tail, quote, position + 6, [surrogate_bytes(high) | acc])
         end
+
+      {low, ""} when low in 0xDC00..0xDFFF ->
+        quoted(tail, quote, position + 6, [surrogate_bytes(low) | acc])
 
       {codepoint, ""} when codepoint not in 0xD800..0xDFFF and codepoint <= 0x10FFFF ->
         quoted(tail, quote, position + 6, [<<codepoint::utf8>> | acc])
@@ -383,4 +386,7 @@ defmodule Jexata.Tokenizer do
 
   defp unicode_escape(_, _, position, _),
     do: {:error, Error.new("S0104", "Invalid Unicode escape", position)}
+
+  defp surrogate_bytes(value),
+    do: <<0xE0 + div(value, 4096), 0x80 + rem(div(value, 64), 64), 0x80 + rem(value, 64)>>
 end

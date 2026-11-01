@@ -11,11 +11,17 @@ defmodule Jexata.Functions.URL do
   def call(name, [value]) when is_struct(value, Value.Undefined) and name in @names,
     do: {:ok, Value.undefined()}
 
-  def call("$encodeUrl", [value]) when is_binary(value),
-    do: {:ok, URI.encode(value, &uri_character?/1)}
+  def call("$encodeUrl", [value]) when is_binary(value) do
+    if String.valid?(value),
+      do: {:ok, URI.encode(value, &uri_character?/1)},
+      else: {:error, Error.new("D3140", "Invalid Unicode string")}
+  end
 
-  def call("$encodeUrlComponent", [value]) when is_binary(value),
-    do: {:ok, URI.encode(value, &component_character?/1)}
+  def call("$encodeUrlComponent", [value]) when is_binary(value) do
+    if String.valid?(value),
+      do: {:ok, URI.encode(value, &component_character?/1)},
+      else: {:error, Error.new("D3140", "Invalid Unicode string")}
+  end
 
   def call(name, [value])
       when name in ["$decodeUrl", "$decodeUrlComponent"] and is_binary(value) do

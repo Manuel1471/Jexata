@@ -25,11 +25,26 @@ normalize = fn recursive, value ->
 end
 
 read_json = fn path ->
+  source = File.read!(path)
+
   try do
-    path |> File.read!() |> :json.decode() |> then(&normalize.(normalize, &1))
+    source |> :json.decode() |> then(&normalize.(normalize, &1))
   rescue
-    # Some official fixtures contain unpaired UTF-16 surrogates, which OTP JSON rejects.
-    _ -> :unreadable
+    _ ->
+      # OTP rejects lone UTF-16 surrogates. Keep their escape text inside the
+      # JSONata source so the tokenizer can model the invalid string value.
+      sanitized =
+        Regex.replace(
+          ~r/\\uD[89AB][0-9A-F]{2}(?!\\uD[C-F][0-9A-F]{2})|\\uD[C-F][0-9A-F]{2}/i,
+          source,
+          fn escape -> "\\" <> escape end
+        )
+
+      try do
+        sanitized |> :json.decode() |> then(&normalize.(normalize, &1))
+      rescue
+        _ -> :unreadable
+      end
   end
 end
 
