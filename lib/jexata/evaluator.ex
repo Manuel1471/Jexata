@@ -47,6 +47,9 @@ defmodule Jexata.Evaluator do
   defp eval(:wildcard, data, _root), do: {:ok, Value.sequence(Value.items(data))}
   defp eval(:descendants, data, _context), do: {:ok, Value.sequence(descendants(data))}
 
+  defp eval({:path, {:variable, "$"} = left, {:object, pairs}}, data, context),
+    do: eval({:group, left, pairs}, data, context)
+
   defp eval({:path, left, right}, data, root) do
     left =
       if match?({:literal, name} when is_binary(name), left),
@@ -81,8 +84,16 @@ defmodule Jexata.Evaluator do
             Enum.reduce_while(groups, {:ok, result}, fn {key, items}, {:ok, acc} ->
               case eval(value_ast, Enum.reverse(items), context) do
                 {:ok, value} ->
-                  {:cont,
-                   {:ok, if(Value.undefined?(value), do: acc, else: Map.put(acc, key, value))}}
+                  cond do
+                    Value.undefined?(value) ->
+                      {:cont, {:ok, acc}}
+
+                    Map.has_key?(acc, key) ->
+                      {:halt, {:error, Error.new("D1009", "Duplicate object key")}}
+
+                    true ->
+                      {:cont, {:ok, Map.put(acc, key, value)}}
+                  end
 
                 error ->
                   {:halt, error}
@@ -202,6 +213,11 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:binary, "~>", left, {:keep_array, {:call, _, _} = call}}, data, context) do
+    with {:ok, value} <- eval({:binary, "~>", left, call}, data, context),
+         do: {:ok, Value.sequence(Value.items(value), true)}
+  end
+
   defp eval({:binary, "~>", left, {:call, {:variable, name}, args}}, data, context) do
     with {:ok, value} <- eval(left, data, context),
          {:ok, values} <- eval_list(args, data, context) do
@@ -281,13 +297,14 @@ defmodule Jexata.Evaluator do
   defp eval({:binary, ":=", _, _}, _, _),
     do: {:error, Error.new("S0212", "Binding target must be a variable")}
 
-  defp eval({:lambda, parameters, signature, body}, _, context) do
+  defp eval({:lambda, parameters, signature, body}, data, context) do
     {:ok,
      %Closure{
        parameters: parameters,
        body: body,
        environment: context.environment,
        root: context.root,
+       context_value: data,
        signature: signature
      }}
   end
@@ -352,6 +369,33 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:call, {:variable, "$match"}, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context) do
+      case Map.fetch(context.environment, "$match") do
+        {:ok, function} ->
+          invoke(with_recursive_bindings(function, context.environment), values, data)
+
+        :error ->
+          case values do
+            [value, %Closure{} = matcher] when is_binary(value) -> match_callback(matcher, value)
+            _ -> Functions.call("$match", values, data)
+          end
+      end
+    end
+  end
+
+  defp eval({:call, {:variable, "$split"}, args}, data, context) do
+    with {:ok, values} <- eval_list(args, data, context) do
+      case values do
+        [value, matcher] when is_binary(value) and is_struct(matcher, Builtin) ->
+          {:error, Error.new("T1010", "$split matcher did not return a match object")}
+
+        _ ->
+          Functions.call("$split", values, data)
+      end
+    end
+  end
+
   defp eval({:call, {:variable, name}, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
@@ -386,7 +430,12 @@ defmodule Jexata.Evaluator do
           {:error, Error.new("T1008", "Partial application requires a function")}
         else
           if Value.undefined?(function) and match?({:name, _}, target),
-            do: {:error, Error.new("T1005", "Unknown function")},
+            do:
+              {:error,
+               Error.new(
+                 if(Functions.supported?("$" <> elem(target, 1)), do: "T1005", else: "T1006"),
+                 "Unknown function"
+               )},
             else:
               invoke_or_partial(
                 with_recursive_bindings(function, context.environment),
@@ -589,6 +638,16 @@ defmodule Jexata.Evaluator do
   defp higher_order(name, _, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 
   defp reduce_items(items, callback, initial, data) do
+    if is_struct(callback, Closure) and length(callback.parameters) < 2 do
+      {:error, Error.new("D3050", "$reduce callback requires at least two parameters")}
+    else
+      do_reduce_items(items, callback, initial, data)
+    end
+  end
+
+  defp do_reduce_items(items, callback, initial, data) do
+    index_offset = if Value.undefined?(initial), do: 1, else: 0
+
     {first, rest} =
       if Value.undefined?(initial) do
         case items do
@@ -600,7 +659,7 @@ defmodule Jexata.Evaluator do
       end
 
     rest
-    |> Enum.with_index()
+    |> Enum.with_index(index_offset)
     |> Enum.reduce_while({:ok, first}, fn {item, index}, {:ok, accumulator} ->
       case invoke_callback(callback, [accumulator, item, index, items], data) do
         {:ok, value} -> {:cont, {:ok, value}}
@@ -611,6 +670,9 @@ defmodule Jexata.Evaluator do
 
   defp invoke_callback(%Closure{parameters: parameters} = closure, args, data),
     do: invoke(closure, Enum.take(args, length(parameters)), data)
+
+  defp invoke_callback(%Builtin{name: "$append"} = builtin, [left, right | _], data),
+    do: invoke(builtin, [left, right], data)
 
   defp invoke_callback(%Builtin{} = builtin, [value | _], data),
     do: invoke(builtin, [value], data)
@@ -661,7 +723,7 @@ defmodule Jexata.Evaluator do
 
   defp with_recursive_bindings(function, _environment), do: function
 
-  defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data) do
+  defp invoke(%Closure{} = closure, values, data) do
     depth = Process.get({__MODULE__, :closure_depth}, 0)
 
     if depth >= 1024 do
@@ -670,18 +732,7 @@ defmodule Jexata.Evaluator do
       Process.put({__MODULE__, :closure_depth}, depth + 1)
 
       try do
-        case Signature.bind(closure.signature, parameters, values, data) do
-          {:ok, bound} ->
-            bindings = Enum.zip(parameters, bound) |> Map.new()
-            context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
-            eval(body, data, context)
-
-          {:undefined} ->
-            {:ok, Value.undefined()}
-
-          error ->
-            error
-        end
+        invoke_closure_loop(closure, values, data, 0)
       after
         if depth == 0,
           do: Process.delete({__MODULE__, :closure_depth}),
@@ -733,6 +784,101 @@ defmodule Jexata.Evaluator do
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
+
+  defp invoke_closure_loop(_closure, _values, _data, steps) when steps >= 100_000,
+    do: {:error, Error.new("U1001", "Function iteration limit exceeded")}
+
+  defp invoke_closure_loop(
+         %Closure{parameters: parameters, body: body} = closure,
+         values,
+         data,
+         steps
+       ) do
+    case Signature.bind(closure.signature, parameters, values, data) do
+      {:ok, bound} ->
+        bindings = Enum.zip(parameters, bound) |> Map.new()
+        context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
+
+        case tail_expression(body, closure.context_value, context) do
+          {:tail, %Closure{} = next, arguments} ->
+            invoke_closure_loop(next, arguments, next.context_value, steps + 1)
+
+          {:eval, ast} ->
+            eval(ast, closure.context_value, context)
+
+          error ->
+            error
+        end
+
+      {:undefined} ->
+        {:ok, Value.undefined()}
+
+      error ->
+        error
+    end
+  end
+
+  defp tail_expression({:conditional, test, yes, no}, data, context) do
+    case eval(test, data, context) do
+      {:ok, value} ->
+        tail_expression(if(Semantics.boolean(value), do: yes, else: no), data, context)
+
+      error ->
+        error
+    end
+  end
+
+  defp tail_expression({:call, {:variable, name}, args} = ast, data, context) do
+    case Map.get(context.environment, name) do
+      %Closure{} = closure ->
+        case eval_list(args, data, context) do
+          {:ok, values} -> {:tail, with_recursive_bindings(closure, context.environment), values}
+          error -> error
+        end
+
+      _ ->
+        {:eval, ast}
+    end
+  end
+
+  defp tail_expression(ast, _data, _context), do: {:eval, ast}
+
+  defp match_callback(matcher, value) do
+    matcher = with_recursive_bindings(matcher, %{"$match" => matcher})
+
+    with {:ok, first} <- invoke(matcher, [value], value),
+         do: match_callback_results(first, [], 0)
+  end
+
+  defp match_callback_results(_result, _acc, count) when count >= 100_000,
+    do: {:error, Error.new("U1001", "Matcher iteration limit exceeded")}
+
+  defp match_callback_results(result, acc, count) do
+    cond do
+      Value.undefined?(result) ->
+        {:ok, Value.sequence(Enum.reverse(acc))}
+
+      is_map(result) and is_binary(result["match"]) and is_number(result["start"]) and
+          is_list(result["groups"]) ->
+        entry = %{
+          "match" => result["match"],
+          "index" => result["start"],
+          "groups" => result["groups"]
+        }
+
+        case result["next"] do
+          %Closure{} = next ->
+            with {:ok, subsequent} <- invoke(next, [], next.context_value),
+                 do: match_callback_results(subsequent, [entry | acc], count + 1)
+
+          _ ->
+            {:ok, Value.sequence(Enum.reverse([entry | acc]))}
+        end
+
+      true ->
+        {:error, Error.new("T1010", "Matcher did not return a match object")}
+    end
+  end
 
   defp callable?(value),
     do:
@@ -792,6 +938,9 @@ defmodule Jexata.Evaluator do
   end
 
   defp selected_paths({:variable, "$"}, refs, _context), do: refs
+
+  defp selected_paths({:block, [ast]}, refs, context),
+    do: selected_paths(ast, refs, context)
 
   defp selected_paths({:path, left, right}, refs, context),
     do: selected_paths(right, selected_paths(left, refs, context), context)
@@ -935,16 +1084,22 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp eval_each(items, ast, root, flatten_arrays?, keep_array?) do
+  defp eval_each(items, {:name, name}, _root, flatten_arrays?, keep_array?) do
+    values =
+      Enum.reduce(items, [], fn item, acc ->
+        selected = Semantics.select(item, name)
+        selected_values = if flatten_arrays?, do: Value.items(selected), else: [selected]
+        Enum.reduce(selected_values, acc, fn value, acc -> [value | acc] end)
+      end)
+
+    {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
+  end
+
+  defp eval_each(items, ast, root, _flatten_arrays?, keep_array?) do
     Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
       case eval(ast, item, root) do
         {:ok, value} ->
-          values =
-            if flatten_arrays? and match?({:name, _}, ast),
-              do: Value.items(value),
-              else: [value]
-
-          {:cont, {:ok, Enum.reverse(values) ++ acc}}
+          {:cont, {:ok, [value | acc]}}
 
         error ->
           {:halt, error}
@@ -1045,6 +1200,8 @@ defmodule Jexata.Evaluator do
         {:ok, Value.sequence(Enum.to_list(a..b))}
     end
   end
+
+  defp binary("in", a, b), do: {:ok, Semantics.compare("in", a, b)}
 
   defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
     do: {:ok, Value.undefined()}

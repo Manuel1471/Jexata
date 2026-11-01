@@ -20,8 +20,12 @@ defmodule Jexata.Semantics do
   def boolean(list) when is_list(list), do: Enum.any?(list, &boolean/1)
   def boolean(_), do: true
 
-  def select(value, name) when is_map(value) and not is_struct(value),
-    do: Map.get(value, name, Value.undefined())
+  def select(value, name) when is_map(value) and not is_struct(value) do
+    case Map.fetch(value, name) do
+      {:ok, selected} -> selected
+      :error -> Value.undefined()
+    end
+  end
 
   def select(value, name) when is_list(value) do
     value

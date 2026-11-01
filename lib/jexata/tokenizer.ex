@@ -103,9 +103,6 @@ defmodule Jexata.Tokenizer do
             "true" -> {:literal, true}
             "false" -> {:literal, false}
             "null" -> {:literal, nil}
-            "and" -> {:op, "and"}
-            "or" -> {:op, "or"}
-            "in" -> {:op, "in"}
             _ -> {:name, name}
           end
 

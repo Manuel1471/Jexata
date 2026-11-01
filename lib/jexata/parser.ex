@@ -137,7 +137,8 @@ defmodule Jexata.Parser do
     end
   end
 
-  defp infix(left, [%Token{type: :op, value: op} | rest] = tokens, min_bp) do
+  defp infix(left, [%Token{type: type, value: op} | rest] = tokens, min_bp)
+       when type in [:op, :name] do
     case Map.get(@precedence, op) do
       nil ->
         {:ok, left, tokens}
