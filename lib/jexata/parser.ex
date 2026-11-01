@@ -50,8 +50,9 @@ defmodule Jexata.Parser do
        when type in [:literal, :number, :string],
        do: {:ok, {:literal, value}, rest}
 
-  defp prefix([%Token{type: :name, value: "function"}, %Token{value: "("} | rest]),
-    do: lambda_parameters([], rest)
+  defp prefix([%Token{type: :name, value: name}, %Token{value: "("} | rest])
+       when name in ["function", "λ"],
+       do: lambda_parameters([], rest)
 
   defp prefix([%Token{type: :name, value: name} | rest]), do: {:ok, {:name, name}, rest}
   defp prefix([%Token{type: :variable, value: name} | rest]), do: {:ok, {:variable, name}, rest}
