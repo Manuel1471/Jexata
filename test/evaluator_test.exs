@@ -7,6 +7,9 @@ defmodule Jexata.EvaluatorTest do
 
     assert Jexata.run("orders.price", %{"orders" => [%{"price" => 2}, %{"price" => 3}]}) ==
              {:ok, [2, 3]}
+
+    assert Jexata.run("\"customer\".\"name\"", %{"customer" => %{"name" => "Ada"}}) ==
+             {:ok, "Ada"}
   end
 
   test "preserves null, missing, arrays and sequence cardinality" do

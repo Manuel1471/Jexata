@@ -46,6 +46,16 @@ defmodule Jexata.Evaluator do
   defp eval(:descendants, data, _context), do: {:ok, Value.sequence(descendants(data))}
 
   defp eval({:path, left, right}, data, root) do
+    left =
+      if match?({:literal, name} when is_binary(name), left),
+        do: {:name, elem(left, 1)},
+        else: left
+
+    right =
+      if match?({:literal, name} when is_binary(name), right),
+        do: {:name, elem(right, 1)},
+        else: right
+
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
@@ -574,8 +584,8 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(%Builtin{} = builtin, [value | _], data),
     do: invoke(builtin, [value], data)
 
-  defp invoke_callback(%Partial{} = partial, args, data),
-    do: invoke(partial, args, data)
+  defp invoke_callback(%Partial{} = partial, [value | _], data),
+    do: invoke(partial, [value], data)
 
   defp invoke_callback(%Composition{} = composition, [value | _], data),
     do: invoke(composition, [value], data)

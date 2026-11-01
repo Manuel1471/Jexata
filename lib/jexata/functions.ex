@@ -34,6 +34,8 @@ defmodule Jexata.Functions do
              "$sqrt",
              "$boolean",
              "$not",
+             "$uppercase",
+             "$lowercase",
              "$trim",
              "$string"
            ],

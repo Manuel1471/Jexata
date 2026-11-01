@@ -233,7 +233,7 @@ defmodule Jexata.Tokenizer do
 
         if value,
           do: quoted(tail, quote, position + 2, [value | acc]),
-          else: {:error, Error.new("S0104", "Invalid escape", position)}
+          else: {:error, Error.new("S0103", "Invalid escape", position)}
     end
   end
 
