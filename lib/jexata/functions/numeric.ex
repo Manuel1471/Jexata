@@ -46,28 +46,12 @@ defmodule Jexata.Functions.Numeric do
   def call("$number", [false]), do: {:ok, 0}
 
   def call("$number", [value]) when is_binary(value) do
-    cond do
-      Regex.match?(~r/\A0[xX][0-9a-fA-F]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(16)}
+    parsed = Integer.parse(value)
 
-      Regex.match?(~r/\A0[oO][0-7]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(8)}
-
-      Regex.match?(~r/\A0[bB][01]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(2)}
-
-      Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
-        if String.contains?(value, [".", "e", "E"]) do
-          case Float.parse(value) do
-            {number, ""} -> {:ok, number}
-            _ -> invalid_number()
-          end
-        else
-          {:ok, String.to_integer(value)}
-        end
-
-      true ->
-        invalid_number()
+    if match?({_, ""}, parsed) and not String.starts_with?(value, "+") do
+      {:ok, elem(parsed, 0)}
+    else
+      number_from_string(value)
     end
   end
 
@@ -117,6 +101,32 @@ defmodule Jexata.Functions.Numeric do
       do: {:ok, round_decimal(value, precision)}
 
   def call(name, _), do: type_error(name)
+
+  defp number_from_string(value) do
+    cond do
+      Regex.match?(~r/\A0[xX][0-9a-fA-F]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(16)}
+
+      Regex.match?(~r/\A0[oO][0-7]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(8)}
+
+      Regex.match?(~r/\A0[bB][01]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(2)}
+
+      Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
+        if String.contains?(value, [".", "e", "E"]) do
+          case Float.parse(value) do
+            {number, ""} -> {:ok, number}
+            _ -> invalid_number()
+          end
+        else
+          {:ok, String.to_integer(value)}
+        end
+
+      true ->
+        invalid_number()
+    end
+  end
 
   defp aggregate("$sum", values), do: {:ok, Enum.sum(values)}
   defp aggregate("$max", []), do: {:ok, Value.undefined()}

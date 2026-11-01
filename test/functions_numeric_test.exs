@@ -31,6 +31,7 @@ defmodule Jexata.FunctionsNumericTest do
     assert Jexata.run("$formatBase(10, 2)", %{}) == {:ok, "1010"}
     assert {:error, %Jexata.Error{code: "D3060"}} = Jexata.run("$sqrt(-1)", %{})
     assert Jexata.run("$number('0123')", %{}) == {:ok, 123}
+    assert Jexata.run("$number('-007')", %{}) == {:ok, -7}
     assert {:error, %Jexata.Error{code: "D3030"}} = Jexata.run("$number('abc')", %{})
   end
 end
