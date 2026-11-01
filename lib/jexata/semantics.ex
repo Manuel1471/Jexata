@@ -27,15 +27,15 @@ defmodule Jexata.Semantics do
     end
   end
 
-  def select(value, name) when is_list(value) do
-    value
-    |> Enum.map(&select(&1, name))
-    |> Enum.flat_map(&Value.items/1)
-    |> Value.sequence()
-  end
+  def select(value, name) when is_list(value), do: select_list(value, name, [])
 
   def select(%Sequence{items: values}, name), do: select(values, name)
   def select(_, _), do: Value.undefined()
+
+  defp select_list([], _name, acc), do: acc |> Enum.reverse() |> Value.sequence()
+
+  defp select_list([item | rest], name, acc),
+    do: select_list(rest, name, Enum.reverse(Value.items(select(item, name)), acc))
 
   def compare("=", left, right), do: left == right
   def compare("!=", left, right), do: left != right
