@@ -23,6 +23,8 @@ defmodule Jexata.Functions do
          else: args
 
     cond do
+      name == "$error" -> error_function(args)
+      name == "$assert" -> assert_function(args)
       name == "$type" -> type_of(args)
       Numeric.supported?(name) -> Numeric.call(name, args)
       Boolean.supported?(name) -> Boolean.call(name, args)
@@ -50,4 +52,25 @@ defmodule Jexata.Functions do
   end
 
   defp type_of(_), do: {:error, Error.new("T0410", "Invalid arguments for $type")}
+
+  defp error_function([]), do: {:error, Error.new("D3137", "$error() function evaluated")}
+
+  defp error_function([value]) when is_binary(value),
+    do: {:error, Error.new("D3137", value)}
+
+  defp error_function([value]) when is_struct(value, Value.Undefined),
+    do: error_function([])
+
+  defp error_function(_), do: {:error, Error.new("T0410", "Invalid arguments for $error")}
+
+  defp assert_function([true]), do: {:ok, Value.undefined()}
+  defp assert_function([false]), do: {:error, Error.new("D3141", "$assert() statement failed")}
+
+  defp assert_function([true, message]) when is_binary(message),
+    do: {:ok, Value.undefined()}
+
+  defp assert_function([false, message]) when is_binary(message),
+    do: {:error, Error.new("D3141", message)}
+
+  defp assert_function(_), do: {:error, Error.new("T0410", "Invalid arguments for $assert")}
 end
