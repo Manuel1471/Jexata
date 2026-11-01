@@ -12,7 +12,22 @@ Measurement environment: Mac16,12 (arm64), Elixir 1.20.2, OTP 29, 10 online sche
 | `orders[price > 50].price` | 1,000 | 2.708 | 109.727 | 117.153 | 40,403 |
 | `$sum(orders.price)` | 1,000 | 1.474 | 32.759 | 39.048 | 19,090 |
 
-The script reports all 45 measurements. Repeated runs may vary with system load and BEAM runtime state. Reductions are less sensitive to that timing noise. The benchmark does not measure memory use, tail latency, or adversarial expressions.
+The script reports compilation, evaluation, and `run/2` measurements for each expression and size. Repeated runs may vary with system load and BEAM runtime state. Reductions are less sensitive to that timing noise. The benchmark does not measure memory use, tail latency, or adversarial expressions.
+
+## Evaluator hot paths
+
+The benchmark now includes `$map` with a lambda, string functions inside `$map`, `$reduce` with a lambda, recursive calls inside `$reduce`, and `$sort` with a comparator. The last four use fewer iterations than simple paths so a quadratic sort cannot dominate the entire run. Selected compiled evaluation results for 1,000 orders on the same host:
+
+| Workload | Before µs/op | After µs/op | Before reductions/op | After reductions/op |
+| --- | ---: | ---: | ---: | ---: |
+| `orders[price > 50].price`, numeric fast path | 111.394 | 91.578 | 40,434 | 30,443 |
+| `$map(orders, function($o){$o.price * 2})`, exact arity binding | 232.862 | 208.692 | 96,155 | 90,144 |
+| Recursive `$reduce`, targeted closure bindings | 1,956.920 | 1,967.020 | 558,099 | 498,184 |
+| `$sort` with comparator, stable merge sort | 152,581.280 | 1,478.820 | 65,973,184 | 693,908 |
+
+These are separate local runs; microsecond values are affected by host load. The reduction changes are the stronger evidence. `mix profile.eprof` on `$sum(orders.price)` showed that selecting and flattening `orders.price` dominates its cost; aggregate validation and `Enum.sum/1` were smaller contributors. A profile of `$map` showed repeated signature binding and process dictionary operations, motivating the exact arity change. A direct 1,000-character ASCII function comparison found `$length` at 17.431 versus 2.137 µs, `$substring` at 10.355 versus 2.223 µs, and `$pad` at 22.267 versus 6.379 µs per call before and after the ASCII paths.
+
+CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks four representative 1,000-order workloads and fails when a measurement exceeds 150% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion.
 
 ## Tokenizer comparison
 

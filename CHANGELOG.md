@@ -7,4 +7,4 @@
 - Added compilation limits, ExUnit coverage, a reference compatibility runner, and a reproducible benchmark script.
 - Added Hex package metadata, an MIT license, and CI with publication on `master` after passing checks.
 
-The portable JSONata v2.2.0 suite reports 1,251 passing, 8 failing, 3 unsupported, and 9 skipped cases. See `docs/COMPATIBILITY.md` for details and execution limits.
+The portable JSONata v2.2.0 suite reports 1,271 passing, 0 failing, 0 unsupported, and 0 skipped cases with the documented local runner. Comparator `$sort` now uses a stable merge sort, numeric operators and ASCII string operations have fast paths, `$pad` has a one-million-codepoint output limit, and CI checks reduction budgets for selected workloads. See `docs/COMPATIBILITY.md` for details and execution limits.

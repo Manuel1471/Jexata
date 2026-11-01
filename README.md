@@ -59,7 +59,7 @@ Passing the portable suite does not establish compatibility with every JSONata e
 Jexata.compile("orders.price", max_source_bytes: 1_000, max_tokens: 100)
 ```
 
-There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation) and a 100,000 iteration limit for supported tail calls, but no general evaluation time, step, memory, output size, or regular expression limit. These compilation checks do not make execution of arbitrary user expressions sandbox safe. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
+There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation), a 100,000 iteration limit for supported tail calls, and a one-million-codepoint output limit for `$pad`, but no general evaluation time, step, memory, output size, or regular expression limit. These compilation checks do not make execution of arbitrary user expressions sandbox safe. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
 
 ## Development
 
@@ -67,6 +67,7 @@ There is a function recursion depth limit of 1,024 for ordinary calls (configura
 mix format
 mix compile --warnings-as-errors
 mix test
+mix run scripts/reductions_guard.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
 ```
 
