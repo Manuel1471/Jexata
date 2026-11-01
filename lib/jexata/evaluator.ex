@@ -31,7 +31,13 @@ defmodule Jexata.Evaluator do
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
-      |> eval_each(right, root)
+      |> eval_each(
+        right,
+        root,
+        is_list(source) or is_struct(source, Value.Sequence),
+        (is_struct(source, Value.Sequence) and source.keep_array) or
+          match?({:keep_array, _}, right)
+      )
     end
   end
 
@@ -87,15 +93,22 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:keep_array, ast}, data, context) do
+    with {:ok, value} <- eval(ast, data, context),
+         do: {:ok, Value.sequence(Value.items(value), true)}
+  end
+
   defp eval({:filter, left, predicate}, data, root) do
     with {:ok, source} <- eval(left, data, root) do
-      source
-      |> Value.items()
+      items = Value.items(source)
+      count = length(items)
+
+      items
       |> Enum.with_index()
       |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
         case eval(predicate, item, root) do
           {:ok, result} ->
-            keep = if is_number(result), do: result == index, else: Semantics.boolean(result)
+            keep = predicate_matches?(result, index, count)
             {:cont, {:ok, if(keep, do: [item | acc], else: acc)}}
 
           error ->
@@ -103,8 +116,15 @@ defmodule Jexata.Evaluator do
         end
       end)
       |> case do
-        {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
-        error -> error
+        {:ok, values} ->
+          {:ok,
+           Value.sequence(
+             Enum.reverse(values),
+             is_struct(source, Value.Sequence) and source.keep_array
+           )}
+
+        error ->
+          error
       end
     end
   end
@@ -112,9 +132,13 @@ defmodule Jexata.Evaluator do
   defp eval({:array, expressions}, data, root) do
     with {:ok, values} <- eval_list(expressions, data, root) do
       {:ok,
-       Enum.flat_map(values, fn
-         %Value.Sequence{items: items} -> items
-         value -> if Value.undefined?(value), do: [], else: [value]
+       expressions
+       |> Enum.zip(values)
+       |> Enum.flat_map(fn
+         {{:array, _}, value} -> [value]
+         {_, %Value.Sequence{items: items}} -> items
+         {_, value} when is_list(value) -> value
+         {_, value} -> if Value.undefined?(value), do: [], else: [value]
        end)}
     end
   end
@@ -255,8 +279,11 @@ defmodule Jexata.Evaluator do
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
       case invoke_callback(callback, [item, index, Value.items(input)], data) do
-        {:ok, value} -> {:cont, {:ok, [value | acc]}}
-        error -> {:halt, error}
+        {:ok, value} ->
+          {:cont, {:ok, [value | acc]}}
+
+        error ->
+          {:halt, error}
       end
     end)
     |> case do
@@ -323,15 +350,23 @@ defmodule Jexata.Evaluator do
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
 
-  defp eval_each(items, ast, root) do
+  defp eval_each(items, ast, root, flatten_arrays?, keep_array?) do
     Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
       case eval(ast, item, root) do
-        {:ok, value} -> {:cont, {:ok, [value | acc]}}
-        error -> {:halt, error}
+        {:ok, value} ->
+          values =
+            if flatten_arrays? and match?({:name, _}, ast),
+              do: Value.items(value),
+              else: [value]
+
+          {:cont, {:ok, Enum.reverse(values) ++ acc}}
+
+        error ->
+          {:halt, error}
       end
     end)
     |> case do
-      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values))}
+      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
       error -> error
     end
   end
@@ -386,11 +421,16 @@ defmodule Jexata.Evaluator do
 
   defp binary("&", a, b), do: {:ok, string(a) <> string(b)}
 
-  defp binary("..", a, b) when is_integer(a) and is_integer(b) and b - a <= 100_000 do
-    {:ok, if(a > b, do: [], else: Enum.to_list(a..b))}
+  defp binary("..", a, b) do
+    cond do
+      not is_integer(a) -> {:error, Error.new("T2003", "Range start must be an integer")}
+      not is_integer(b) -> {:error, Error.new("T2004", "Range end must be an integer")}
+      b - a + 1 > 100_000 -> {:error, Error.new("D2014", "Range exceeds the configured limit")}
+      a > b -> {:ok, Value.undefined()}
+      true -> {:ok, Value.sequence(Enum.to_list(a..b))}
+    end
   end
 
-  defp binary("..", _, _), do: type_error("Range requires integers with at most 100000 values")
   defp binary(op, _, _), do: {:error, Error.new("T1007", "Unsupported operator #{op}")}
 
   defp string(nil), do: "null"
@@ -418,6 +458,19 @@ defmodule Jexata.Evaluator do
       end
     end)
   end
+
+  defp predicate_matches?(value, index, count) when is_number(value) do
+    target = floor(value)
+    index == if(target < 0, do: count + target, else: target)
+  end
+
+  defp predicate_matches?(values, index, count) when is_list(values) and values != [] do
+    if Enum.all?(values, &is_number/1),
+      do: Enum.any?(values, &predicate_matches?(&1, index, count)),
+      else: Semantics.boolean(values)
+  end
+
+  defp predicate_matches?(value, _index, _count), do: Semantics.boolean(value)
 
   defp eval_sort_keys(terms, item, context) do
     Enum.reduce_while(terms, {:ok, []}, fn {direction, ast}, {:ok, keys} ->

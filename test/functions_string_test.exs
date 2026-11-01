@@ -19,4 +19,11 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$replace('aba', 'a', 'x', 1)", %{}) == {:ok, "xba"}
     assert Jexata.run("$contains('abc', missing)", %{}) == {:ok, :undefined}
   end
+
+  test "pad repeats Unicode patterns on either side" do
+    assert Jexata.run("$pad('foo', 8, '-+')", %{}) == {:ok, "foo-+-+-"}
+    assert Jexata.run("$pad('𝄞💩', -7)", %{}) == {:ok, "     𝄞💩"}
+    assert Jexata.run("$pad('foo', 5.7, '')", %{}) == {:ok, "foo  "}
+    assert Jexata.run("$pad(missing, 3)", %{}) == {:ok, :undefined}
+  end
 end

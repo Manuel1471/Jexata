@@ -50,8 +50,9 @@ defmodule Jexata.Parser do
        when type in [:literal, :number, :string],
        do: {:ok, {:literal, value}, rest}
 
-  defp prefix([%Token{type: :name, value: "function"}, %Token{value: "("} | rest]),
-    do: lambda_parameters([], rest)
+  defp prefix([%Token{type: :name, value: name}, %Token{value: "("} | rest])
+       when name in ["function", "λ"],
+       do: lambda_parameters([], rest)
 
   defp prefix([%Token{type: :name, value: name} | rest]), do: {:ok, {:name, name}, rest}
   defp prefix([%Token{type: :variable, value: name} | rest]), do: {:ok, {:variable, name}, rest}
@@ -75,7 +76,8 @@ defmodule Jexata.Parser do
   defp prefix([]), do: {:error, Error.new("S0201", "Expected an expression")}
 
   defp infix(left, [%Token{value: "."} | rest], min_bp) when min_bp < 100 do
-    with {:ok, right, tail} <- expression(rest, 100),
+    with {:ok, right, tail} <- prefix(rest),
+         {:ok, right, tail} <- path_postfix(right, tail),
          do: infix({:path, left, right}, tail, min_bp)
   end
 
@@ -92,6 +94,9 @@ defmodule Jexata.Parser do
     with {:ok, terms, tail} <- sort_terms([], rest), do: infix({:sort, left, terms}, tail, min_bp)
   end
 
+  defp infix(left, [%Token{value: "["}, %Token{value: "]"} | rest], min_bp) when min_bp < 100,
+    do: infix({:keep_array, left}, rest, min_bp)
+
   defp infix(left, [%Token{value: "["} | rest], min_bp) when min_bp < 100 do
     with {:ok, predicate, tail} <- expression(rest, 0),
          {:ok, tail} <- expect(tail, "]") do
@@ -101,8 +106,7 @@ defmodule Jexata.Parser do
 
   defp infix(left, [%Token{value: "?"} | rest], min_bp) when min_bp < 20 do
     with {:ok, consequent, tail} <- expression(rest, 0),
-         {:ok, tail} <- expect(tail, ":"),
-         {:ok, alternate, tail} <- expression(tail, 19) do
+         {:ok, alternate, tail} <- optional_alternate(tail) do
       infix({:conditional, left, consequent, alternate}, tail, min_bp)
     end
   end
@@ -123,6 +127,24 @@ defmodule Jexata.Parser do
   end
 
   defp infix(left, tokens, _), do: {:ok, left, tokens}
+
+  defp optional_alternate([%Token{value: ":"} | rest]), do: expression(rest, 19)
+  defp optional_alternate(tail), do: {:ok, {:literal, Jexata.Runtime.Value.undefined()}, tail}
+
+  defp path_postfix(left, [%Token{value: "("} | rest]) do
+    with {:ok, args, tail} <- arguments(rest), do: path_postfix({:call, left, args}, tail)
+  end
+
+  defp path_postfix(left, [%Token{value: "["}, %Token{value: "]"} | rest]),
+    do: path_postfix({:keep_array, left}, rest)
+
+  defp path_postfix(left, [%Token{value: "["} | rest]) do
+    with {:ok, predicate, tail} <- expression(rest, 0),
+         {:ok, tail} <- expect(tail, "]"),
+         do: path_postfix({:filter, left, predicate}, tail)
+  end
+
+  defp path_postfix(left, tail), do: {:ok, left, tail}
 
   defp sort_terms(terms, tokens) do
     {direction, rest} =

@@ -7,7 +7,7 @@ defmodule Jexata.Runtime.Value do
 
   defmodule Sequence do
     @moduledoc false
-    defstruct items: []
+    defstruct items: [], keep_array: false
   end
 
   alias __MODULE__.{Sequence, Undefined}
@@ -16,7 +16,7 @@ defmodule Jexata.Runtime.Value do
   def undefined?(%Undefined{}), do: true
   def undefined?(_), do: false
 
-  def sequence(values) do
+  def sequence(values, keep_array \\ false) do
     items =
       Enum.flat_map(values, fn
         %Undefined{} -> []
@@ -24,10 +24,11 @@ defmodule Jexata.Runtime.Value do
         item -> [item]
       end)
 
-    case items do
-      [] -> undefined()
-      [one] -> one
-      many -> %Sequence{items: many}
+    case {items, keep_array} do
+      {items, true} -> %Sequence{items: items, keep_array: true}
+      {[], false} -> undefined()
+      {[one], false} -> one
+      {many, false} -> %Sequence{items: many}
     end
   end
 

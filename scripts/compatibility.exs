@@ -1,7 +1,19 @@
 # Run with: mix run scripts/compatibility.exs /path/to/jsonata/test/test-suite
 # Reference: jsonata-js/jsonata v2.2.0 (8ee4476f8a228bfc7a62979ae0a9c13a4043cd03)
 [suite | _] = System.argv()
-files = Path.wildcard(Path.join([suite, "groups", "*", "case*.json"])) |> Enum.sort()
+
+group_filter =
+  System.argv()
+  |> Enum.find_value(fn arg ->
+    if String.starts_with?(arg, "--group="), do: String.replace_prefix(arg, "--group=", "")
+  end)
+
+files =
+  Path.wildcard(Path.join([suite, "groups", "*", "case*.json"]))
+  |> Enum.sort()
+  |> Enum.filter(fn file ->
+    is_nil(group_filter) or Path.basename(Path.dirname(file)) == group_filter
+  end)
 
 normalize = fn recursive, value ->
   case value do
@@ -92,6 +104,25 @@ result =
         end
       end
 
+    if status in [:fail, :unsupported] and "--mismatches" in System.argv() do
+      IO.inspect({file, case_data["expr"], case_data["result"], case_data["code"], status},
+        label: "CASE"
+      )
+    end
+
+    if "--details" in System.argv() do
+      group_name = file |> Path.dirname() |> Path.basename()
+      groups = Process.get(:compat_groups, %{})
+
+      group_counts =
+        Map.get(groups, group_name, %{pass: 0, fail: 0, unsupported: 0, skipped: 0, crashes: 0})
+
+      Process.put(
+        :compat_groups,
+        Map.put(groups, group_name, Map.update!(group_counts, status, &(&1 + 1)))
+      )
+    end
+
     Map.update!(counts, status, &(&1 + 1))
   end)
 
@@ -101,3 +132,9 @@ IO.puts("Total: #{length(cases)}")
 Enum.each([:pass, :fail, :unsupported, :skipped, :crashes], fn key ->
   IO.puts("#{key}: #{result[key]}")
 end)
+
+if "--details" in System.argv() do
+  Process.get(:compat_groups, %{})
+  |> Enum.sort_by(fn {_name, counts} -> -(counts.fail + counts.unsupported) end)
+  |> Enum.each(fn {name, counts} -> IO.puts("#{name}: #{inspect(counts)}") end)
+end
