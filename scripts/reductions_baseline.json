@@ -1,0 +1,18 @@
+{
+  "filter": {
+    "source": "orders[price > 50].price",
+    "baseline": 30443
+  },
+  "map_lambda": {
+    "source": "$map(orders, function($o){$o.price * 2})",
+    "baseline": 90145
+  },
+  "reduce_recursive": {
+    "source": "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
+    "baseline": 498184
+  },
+  "sort_comparator": {
+    "source": "$sort(orders, function($a,$b){$a.price > $b.price})",
+    "baseline": 615152
+  }
+}
