@@ -4,33 +4,6 @@ defmodule Jexata.Tokenizer do
 
   @name ~r/\A[\p{L}_][\p{L}\p{N}_]*/u
   @unicode_space ~r/\A\s/u
-  @single [
-    ".",
-    "[",
-    "]",
-    "{",
-    "}",
-    "(",
-    ")",
-    ",",
-    ":",
-    ";",
-    "?",
-    "+",
-    "-",
-    "*",
-    "/",
-    "%",
-    "=",
-    "<",
-    ">",
-    "&",
-    "|",
-    "^",
-    "#",
-    "@"
-  ]
-
   @spec tokenize(String.t()) :: {:ok, [Token.t()]} | {:error, Error.t()}
   def tokenize(source) when is_binary(source), do: scan(source, 0, [])
 
@@ -109,18 +82,18 @@ defmodule Jexata.Tokenizer do
         emit(source, name, type, value, position, acc)
 
       true ->
-        <<character::utf8, _::binary>> = source
-        symbol = <<character::utf8>>
+        case single_symbol(source) do
+          nil ->
+            <<character::utf8, _::binary>> = source
+            symbol = <<character::utf8>>
 
-        cond do
-          symbol in @single ->
+            if symbol == "!",
+              do: {:error, Error.new("S0204", "Unexpected operator !", position)},
+              else:
+                {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
+
+          symbol ->
             emit(source, symbol, :op, symbol, position, acc)
-
-          symbol == "!" ->
-            {:error, Error.new("S0204", "Unexpected operator !", position)}
-
-          true ->
-            {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
         end
     end
   end
@@ -202,6 +175,32 @@ defmodule Jexata.Tokenizer do
   defp operator(<<"??", _::binary>>), do: "??"
   defp operator(<<"?:", _::binary>>), do: "?:"
   defp operator(_), do: nil
+
+  defp single_symbol(<<".", _::binary>>), do: "."
+  defp single_symbol(<<"[", _::binary>>), do: "["
+  defp single_symbol(<<"]", _::binary>>), do: "]"
+  defp single_symbol(<<"{", _::binary>>), do: "{"
+  defp single_symbol(<<"}", _::binary>>), do: "}"
+  defp single_symbol(<<"(", _::binary>>), do: "("
+  defp single_symbol(<<")", _::binary>>), do: ")"
+  defp single_symbol(<<",", _::binary>>), do: ","
+  defp single_symbol(<<":", _::binary>>), do: ":"
+  defp single_symbol(<<";", _::binary>>), do: ";"
+  defp single_symbol(<<"?", _::binary>>), do: "?"
+  defp single_symbol(<<"+", _::binary>>), do: "+"
+  defp single_symbol(<<"-", _::binary>>), do: "-"
+  defp single_symbol(<<"*", _::binary>>), do: "*"
+  defp single_symbol(<<"/", _::binary>>), do: "/"
+  defp single_symbol(<<"%", _::binary>>), do: "%"
+  defp single_symbol(<<"=", _::binary>>), do: "="
+  defp single_symbol(<<"<", _::binary>>), do: "<"
+  defp single_symbol(<<">", _::binary>>), do: ">"
+  defp single_symbol(<<"&", _::binary>>), do: "&"
+  defp single_symbol(<<"|", _::binary>>), do: "|"
+  defp single_symbol(<<"^", _::binary>>), do: "^"
+  defp single_symbol(<<"#", _::binary>>), do: "#"
+  defp single_symbol(<<"@", _::binary>>), do: "@"
+  defp single_symbol(_), do: nil
 
   # Longitud en bytes del espacio en blanco inicial (un solo carácter) o 0.
   defp whitespace_length(<<c, _::binary>>) when c in [?\s, ?\t, ?\n, ?\r, ?\v, ?\f], do: 1
