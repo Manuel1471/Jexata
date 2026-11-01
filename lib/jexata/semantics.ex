@@ -32,7 +32,7 @@ defmodule Jexata.Semantics do
   def select(%Sequence{items: values}, name), do: select(values, name)
   def select(_, _), do: Value.undefined()
 
-  defp select_list([], _name, acc), do: acc |> Enum.reverse() |> Value.sequence()
+  defp select_list([], _name, acc), do: acc |> Enum.reverse() |> Value.sequence_from_items()
 
   defp select_list([item | rest], name, acc),
     do: select_list(rest, name, Enum.reverse(Value.items(select(item, name)), acc))

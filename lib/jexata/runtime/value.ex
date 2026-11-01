@@ -27,6 +27,15 @@ defmodule Jexata.Runtime.Value do
     end
   end
 
+  # Call only when each item has already passed through sequence normalization.
+  def sequence_from_items(items) do
+    case items do
+      [] -> undefined()
+      [one] -> one
+      many -> %Sequence{items: many}
+    end
+  end
+
   defp sequence_items([], acc), do: Enum.reverse(acc)
   defp sequence_items([%Undefined{} | rest], acc), do: sequence_items(rest, acc)
 
