@@ -44,4 +44,8 @@ defmodule Jexata.TransformTest do
     assert Jexata.run("$ ~> |**|{'touched': true}|", input) ==
              {:ok, %{"child" => %{"value" => 1, "touched" => true}, "touched" => true}}
   end
+
+  test "transform with no selected objects returns the original input" do
+    assert Jexata.run("$ ~> |missing|{'value': 2}|", 1) == {:ok, 1}
+  end
 end

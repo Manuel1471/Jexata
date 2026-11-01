@@ -1252,6 +1252,8 @@ defmodule Jexata.Evaluator do
   defp disjoint_references?([{path, _} | rest]),
     do: Enum.all?(rest, fn {candidate, _} -> length(candidate) == length(path) end)
 
+  defp apply_disjoint_transform(_transform, input, _context, []), do: {:ok, input}
+
   defp apply_disjoint_transform(transform, input, context, references) do
     Enum.reduce_while(references, {:ok, %{}}, fn {path, selected}, {:ok, trie} ->
       case transformed_value(transform, selected, context) do
