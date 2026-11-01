@@ -1,6 +1,7 @@
 defmodule Jexata.Parser do
   @moduledoc false
   alias Jexata.{Error, Token, Tokenizer}
+  alias Jexata.Runtime.Limits
 
   @precedence %{
     ":=" => 10,
@@ -23,8 +24,11 @@ defmodule Jexata.Parser do
   }
 
   @spec parse(String.t()) :: {:ok, Jexata.AST.t()} | {:error, Error.t()}
-  def parse(source) do
-    with {:ok, tokens} <- Tokenizer.tokenize(source),
+  def parse(source, options \\ []) do
+    with {:ok, limits} <- Limits.validate(options),
+         :ok <- Limits.source(source, limits),
+         {:ok, tokens} <- Tokenizer.tokenize(source),
+         :ok <- Limits.tokens(tokens, limits),
          {:ok, ast, rest} <- expression(tokens, 0) do
       case rest do
         [%Token{type: :eof}] -> {:ok, ast}

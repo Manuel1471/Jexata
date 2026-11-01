@@ -6,21 +6,35 @@ defmodule Jexata do
   """
 
   alias Jexata.{Error, Evaluator, Expression, Parser}
+  alias Jexata.Runtime.Limits
 
   @type json ::
           nil | boolean() | number() | String.t() | [json()] | %{optional(String.t()) => json()}
 
-  @doc "Compiles a JSONata source string into an immutable expression."
-  @spec compile(String.t()) :: {:ok, Expression.t()} | {:error, Error.t()}
-  def compile(source) when is_binary(source) do
-    if String.trim(source) == "" do
-      {:error, Error.new("S0201", "Expression is empty", 0)}
+  @doc "Compiles a JSONata source string into an immutable expression.
+
+  `max_source_bytes`, `max_tokens`, and `max_nesting` may be set as positive integers.
+  "
+  @spec compile(String.t(), keyword()) :: {:ok, Expression.t()} | {:error, Error.t()}
+  def compile(source, options \\ [])
+
+  def compile(source, options) when is_binary(source) do
+    with {:ok, limits} <- Limits.validate(options),
+         true <- String.valid?(source),
+         :ok <- Limits.source(source, limits) do
+      if String.trim(source) == "" do
+        {:error, Error.new("S0201", "Expression is empty", 0)}
+      else
+        with {:ok, ast} <- Parser.parse(source, limits),
+             do: {:ok, %Expression{source: source, ast: ast}}
+      end
     else
-      with {:ok, ast} <- Parser.parse(source), do: {:ok, %Expression{source: source, ast: ast}}
+      false -> {:error, Error.new("J0001", "Expression must be valid UTF-8")}
+      error -> error
     end
   end
 
-  def compile(_), do: {:error, Error.new("J0001", "Expression must be a string")}
+  def compile(_, _), do: {:error, Error.new("J0001", "Expression must be a string")}
 
   @doc "Evaluates a compiled expression against JSON-like Elixir data."
   @spec evaluate(Expression.t(), json()) :: {:ok, json()} | {:error, Error.t()}
