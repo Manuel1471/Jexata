@@ -102,8 +102,7 @@ defmodule Jexata.Functions.String do
       missing = max(target - current, 0)
       padding = if pattern == "", do: " ", else: pattern
 
-      padded =
-        padding |> String.codepoints() |> Stream.cycle() |> Enum.take(missing) |> Enum.join()
+      padded = pad_fragment(padding, missing)
 
       {:ok, if(width < 0, do: padded <> value, else: value <> padded)}
     end
@@ -429,6 +428,21 @@ defmodule Jexata.Functions.String do
 
   defp pretty_json(value, _level), do: encode_json(value)
   defp encode_json(value), do: value |> :json.encode() |> IO.iodata_to_binary()
+
+  defp pad_fragment(_pattern, 0), do: ""
+
+  defp pad_fragment(pattern, count) do
+    width = if ascii?(pattern), do: byte_size(pattern), else: length(String.codepoints(pattern))
+    whole = div(count, width)
+    extra = rem(count, width)
+
+    if extra == 0 do
+      String.duplicate(pattern, whole)
+    else
+      prefix = pattern |> String.codepoints() |> Enum.take(extra) |> Enum.join()
+      String.duplicate(pattern, whole) <> prefix
+    end
+  end
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 end

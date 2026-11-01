@@ -25,6 +25,7 @@ defmodule Jexata.FunctionsStringTest do
 
   test "pad repeats Unicode patterns on either side" do
     assert Jexata.run("$pad('foo', 8, '-+')", %{}) == {:ok, "foo-+-+-"}
+    assert Jexata.run("$pad('x', 6, 'é𝄞')", %{}) == {:ok, "xé𝄞é𝄞é"}
     assert Jexata.run("$pad('𝄞💩', -7)", %{}) == {:ok, "     𝄞💩"}
     assert Jexata.run("$pad('foo', 5.7, '')", %{}) == {:ok, "foo  "}
     assert Jexata.run("$pad(missing, 3)", %{}) == {:ok, :undefined}
