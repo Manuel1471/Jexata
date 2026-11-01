@@ -29,6 +29,13 @@ defmodule Jexata.Functions.Datetime do
   def call(name, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 
   defp parse_iso(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, date, _offset} -> {:ok, DateTime.to_unix(date, :millisecond)}
+      {:error, _} -> parse_short_iso(value)
+    end
+  end
+
+  defp parse_short_iso(value) do
     normalized =
       cond do
         Regex.match?(~r/\A\d{4}\z/, value) -> value <> "-01-01T00:00:00Z"
