@@ -52,6 +52,8 @@ defmodule Jexata.EvaluatorTest do
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 % 0.0", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1/(10e300 * 10e100)", :undefined)
     assert Jexata.run("{'a': 1} & 'x'", %{}) == {:ok, "{\"a\":1}x"}
+    assert {:error, %Jexata.Error{code: "T2002"}} = Jexata.run("1 + null", %{})
+    assert {:error, %Jexata.Error{code: "D1002"}} = Jexata.run("-'x'", %{})
   end
 
   test "compiled expressions can be reused concurrently" do

@@ -176,7 +176,11 @@ defmodule Jexata.Evaluator do
 
   defp eval({:negate, ast}, data, root) do
     with {:ok, value} <- eval(ast, data, root) do
-      if is_number(value), do: {:ok, -value}, else: type_error("Unary minus requires a number")
+      cond do
+        Value.undefined?(value) -> {:ok, value}
+        is_number(value) -> {:ok, -value}
+        true -> {:error, Error.new("D1002", "Unary minus requires a number")}
+      end
     end
   end
 
@@ -360,7 +364,18 @@ defmodule Jexata.Evaluator do
 
         {:error, Error.new(code, "Partial application requires a function")}
       else
-        invoke_or_partial(with_recursive_bindings(function, context.environment), values, data)
+        if Enum.any?(values, &is_struct(&1, Placeholder)) and not callable?(function) do
+          {:error, Error.new("T1008", "Partial application requires a function")}
+        else
+          if Value.undefined?(function) and match?({:name, _}, target),
+            do: {:error, Error.new("T1005", "Unknown function")},
+            else:
+              invoke_or_partial(
+                with_recursive_bindings(function, context.environment),
+                values,
+                data
+              )
+        end
       end
     end
   end
@@ -886,27 +901,35 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
-    do: {:ok, Value.undefined()}
-
   defp binary(op, a, b) when op in ["+", "-", "*", "/", "%"] do
-    if is_number(a) and is_number(b) do
-      case {op, b} do
-        {"/", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
-        {"%", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
-        {"+", _} -> {:ok, number_result(a + b)}
-        {"-", _} -> {:ok, number_result(a - b)}
-        {"*", _} -> {:ok, number_result(a * b)}
-        {"/", _} -> {:ok, a / b}
-        {"%", _} when is_integer(a) and is_integer(b) -> {:ok, number_result(rem(a, b))}
-        {"%", _} -> {:ok, :math.fmod(a, b)}
-      end
-    else
-      type_error("Arithmetic operands must be numbers")
+    cond do
+      not is_number(a) and not Value.undefined?(a) ->
+        {:error, Error.new("T2001", "Left arithmetic operand must be a number")}
+
+      not is_number(b) and not Value.undefined?(b) ->
+        {:error, Error.new("T2002", "Right arithmetic operand must be a number")}
+
+      Value.undefined?(a) or Value.undefined?(b) ->
+        {:ok, Value.undefined()}
+
+      true ->
+        case {op, b} do
+          {"/", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
+          {"%", zero} when zero == 0 -> {:error, Error.new("D1001", "Division by zero")}
+          {"+", _} -> {:ok, number_result(a + b)}
+          {"-", _} -> {:ok, number_result(a - b)}
+          {"*", _} -> {:ok, number_result(a * b)}
+          {"/", _} -> {:ok, a / b}
+          {"%", _} when is_integer(a) and is_integer(b) -> {:ok, number_result(rem(a, b))}
+          {"%", _} -> {:ok, :math.fmod(a, b)}
+        end
     end
   rescue
     ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
   end
+
+  defp binary(_, a, b) when is_struct(a, Value.Undefined) or is_struct(b, Value.Undefined),
+    do: {:ok, Value.undefined()}
 
   defp binary(op, a, b) when op in ["=", "!=", "in"], do: {:ok, Semantics.compare(op, a, b)}
 
@@ -1007,6 +1030,4 @@ defmodule Jexata.Evaluator do
   end
 
   defp descendants(value), do: [value]
-
-  defp type_error(message), do: {:error, Error.new("T2001", message)}
 end
