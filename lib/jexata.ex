@@ -67,6 +67,32 @@ defmodule Jexata do
 
   def evaluate(_, _, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
+  @doc "Evaluates with a positive `:max_function_depth` limit for recursive calls."
+  @spec evaluate(Expression.t(), input(), map(), keyword()) ::
+          {:ok, result()} | {:error, Error.t()}
+  def evaluate(%Expression{ast: ast}, data, bindings, options)
+      when is_map(bindings) and is_list(options) do
+    max_depth = Keyword.get(options, :max_function_depth, 1024)
+
+    cond do
+      not (is_integer(max_depth) and max_depth > 0) ->
+        {:error, Error.new("J0006", "max_function_depth must be a positive integer")}
+
+      not Enum.all?(bindings, fn {name, _} ->
+        is_binary(name) and name != "" and not String.starts_with?(name, "$")
+      end) ->
+        {:error, Error.new("J0005", "Bindings must use names without a leading $")}
+
+      true ->
+        environment = Map.new(bindings, fn {name, value} -> {"$" <> name, value} end)
+
+        with {:ok, value} <- Evaluator.evaluate(ast, data, environment, max_depth),
+             do: {:ok, Jexata.Runtime.Value.public(value)}
+    end
+  end
+
+  def evaluate(_, _, _, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
   @doc "Compiles and evaluates a JSONata expression in one call."
   @spec run(String.t(), input()) :: {:ok, result()} | {:error, Error.t()}
   def run(source, data) do
@@ -77,6 +103,12 @@ defmodule Jexata do
   @spec run(String.t(), input(), map()) :: {:ok, result()} | {:error, Error.t()}
   def run(source, data, bindings) do
     with {:ok, expression} <- compile(source), do: evaluate(expression, data, bindings)
+  end
+
+  @doc "Compiles and evaluates with external bindings and evaluation options."
+  @spec run(String.t(), input(), map(), keyword()) :: {:ok, result()} | {:error, Error.t()}
+  def run(source, data, bindings, options) do
+    with {:ok, expression} <- compile(source), do: evaluate(expression, data, bindings, options)
   end
 
   @doc "Like `compile/1`, but raises on errors."

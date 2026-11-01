@@ -89,15 +89,28 @@ result =
           :skipped
         else
           try do
-            actual = Jexata.run(expression, data, case_data["bindings"] || %{})
+            options =
+              case case_data["depth"] do
+                depth when is_integer(depth) and depth > 0 ->
+                  # The reference counts evaluator nodes; recursive closure calls
+                  # in this interpreter span approximately three such nodes.
+                  [max_function_depth: max(div(depth, 3), 1)]
+
+                _ ->
+                  []
+              end
+
+            actual = Jexata.run(expression, data, case_data["bindings"] || %{}, options)
             expected_code = case_data["code"] || get_in(case_data, ["error", "code"])
 
             cond do
               Map.has_key?(case_data, "result") and actual == {:ok, case_data["result"]} ->
                 :pass
 
-              case_data["unordered"] == true and match?({:ok, values} when is_list(values), actual) and
-                  is_list(case_data["result"]) and Enum.sort(elem(actual, 1)) == Enum.sort(case_data["result"]) ->
+              case_data["unordered"] == true and
+                match?({:ok, values} when is_list(values), actual) and
+                is_list(case_data["result"]) and
+                  Enum.sort(elem(actual, 1)) == Enum.sort(case_data["result"]) ->
                 :pass
 
               case_data["undefinedResult"] == true and actual == {:ok, :undefined} ->

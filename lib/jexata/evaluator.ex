@@ -8,6 +8,19 @@ defmodule Jexata.Evaluator do
   def evaluate(ast, data), do: evaluate(ast, data, %{})
 
   @spec evaluate(Jexata.AST.t(), term(), map()) :: {:ok, term()} | {:error, Error.t()}
+  def evaluate(ast, data, environment, max_function_depth)
+      when is_integer(max_function_depth) and max_function_depth > 0 do
+    key = {__MODULE__, :max_function_depth}
+    prior = Process.get(key)
+    Process.put(key, max_function_depth)
+
+    try do
+      evaluate(ast, data, environment)
+    after
+      if prior == nil, do: Process.delete(key), else: Process.put(key, prior)
+    end
+  end
+
   def evaluate(ast, :undefined, environment) do
     missing = Value.undefined()
     eval(ast, missing, %{root: missing, environment: environment})
@@ -989,7 +1002,7 @@ defmodule Jexata.Evaluator do
   defp invoke(%Closure{} = closure, values, data) do
     depth = Process.get({__MODULE__, :closure_depth}, 0)
 
-    if depth >= 1024 do
+    if depth >= Process.get({__MODULE__, :max_function_depth}, 1024) do
       {:error, Error.new("U1001", "Function recursion limit exceeded")}
     else
       Process.put({__MODULE__, :closure_depth}, depth + 1)

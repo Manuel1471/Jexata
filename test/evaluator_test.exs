@@ -89,6 +89,20 @@ defmodule Jexata.EvaluatorTest do
               ]}
   end
 
+  test "recursive function depth can be limited per evaluation" do
+    source = "($f := function($n){$n = 0 ? 0 : 1 + $f($n - 1)}; $f(3))"
+    expression = Jexata.compile!(source)
+
+    assert {:error, %Jexata.Error{code: "U1001"}} =
+             Jexata.evaluate(expression, %{}, %{}, max_function_depth: 3)
+
+    assert Jexata.evaluate(expression, %{}, %{}, max_function_depth: 4) == {:ok, 3}
+    assert Jexata.evaluate(expression, %{}) == {:ok, 3}
+
+    assert {:error, %Jexata.Error{code: "J0006"}} =
+             Jexata.evaluate(expression, %{}, %{}, max_function_depth: 0)
+  end
+
   test "chained bindings remain local to their parenthesized block" do
     assert Jexata.run("($a := $b := 5; $a + $b)", %{}) == {:ok, 10}
     assert Jexata.run("($x := 'outer'; ($x := missing); $x)", %{}) == {:ok, "outer"}
