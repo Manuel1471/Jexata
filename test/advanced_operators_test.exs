@@ -32,4 +32,9 @@ defmodule Jexata.AdvancedOperatorsTest do
     assert Jexata.run("items{kind:$sum(price)}", data) == {:ok, %{"a" => 3, "b" => 4}}
     assert Jexata.run("items{kind:price}", data) == {:ok, %{"a" => [1, 2], "b" => 4}}
   end
+
+  test "function chaining passes the left value as the first argument" do
+    assert Jexata.run("'  hi  ' ~> $trim() ~> $uppercase()", %{}) == {:ok, "HI"}
+    assert Jexata.run("3 ~> function($x){$x * 2}", %{}) == {:ok, 6}
+  end
 end

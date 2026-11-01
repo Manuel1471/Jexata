@@ -133,6 +133,23 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval({:binary, "~>", left, {:call, {:variable, name}, args}}, data, context) do
+    with {:ok, value} <- eval(left, data, context),
+         {:ok, values} <- eval_list(args, data, context) do
+      case Map.fetch(context.environment, name) do
+        {:ok, closure} -> invoke(closure, [value | values], data)
+        :error -> Functions.call(name, [value | values], data)
+      end
+    end
+  end
+
+  defp eval({:binary, "~>", left, target}, data, context) do
+    with {:ok, value} <- eval(left, data, context),
+         {:ok, function} <- eval(target, data, context) do
+      invoke(function, [value], data)
+    end
+  end
+
   defp eval({:binary, "?:", left, right}, data, context) do
     with {:ok, value} <- eval(left, data, context) do
       if Semantics.boolean(value), do: {:ok, value}, else: eval(right, data, context)
