@@ -15,7 +15,8 @@ defmodule Jexata.Functions.String do
     "$join",
     "$substringBefore",
     "$substringAfter",
-    "$replace"
+    "$replace",
+    "$pad"
   ]
   def supported?(name), do: name in @supported
 
@@ -35,6 +36,19 @@ defmodule Jexata.Functions.String do
 
   def call("$trim", [value]) when is_binary(value),
     do: {:ok, value |> String.trim() |> String.replace(~r/\s+/u, " ")}
+
+  def call("$pad", [value, width]), do: call("$pad", [value, width, " "])
+
+  def call("$pad", [value, _width, _pattern]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
+  def call("$pad", [value, width, pattern])
+      when is_binary(value) and is_number(width) and is_binary(pattern) do
+    missing = max(trunc(abs(width)) - length(String.codepoints(value)), 0)
+    padding = if pattern == "", do: " ", else: pattern
+    padded = padding |> String.codepoints() |> Stream.cycle() |> Enum.take(missing) |> Enum.join()
+    {:ok, if(width < 0, do: padded <> value, else: value <> padded)}
+  end
 
   def call("$contains", [value, token])
       when is_struct(value, Value.Undefined) or is_struct(token, Value.Undefined),
