@@ -40,35 +40,47 @@ defmodule Jexata.Tokenizer do
     end
   end
 
-  defp scan_token(source, position, acc) do
-    multi = operator(source)
+  defp scan_token(<<"$$", _::binary>> = source, position, acc),
+    do: emit(source, "$$", :variable, "$$", position, acc)
 
-    cond do
-      multi ->
-        emit(source, multi, :op, multi, position, acc)
+  defp scan_token(<<"$", _::binary>> = source, position, acc),
+    do: scan_variable(source, position, acc)
 
-      String.starts_with?(source, "$$") ->
-        emit(source, "$$", :variable, "$$", position, acc)
+  defp scan_token(<<"/", _::binary>> = source, position, acc) do
+    if regex_position?(acc),
+      do: scan_regex(source, position, acc),
+      else: scan_symbol(source, position, acc)
+  end
 
-      String.starts_with?(source, "$") ->
-        scan_variable(source, position, acc)
+  defp scan_token(<<first, _::binary>> = source, position, acc) when first in ?0..?9,
+    do: scan_number(source, position, acc)
 
-      String.starts_with?(source, "/") and regex_position?(acc) ->
-        scan_regex(source, position, acc)
+  defp scan_token(<<first, _::binary>> = source, position, acc)
+       when first in ?a..?z or first in ?A..?Z or first == ?_ or first >= 0x80,
+       do: scan_name(source, position, acc)
 
-      (number_size = number_length(source)) > 0 ->
-        lexeme = binary_part(source, 0, number_size)
+  defp scan_token(source, position, acc), do: scan_symbol(source, position, acc)
 
-        if String.contains?(lexeme, [".", "e", "E"]) do
-          case Float.parse(lexeme) do
-            {value, ""} -> emit(source, lexeme, :number, value, position, acc)
-            _ -> {:error, Error.new("S0102", "Invalid numeric literal", position)}
-          end
-        else
-          emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
-        end
+  defp scan_number(source, position, acc) do
+    number_size = number_length(source)
+    lexeme = binary_part(source, 0, number_size)
 
-      (name_size = name_length(source)) > 0 ->
+    if String.contains?(lexeme, [".", "e", "E"]) do
+      case Float.parse(lexeme) do
+        {value, ""} -> emit(source, lexeme, :number, value, position, acc)
+        _ -> {:error, Error.new("S0102", "Invalid numeric literal", position)}
+      end
+    else
+      emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
+    end
+  end
+
+  defp scan_name(source, position, acc) do
+    case name_length(source) do
+      0 ->
+        scan_symbol(source, position, acc)
+
+      name_size ->
         name = binary_part(source, 0, name_size)
 
         {type, value} =
@@ -80,21 +92,21 @@ defmodule Jexata.Tokenizer do
           end
 
         emit(source, name, type, value, position, acc)
+    end
+  end
 
-      true ->
-        case single_symbol(source) do
-          nil ->
-            <<character::utf8, _::binary>> = source
-            symbol = <<character::utf8>>
+  defp scan_symbol(source, position, acc) do
+    case operator(source) || single_symbol(source) do
+      nil ->
+        <<character::utf8, _::binary>> = source
+        symbol = <<character::utf8>>
 
-            if symbol == "!",
-              do: {:error, Error.new("S0204", "Unexpected operator !", position)},
-              else:
-                {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
+        if symbol == "!",
+          do: {:error, Error.new("S0204", "Unexpected operator !", position)},
+          else: {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
 
-          symbol ->
-            emit(source, symbol, :op, symbol, position, acc)
-        end
+      symbol ->
+        emit(source, symbol, :op, symbol, position, acc)
     end
   end
 
