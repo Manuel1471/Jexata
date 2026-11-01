@@ -17,4 +17,31 @@ defmodule Jexata.TransformTest do
     assert {:error, %Jexata.Error{code: "T2012"}} =
              Jexata.run("$ ~> |$|{},5|", %{})
   end
+
+  test "transform updates independent nested array paths in one result" do
+    input = %{
+      "items" => [
+        %{"products" => [%{"price" => 1}, %{"price" => 2}]},
+        %{"products" => [%{"price" => 3}]}
+      ]
+    }
+
+    assert Jexata.run("$ ~> |items.products|{'double': price * 2}|", input) ==
+             {:ok,
+              %{
+                "items" => [
+                  %{
+                    "products" => [%{"price" => 1, "double" => 2}, %{"price" => 2, "double" => 4}]
+                  },
+                  %{"products" => [%{"price" => 3, "double" => 6}]}
+                ]
+              }}
+  end
+
+  test "transform keeps sequential behavior for overlapping paths" do
+    input = %{"child" => %{"value" => 1}}
+
+    assert Jexata.run("$ ~> |**|{'touched': true}|", input) ==
+             {:ok, %{"child" => %{"value" => 1, "touched" => true}, "touched" => true}}
+  end
 end

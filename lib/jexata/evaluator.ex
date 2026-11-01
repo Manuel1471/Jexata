@@ -1233,26 +1233,84 @@ defmodule Jexata.Evaluator do
   defp apply_transform(%Transform{} = transform, input) do
     context = %{root: input, environment: transform.environment}
 
-    paths =
+    references =
       transform.pattern
       |> selected_paths([{[], input}], context)
       |> Enum.flat_map(&expand_reference/1)
       |> Enum.filter(fn {_path, value} -> is_map(value) and not is_struct(value) end)
-      |> Enum.map(&elem(&1, 0))
-      |> Enum.uniq()
+      |> Enum.uniq_by(&elem(&1, 0))
 
-    Enum.reduce_while(paths, {:ok, input}, fn path, {:ok, document} ->
-      selected = get_path(document, path)
+    if disjoint_references?(references) do
+      apply_disjoint_transform(transform, input, context, references)
+    else
+      apply_sequential_transform(transform, input, context, references)
+    end
+  end
 
-      with {:ok, update} <- eval(transform.update, selected, context),
-           {:ok, update} <- transform_update(update),
-           {:ok, delete} <- transform_delete(transform.delete, selected, context) do
-        changed = selected |> Map.merge(update) |> Map.drop(delete)
-        {:cont, {:ok, put_path(document, path, changed)}}
-      else
+  defp disjoint_references?([]), do: true
+
+  defp disjoint_references?([{path, _} | rest]),
+    do: Enum.all?(rest, fn {candidate, _} -> length(candidate) == length(path) end)
+
+  defp apply_disjoint_transform(transform, input, context, references) do
+    Enum.reduce_while(references, {:ok, %{}}, fn {path, selected}, {:ok, trie} ->
+      case transformed_value(transform, selected, context) do
+        {:ok, changed} -> {:cont, {:ok, insert_update(trie, path, changed)}}
         error -> {:halt, error}
       end
     end)
+    |> case do
+      {:ok, trie} -> {:ok, apply_updates(input, trie)}
+      error -> error
+    end
+  end
+
+  defp apply_sequential_transform(transform, input, context, references) do
+    Enum.reduce_while(references, {:ok, input}, fn {path, _}, {:ok, document} ->
+      selected = get_path(document, path)
+
+      case transformed_value(transform, selected, context) do
+        {:ok, changed} -> {:cont, {:ok, put_path(document, path, changed)}}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp transformed_value(transform, selected, context) do
+    with {:ok, update} <- eval(transform.update, selected, context),
+         {:ok, update} <- transform_update(update),
+         {:ok, delete} <- transform_delete(transform.delete, selected, context),
+         do: {:ok, selected |> Map.merge(update) |> Map.drop(delete)}
+  end
+
+  defp insert_update(_trie, [], changed), do: {:replace, changed}
+
+  defp insert_update(trie, [key | rest], changed) do
+    child = Map.get(trie, key, %{})
+    Map.put(trie, key, insert_update(child, rest, changed))
+  end
+
+  defp apply_updates(_input, {:replace, changed}), do: changed
+
+  defp apply_updates(input, trie) when is_map(input),
+    do:
+      Enum.reduce(trie, input, fn {key, child}, acc ->
+        Map.update!(acc, key, &apply_updates(&1, child))
+      end)
+
+  defp apply_updates(input, trie) when is_list(input),
+    do: apply_updates_list(input, trie, 0, [])
+
+  defp apply_updates_list([], _trie, _index, acc), do: Enum.reverse(acc)
+
+  defp apply_updates_list([value | rest], trie, index, acc) do
+    updated =
+      case Map.fetch(trie, index) do
+        {:ok, child} -> apply_updates(value, child)
+        :error -> value
+      end
+
+    apply_updates_list(rest, trie, index + 1, [updated | acc])
   end
 
   defp transform_update(update) when is_map(update) and not is_struct(update), do: {:ok, update}
