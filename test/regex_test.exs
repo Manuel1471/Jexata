@@ -11,6 +11,9 @@ defmodule Jexata.RegexTest do
     assert Jexata.run("$replace('John Smith', /(\\w+)\\s(\\w+)/, '$2, $1')", %{}) ==
              {:ok, "Smith, John"}
 
+    assert Jexata.run("$replace('ab ab', /(a)(b)/, '$2-$1-$$')", %{}) ==
+             {:ok, "b-a-$ b-a-$"}
+
     assert Jexata.run("8 / 2", %{}) == {:ok, 4.0}
 
     assert Jexata.run("$contains($.\"Product Name\", /hat/i)", %{"Product Name" => "Hat"}) ==

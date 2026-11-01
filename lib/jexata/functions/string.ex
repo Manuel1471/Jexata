@@ -304,11 +304,12 @@ defmodule Jexata.Functions.String do
   defp replace_regex(value, pattern, replacement, limit) do
     matches = Regex.scan(pattern, value, return: :index)
     matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
+    template = prepare_replacement(replacement)
 
     {parts, cursor} =
       Enum.map_reduce(matches, 0, fn [{start, size} | captures] = match, cursor ->
         untouched = binary_part(value, cursor, start - cursor)
-        replacement = expand_replacement(replacement, value, match, captures)
+        replacement = expand_replacement(template, value, match, captures)
         {[untouched, replacement], start + size}
       end)
 
@@ -321,18 +322,34 @@ defmodule Jexata.Functions.String do
       else: {:ok, replace_regex(value, pattern, replacement, limit)}
   end
 
-  defp expand_replacement(template, value, full_match, captures) do
-    Regex.replace(~r/\$\$|\$\d+/, template, fn token ->
-      cond do
-        token == "$$" ->
-          "$"
+  defp prepare_replacement(template) do
+    matches = Regex.scan(~r/\$\$|\$\d+/, template, return: :index)
 
-        true ->
-          digits = String.slice(token, 1..-1//1)
-          replacement_group(digits, value, [hd(full_match) | captures])
-      end
-    end)
+    {parts, cursor} =
+      Enum.map_reduce(matches, 0, fn [{start, size}], cursor ->
+        literal = binary_part(template, cursor, start - cursor)
+        token = binary_part(template, start, size)
+        part = if token == "$$", do: :dollar, else: {:group, binary_part(token, 1, size - 1)}
+        {[literal, part], start + size}
+      end)
+
+    [parts, binary_part(template, cursor, byte_size(template) - cursor)]
   end
+
+  defp expand_replacement(template, value, full_match, captures) do
+    groups = [hd(full_match) | captures]
+    expand_replacement_parts(template, value, groups)
+  end
+
+  defp expand_replacement_parts(:dollar, _value, _groups), do: "$"
+
+  defp expand_replacement_parts({:group, digits}, value, groups),
+    do: replacement_group(digits, value, groups)
+
+  defp expand_replacement_parts(parts, value, groups) when is_list(parts),
+    do: Enum.map(parts, &expand_replacement_parts(&1, value, groups))
+
+  defp expand_replacement_parts(literal, _value, _groups), do: literal
 
   defp replacement_group(digits, value, groups) do
     candidates =
