@@ -11,6 +11,8 @@ defmodule Jexata.EvaluatorTest do
 
   test "preserves null, missing, arrays and sequence cardinality" do
     assert Jexata.run("missing", %{}) == {:ok, :undefined}
+    assert Jexata.run("$", :undefined) == {:ok, :undefined}
+    assert Jexata.run("1+2", :undefined) == {:ok, 3}
     assert Jexata.run("value", %{"value" => nil}) == {:ok, nil}
     assert Jexata.run("[missing, null, 1]", %{}) == {:ok, [nil, 1]}
     assert Jexata.run("values", %{"values" => [1]}) == {:ok, [1]}
@@ -29,6 +31,7 @@ defmodule Jexata.EvaluatorTest do
     assert {:error, %Jexata.Error{code: "T2001"}} = Jexata.run("'a' + 2", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 / 0", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 % 0.0", %{})
+    assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1/(10e300 * 10e100)", :undefined)
     assert Jexata.run("{'a': 1} & 'x'", %{}) == {:ok, "{\"a\":1}x"}
   end
 

@@ -4,6 +4,11 @@ defmodule Jexata.Evaluator do
   alias Jexata.Runtime.{Closure, Value}
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
+  def evaluate(ast, :undefined) do
+    missing = Value.undefined()
+    eval(ast, missing, %{root: missing, environment: %{}})
+  end
+
   def evaluate(ast, data), do: eval(ast, data, %{root: data, environment: %{}})
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
@@ -366,6 +371,8 @@ defmodule Jexata.Evaluator do
     else
       type_error("Arithmetic operands must be numbers")
     end
+  rescue
+    ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
   end
 
   defp binary(op, a, b) when op in ["=", "!=", "<", "<=", ">", ">=", "in"] do
