@@ -1,11 +1,11 @@
 # Run with: mix run scripts/reductions_guard.exs
-# Baselines were recorded on Elixir 1.20.2 / OTP 29; a 50% margin allows
+# Baselines were recorded on Elixir 1.20.2 / OTP 29; a 25% margin allows
 # runtime and host variation while catching large algorithmic regressions.
 baseline_path = Path.join(__DIR__, "reductions_baseline.json")
 baselines = baseline_path |> File.read!() |> :json.decode()
 data = %{"orders" => Enum.map(1..1_000, &%{"price" => &1})}
 iterations = 20
-max_ratio = 1.5
+max_ratio = 1.25
 
 failures =
   Enum.reduce(baselines, [], fn {name, %{"source" => source, "baseline" => baseline} = config},

@@ -38,7 +38,7 @@ These are separate local runs; microsecond values are affected by host load. The
 
 The transform benchmark uses a list of 1,000 objects. Independent paths are updated together; overlapping paths retain sequential evaluation. Returning an unchanged nested 1,000-object subtree measured 106.474 to 72.807 µs and 51,203 to 46,161 reductions per call in a dedicated comparison. These timings come from separate runs and are indicative; the reduction counts are more stable.
 
-CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks twelve representative 1,000-order workloads and fails when a measurement exceeds 150% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
+CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks twelve representative 1,000-order workloads and fails when a measurement exceeds 125% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
 
 ## Tokenizer comparison
 
