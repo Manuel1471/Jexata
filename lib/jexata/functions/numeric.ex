@@ -86,30 +86,27 @@ defmodule Jexata.Functions.Numeric do
 
   def call("$formatBase", [value]), do: call("$formatBase", [value, 10])
 
+  def call("$formatBase", [value, _base]) when is_struct(value, Value.Undefined),
+    do: {:ok, value}
+
   def call("$formatBase", [value, base])
-      when is_integer(value) and is_integer(base) and base in 2..36,
-      do: {:ok, Integer.to_string(value, base) |> String.downcase()}
+      when is_number(value) and is_number(base) do
+    integer = round_decimal(value, 0)
+    radix = round_decimal(base, 0)
+
+    if radix in 2..36,
+      do: {:ok, Integer.to_string(integer, radix) |> String.downcase()},
+      else: {:error, Error.new("D3100", "Invalid numeric base")}
+  end
 
   def call("$round", [value]), do: call("$round", [value, 0])
 
+  def call("$round", [value, _precision]) when is_struct(value, Value.Undefined),
+    do: {:ok, value}
+
   def call("$round", [value, precision])
-      when is_number(value) and is_integer(precision) and precision in -15..15 do
-    scale = :math.pow(10, precision)
-    scaled = value * scale
-    low = Float.floor(scaled)
-    fraction = scaled - low
-
-    nearest =
-      cond do
-        fraction < 0.5 -> low
-        fraction > 0.5 -> low + 1
-        rem(trunc(low), 2) == 0 -> low
-        true -> low + 1
-      end
-
-    result = nearest / scale
-    {:ok, if(precision <= 0 and result == trunc(result), do: trunc(result), else: result)}
-  end
+      when is_number(value) and is_integer(precision) and precision in -100..100,
+      do: {:ok, round_decimal(value, precision)}
 
   def call(name, _), do: type_error(name)
 
@@ -123,4 +120,43 @@ defmodule Jexata.Functions.Numeric do
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
   defp invalid_number, do: {:error, Error.new("D3030", "Cannot cast string to number")}
+
+  defp round_decimal(value, precision) when is_integer(value) and precision >= 0, do: value
+
+  defp round_decimal(value, precision) do
+    text =
+      if is_integer(value),
+        do: Integer.to_string(value),
+        else: :erlang.float_to_binary(value, [:short])
+
+    sign = if String.starts_with?(text, "-"), do: -1, else: 1
+    text = String.trim_leading(text, "-")
+    [mantissa | exponent] = String.split(text, ~r/[eE]/)
+    [whole | fraction] = String.split(mantissa, ".")
+    fractional = Enum.at(fraction, 0, "")
+    coefficient = String.to_integer(whole <> fractional)
+
+    scale =
+      if(exponent == [], do: 0, else: String.to_integer(hd(exponent))) - String.length(fractional) +
+        precision
+
+    rounded =
+      if scale >= 0 do
+        coefficient * Integer.pow(10, scale)
+      else
+        divisor = Integer.pow(10, -scale)
+        quotient = div(coefficient, divisor)
+        remainder = rem(coefficient, divisor)
+
+        if remainder * 2 > divisor or (remainder * 2 == divisor and rem(quotient, 2) == 1),
+          do: quotient + 1,
+          else: quotient
+      end
+
+    result = sign * rounded
+
+    if precision > 0,
+      do: result / Integer.pow(10, precision),
+      else: result * Integer.pow(10, -precision)
+  end
 end
