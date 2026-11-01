@@ -24,4 +24,14 @@ defmodule Jexata.FunctionsHigherOrderTest do
              %{}
            ) == {:ok, true}
   end
+
+  test "function composition applies functions from left to right" do
+    assert Jexata.run("($uppertrim := $trim ~> $uppercase; $uppertrim('  hello  '))", %{}) ==
+             {:ok, "HELLO"}
+
+    assert Jexata.run(
+             "($square := function($x){$x*$x}; $sum_of_squares := $map(?, $square) ~> $sum; [1..3] ~> $sum_of_squares())",
+             %{}
+           ) == {:ok, 14}
+  end
 end

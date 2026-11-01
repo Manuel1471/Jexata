@@ -14,6 +14,7 @@ defmodule Jexata.Semantics do
   def boolean(%Jexata.Runtime.Builtin{}), do: false
   def boolean(%Jexata.Runtime.Partial{}), do: false
   def boolean(%Jexata.Runtime.Transform{}), do: false
+  def boolean(%Jexata.Runtime.Composition{}), do: false
   def boolean(map) when is_map(map), do: map_size(map) > 0
   def boolean([]), do: false
   def boolean(list) when is_list(list), do: Enum.any?(list, &boolean/1)

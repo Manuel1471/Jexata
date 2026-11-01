@@ -300,6 +300,9 @@ defmodule Jexata.Parser do
     with {:ok, tail} <- expect(tokens, ")"), do: {:ok, Enum.reverse(items), tail}
   end
 
+  defp block(items, [%Token{value: ";"}, %Token{value: ")"} | rest]),
+    do: block(items, [%Token{type: :op, value: ")", position: 0} | rest])
+
   defp block(items, [%Token{value: ";"} | rest]) do
     with {:ok, value, tail} <- expression(rest, 0), do: block([value | items], tail)
   end

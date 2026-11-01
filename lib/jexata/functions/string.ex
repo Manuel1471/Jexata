@@ -41,6 +41,7 @@ defmodule Jexata.Functions.String do
   def call("$string", [%Jexata.Runtime.Builtin{}]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Partial{}]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Transform{}]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Composition{}]), do: {:ok, ""}
 
   def call("$string", [value, false]), do: call("$string", [value])
   def call("$string", [value, true]) when is_binary(value), do: {:ok, value}
@@ -49,6 +50,7 @@ defmodule Jexata.Functions.String do
   def call("$string", [%Jexata.Runtime.Builtin{}, true]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Partial{}, true]), do: {:ok, ""}
   def call("$string", [%Jexata.Runtime.Transform{}, true]), do: {:ok, ""}
+  def call("$string", [%Jexata.Runtime.Composition{}, true]), do: {:ok, ""}
 
   def call("$string", [value, true]) do
     if Value.undefined?(value),
@@ -90,6 +92,9 @@ defmodule Jexata.Functions.String do
 
   def call("$substringBefore", [value, ""]) when is_binary(value), do: {:ok, ""}
 
+  def call("$substringBefore", [value, _token]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
   def call("$substringBefore", [value, token]) when is_binary(value) and is_binary(token) do
     case :binary.match(value, token) do
       {index, _} -> {:ok, binary_part(value, 0, index)}
@@ -98,6 +103,9 @@ defmodule Jexata.Functions.String do
   end
 
   def call("$substringAfter", [value, ""]) when is_binary(value), do: {:ok, value}
+
+  def call("$substringAfter", [value, _token]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
 
   def call("$substringAfter", [value, token]) when is_binary(value) and is_binary(token) do
     case :binary.match(value, token) do

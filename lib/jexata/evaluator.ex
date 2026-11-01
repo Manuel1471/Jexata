@@ -1,7 +1,7 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
-  alias Jexata.Runtime.{Builtin, Closure, Partial, Signature, Transform, Value}
+  alias Jexata.Runtime.{Builtin, Closure, Composition, Partial, Signature, Transform, Value}
   alias Jexata.Runtime.Partial.Placeholder
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -183,14 +183,32 @@ defmodule Jexata.Evaluator do
   defp eval({:binary, "~>", left, {:call, {:variable, name}, args}}, data, context) do
     with {:ok, value} <- eval(left, data, context),
          {:ok, values} <- eval_list(args, data, context) do
-      case Map.fetch(context.environment, name) do
-        {:ok, closure} ->
-          invoke(with_recursive_bindings(closure, context.environment), [value | values], data)
+      target =
+        case Map.fetch(context.environment, name) do
+          {:ok, function} ->
+            with_recursive_bindings(function, context.environment)
 
-        :error ->
-          if name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"],
-            do: higher_order(name, [value | values], data),
-            else: Functions.call(name, [value | values], data)
+          :error ->
+            if Functions.supported?(name), do: %Builtin{name: name}, else: Value.undefined()
+        end
+
+      if callable?(value) and callable?(target) do
+        arguments =
+          if Enum.any?(values, &is_struct(&1, Placeholder)),
+            do: values,
+            else: [%Placeholder{} | values]
+
+        {:ok,
+         %Composition{first: value, second: %Partial{function: target, arguments: arguments}}}
+      else
+        case target do
+          %Builtin{name: name}
+          when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"] ->
+            higher_order(name, [value | values], data)
+
+          _ ->
+            invoke(target, [value | values], data)
+        end
       end
     end
   end
@@ -198,7 +216,16 @@ defmodule Jexata.Evaluator do
   defp eval({:binary, "~>", left, target}, data, context) do
     with {:ok, value} <- eval(left, data, context),
          {:ok, function} <- eval(target, data, context) do
-      invoke(function, [value], data)
+      cond do
+        callable?(value) and callable?(function) ->
+          {:ok, %Composition{first: value, second: function}}
+
+        callable?(function) ->
+          invoke(function, [value], data)
+
+        true ->
+          {:error, Error.new("T2006", "Right side of ~> must be a function")}
+      end
     end
   end
 
@@ -259,10 +286,14 @@ defmodule Jexata.Evaluator do
   defp eval({:call, {:variable, name}, args}, data, context)
        when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"] do
     with {:ok, values} <- eval_list(args, data, context) do
-      values =
-        if name in ["$each", "$sift"] and length(values) == 1, do: [data | values], else: values
+      if Enum.any?(values, &is_struct(&1, Placeholder)) do
+        {:ok, %Partial{function: %Builtin{name: name}, arguments: values}}
+      else
+        values =
+          if name in ["$each", "$sift"] and length(values) == 1, do: [data | values], else: values
 
-      higher_order(name, values, data)
+        higher_order(name, values, data)
+      end
     end
   end
 
@@ -562,6 +593,11 @@ defmodule Jexata.Evaluator do
 
   defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
 
+  defp invoke(%Composition{first: first, second: second}, values, data) do
+    with {:ok, intermediate} <- invoke(first, values, data),
+         do: invoke(second, [intermediate], data)
+  end
+
   defp invoke(%Transform{} = transform, [input], _data), do: apply_transform(transform, input)
 
   defp invoke(%Partial{function: function, arguments: arguments}, values, data) do
@@ -594,6 +630,11 @@ defmodule Jexata.Evaluator do
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}
+
+  defp callable?(value),
+    do:
+      is_struct(value, Closure) or is_struct(value, Builtin) or is_struct(value, Partial) or
+        is_struct(value, Composition) or is_struct(value, Transform) or is_struct(value, Regex)
 
   defp apply_transform(%Transform{} = transform, input) do
     context = %{root: input, environment: transform.environment}
