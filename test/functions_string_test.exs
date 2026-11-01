@@ -8,6 +8,7 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$contains('hello', 'ell')", %{}) == {:ok, true}
     assert Jexata.run("$join(['a','b'], '-')", %{}) == {:ok, "a-b"}
     assert Jexata.run("$string(null)", %{}) == {:ok, "null"}
+    assert Jexata.run("$length(\"\\uD834\\uDD1E\")", %{}) == {:ok, 1}
   end
 
   test "substring delimiters, split limits and literal replacement" do

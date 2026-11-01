@@ -200,8 +200,10 @@ defmodule Jexata.Tokenizer do
 
   defp token(type, value, position), do: %Token{type: type, value: value, position: position}
 
-  defp quoted(<<>>, _quote, position, _acc),
-    do: {:error, Error.new("S0103", "Unterminated string", position)}
+  defp quoted(<<>>, quote, position, _acc),
+    do:
+      {:error,
+       Error.new(if(quote == ?`, do: "S0105", else: "S0101"), "Unterminated string", position)}
 
   defp quoted(<<quote::utf8, tail::binary>>, quote, _position, acc),
     do: {:ok, IO.iodata_to_binary(Enum.reverse(acc)), tail}
@@ -241,6 +243,22 @@ defmodule Jexata.Tokenizer do
 
   defp unicode_escape(<<digits::binary-size(4), tail::binary>>, quote, position, acc) do
     case Integer.parse(digits, 16) do
+      {high, ""} when high in 0xD800..0xDBFF ->
+        case tail do
+          <<?\\, ?u, low_digits::binary-size(4), rest::binary>> ->
+            case Integer.parse(low_digits, 16) do
+              {low, ""} when low in 0xDC00..0xDFFF ->
+                codepoint = 0x10000 + (high - 0xD800) * 0x400 + low - 0xDC00
+                quoted(rest, quote, position + 12, [<<codepoint::utf8>> | acc])
+
+              _ ->
+                {:error, Error.new("S0104", "Invalid Unicode surrogate pair", position)}
+            end
+
+          _ ->
+            {:error, Error.new("S0104", "Invalid Unicode surrogate pair", position)}
+        end
+
       {codepoint, ""} when codepoint not in 0xD800..0xDFFF and codepoint <= 0x10FFFF ->
         quoted(tail, quote, position + 6, [<<codepoint::utf8>> | acc])
 
