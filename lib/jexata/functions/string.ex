@@ -12,7 +12,10 @@ defmodule Jexata.Functions.String do
     "$substring",
     "$contains",
     "$split",
-    "$join"
+    "$join",
+    "$substringBefore",
+    "$substringAfter",
+    "$replace"
   ]
   def supported?(name), do: name in @supported
 
@@ -33,6 +36,45 @@ defmodule Jexata.Functions.String do
   def call("$trim", [value]) when is_binary(value),
     do: {:ok, value |> String.trim() |> String.replace(~r/\s+/u, " ")}
 
+  def call("$contains", [value, token])
+      when is_struct(value, Value.Undefined) or is_struct(token, Value.Undefined),
+      do: {:ok, Value.undefined()}
+
+  def call("$substringBefore", [value, ""]) when is_binary(value), do: {:ok, ""}
+
+  def call("$substringBefore", [value, token]) when is_binary(value) and is_binary(token) do
+    case :binary.match(value, token) do
+      {index, _} -> {:ok, binary_part(value, 0, index)}
+      :nomatch -> {:ok, value}
+    end
+  end
+
+  def call("$substringAfter", [value, ""]) when is_binary(value), do: {:ok, value}
+
+  def call("$substringAfter", [value, token]) when is_binary(value) and is_binary(token) do
+    case :binary.match(value, token) do
+      {index, length} ->
+        {:ok, binary_part(value, index + length, byte_size(value) - index - length)}
+
+      :nomatch ->
+        {:ok, value}
+    end
+  end
+
+  def call("$replace", [value, token, replacement])
+      when is_binary(value) and is_binary(token) and is_binary(replacement) and token != "",
+      do: {:ok, String.replace(value, token, replacement)}
+
+  def call("$replace", [value, token, replacement, limit])
+      when is_binary(value) and is_binary(token) and is_binary(replacement) and is_integer(limit) and
+             limit >= 0 and token != "" do
+    {:ok,
+     if(limit == 0,
+       do: value,
+       else: value |> String.split(token, parts: limit + 1) |> Enum.join(replacement)
+     )}
+  end
+
   def call("$contains", [value, token]) when is_binary(value) and is_binary(token),
     do: {:ok, String.contains?(value, token)}
 
@@ -45,6 +87,10 @@ defmodule Jexata.Functions.String do
 
   def call("$split", [value, separator]) when is_binary(value) and is_binary(separator),
     do: {:ok, String.split(value, separator)}
+
+  def call("$split", [value, separator, limit])
+      when is_binary(value) and is_binary(separator) and is_integer(limit) and limit >= 0,
+      do: {:ok, value |> String.split(separator) |> Enum.take(limit)}
 
   def call("$join", [values]) when is_list(values), do: call("$join", [values, ""])
 

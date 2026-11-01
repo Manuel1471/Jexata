@@ -9,4 +9,14 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$join(['a','b'], '-')", %{}) == {:ok, "a-b"}
     assert Jexata.run("$string(null)", %{}) == {:ok, "null"}
   end
+
+  test "substring delimiters, split limits and literal replacement" do
+    assert Jexata.run("$substringBefore('abc', 'b')", %{}) == {:ok, "a"}
+    assert Jexata.run("$substringAfter('abc', 'b')", %{}) == {:ok, "c"}
+    assert Jexata.run("$substringBefore('abc', 'x')", %{}) == {:ok, "abc"}
+    assert Jexata.run("$substringBefore('Hola', '')", %{}) == {:ok, ""}
+    assert Jexata.run("$split('a,b,c', ',', 2)", %{}) == {:ok, ["a", "b"]}
+    assert Jexata.run("$replace('aba', 'a', 'x', 1)", %{}) == {:ok, "xba"}
+    assert Jexata.run("$contains('abc', missing)", %{}) == {:ok, :undefined}
+  end
 end
