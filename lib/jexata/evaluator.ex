@@ -171,8 +171,13 @@ defmodule Jexata.Evaluator do
     with {:ok, value} <- eval(left, data, context),
          {:ok, values} <- eval_list(args, data, context) do
       case Map.fetch(context.environment, name) do
-        {:ok, closure} -> invoke(closure, [value | values], data)
-        :error -> Functions.call(name, [value | values], data)
+        {:ok, closure} ->
+          invoke(closure, [value | values], data)
+
+        :error ->
+          if name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"],
+            do: higher_order(name, [value | values], data),
+            else: Functions.call(name, [value | values], data)
       end
     end
   end
@@ -239,8 +244,13 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:call, {:variable, name}, args}, data, context)
-       when name in ["$map", "$filter", "$reduce"] do
-    with {:ok, values} <- eval_list(args, data, context), do: higher_order(name, values, data)
+       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"] do
+    with {:ok, values} <- eval_list(args, data, context) do
+      values =
+        if name in ["$each", "$sift"] and length(values) == 1, do: [data | values], else: values
+
+      higher_order(name, values, data)
+    end
   end
 
   defp eval({:call, {:variable, "$eval"}, args}, data, context) do
@@ -353,6 +363,89 @@ defmodule Jexata.Evaluator do
   defp higher_order("$reduce", [input, %Closure{} = callback, initial], data),
     do: reduce_items(Value.items(input), callback, initial, data)
 
+  defp higher_order("$single", [input], data), do: higher_order("$single", [input, nil], data)
+
+  defp higher_order("$single", [input, callback], data) do
+    if Value.undefined?(input) do
+      {:ok, Value.undefined()}
+    else
+      input
+      |> Value.items()
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, found} ->
+        result =
+          if is_nil(callback),
+            do: {:ok, true},
+            else: invoke_callback(callback, [item, index, Value.items(input)], data)
+
+        case result do
+          {:ok, value} ->
+            {:cont, {:ok, if(Semantics.boolean(value), do: [item | found], else: found)}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, [item]} -> {:ok, item}
+        {:ok, []} -> {:error, Error.new("D3139", "$single found no matching item")}
+        {:ok, _} -> {:error, Error.new("D3138", "$single found multiple matching items")}
+        error -> error
+      end
+    end
+  end
+
+  defp higher_order("$each", [object, callback], data)
+       when is_map(object) and not is_struct(object) do
+    object
+    |> Enum.reduce_while({:ok, []}, fn {key, value}, {:ok, results} ->
+      case invoke_callback(callback, [value, key, object], data) do
+        {:ok, result} -> {:cont, {:ok, [result | results]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, results} -> {:ok, Value.sequence(Enum.reverse(results))}
+      error -> error
+    end
+  end
+
+  defp higher_order("$sift", [object, callback], data)
+       when is_map(object) and not is_struct(object) do
+    Enum.reduce_while(object, {:ok, %{}}, fn {key, value}, {:ok, result} ->
+      case invoke_callback(callback, [value, key, object], data) do
+        {:ok, keep} ->
+          {:cont,
+           {:ok, if(Semantics.boolean(keep), do: Map.put(result, key, value), else: result)}}
+
+        error ->
+          {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, result} when map_size(result) == 0 -> {:ok, Value.undefined()}
+      other -> other
+    end
+  end
+
+  defp higher_order("$sift", [objects, callback], data) when is_list(objects) do
+    Enum.reduce_while(objects, {:ok, []}, fn object, {:ok, results} ->
+      case higher_order("$sift", [object, callback], data) do
+        {:ok, result} -> {:cont, {:ok, [result | results]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, results} -> {:ok, Value.sequence(Enum.reverse(results))}
+      error -> error
+    end
+  end
+
+  defp higher_order("$sift", [%Value.Sequence{items: objects}, callback], data),
+    do: higher_order("$sift", [objects, callback], data)
+
+  defp higher_order("$sift", [_other, _callback], _data), do: {:ok, Value.undefined()}
+
   defp higher_order(name, _, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 
   defp reduce_items(items, callback, initial, data) do
@@ -379,6 +472,9 @@ defmodule Jexata.Evaluator do
   defp invoke_callback(%Closure{parameters: parameters} = closure, args, data),
     do: invoke(closure, Enum.take(args, length(parameters)), data)
 
+  defp invoke_callback(%Builtin{} = builtin, [value | _], data),
+    do: invoke(builtin, [value], data)
+
   defp invoke(%Closure{parameters: parameters, body: body} = closure, values, data) do
     case Signature.bind(closure.signature, parameters, values, data) do
       {:ok, bound} ->
@@ -394,10 +490,28 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp invoke(%Builtin{name: name}, values, data) when name in ["$map", "$filter", "$reduce"],
-    do: higher_order(name, values, data)
+  defp invoke(%Builtin{name: name}, values, data)
+       when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift"],
+       do: higher_order(name, values, data)
 
   defp invoke(%Builtin{name: name}, values, data), do: Functions.call(name, values, data)
+
+  defp invoke(%Regex{} = pattern, [value], _data) when is_binary(value) do
+    case Regex.run(pattern, value, return: :index) do
+      nil ->
+        {:ok, Value.undefined()}
+
+      [{index, length} | captures] ->
+        groups =
+          Enum.map(captures, fn
+            {-1, _} -> ""
+            {start, size} -> binary_part(value, start, size)
+          end)
+
+        {:ok,
+         %{"match" => binary_part(value, index, length), "index" => index, "groups" => groups}}
+    end
+  end
 
   defp invoke(_, _, _),
     do: {:error, Error.new("T1006", "Value is not a callable function or arity is invalid")}

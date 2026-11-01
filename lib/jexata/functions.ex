@@ -5,7 +5,19 @@ defmodule Jexata.Functions do
   alias Jexata.Runtime.Value
 
   def supported?(name) do
-    name in ["$type", "$error", "$assert", "$map", "$filter", "$reduce", "$eval", "$formatNumber"] or
+    name in [
+      "$type",
+      "$error",
+      "$assert",
+      "$map",
+      "$filter",
+      "$reduce",
+      "$single",
+      "$each",
+      "$sift",
+      "$eval",
+      "$formatNumber"
+    ] or
       Enum.any?([Numeric, Boolean, String, Array, Object, URL, Datetime], & &1.supported?(name))
   end
 
