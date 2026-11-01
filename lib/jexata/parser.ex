@@ -5,6 +5,8 @@ defmodule Jexata.Parser do
 
   @precedence %{
     ":=" => 10,
+    "?:" => 20,
+    "??" => 20,
     "or" => 30,
     "and" => 40,
     "=" => 50,
@@ -58,6 +60,7 @@ defmodule Jexata.Parser do
   end
 
   defp prefix([%Token{value: "*"} | rest]), do: {:ok, :wildcard, rest}
+  defp prefix([%Token{value: "**"} | rest]), do: {:ok, :descendants, rest}
   defp prefix([%Token{value: "["} | rest]), do: collection(rest, "]", :array)
   defp prefix([%Token{value: "{"} | rest]), do: collection(rest, "}", :object)
 
@@ -77,6 +80,15 @@ defmodule Jexata.Parser do
 
   defp infix(left, [%Token{value: "("} | rest], min_bp) when min_bp < 100 do
     with {:ok, args, tail} <- arguments(rest), do: infix({:call, left, args}, tail, min_bp)
+  end
+
+  defp infix(left, [%Token{value: "{"} | rest], min_bp) when min_bp < 100 do
+    with {:ok, {:object, pairs}, tail} <- collection(rest, "}", :object),
+         do: infix({:group, left, pairs}, tail, min_bp)
+  end
+
+  defp infix(left, [%Token{value: "^"}, %Token{value: "("} | rest], min_bp) when min_bp < 100 do
+    with {:ok, terms, tail} <- sort_terms([], rest), do: infix({:sort, left, terms}, tail, min_bp)
   end
 
   defp infix(left, [%Token{value: "["} | rest], min_bp) when min_bp < 100 do
@@ -110,6 +122,26 @@ defmodule Jexata.Parser do
   end
 
   defp infix(left, tokens, _), do: {:ok, left, tokens}
+
+  defp sort_terms(terms, tokens) do
+    {direction, rest} =
+      case tokens do
+        [%Token{value: ">"} | tail] -> {:desc, tail}
+        [%Token{value: "<"} | tail] -> {:asc, tail}
+        _ -> {:asc, tokens}
+      end
+
+    with {:ok, ast, tail} <- expression(rest, 0) do
+      case tail do
+        [%Token{value: ","} | more] ->
+          sort_terms([{direction, ast} | terms], more)
+
+        _ ->
+          with {:ok, more} <- expect(tail, ")"),
+               do: {:ok, Enum.reverse([{direction, ast} | terms]), more}
+      end
+    end
+  end
 
   defp collection([%Token{value: closing} | rest], closing, :array), do: {:ok, {:array, []}, rest}
 

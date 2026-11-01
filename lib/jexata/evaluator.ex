@@ -20,12 +20,65 @@ defmodule Jexata.Evaluator do
 
   defp eval(:wildcard, data, _root) when is_map(data), do: {:ok, Value.sequence(Map.values(data))}
   defp eval(:wildcard, data, _root), do: {:ok, Value.sequence(Value.items(data))}
+  defp eval(:descendants, data, _context), do: {:ok, Value.sequence(descendants(data))}
 
   defp eval({:path, left, right}, data, root) do
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
       |> eval_each(right, root)
+    end
+  end
+
+  defp eval({:group, left, pairs}, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      Enum.reduce_while(pairs, {:ok, %{}}, fn {key_ast, value_ast}, {:ok, result} ->
+        case group_items(Value.items(source), key_ast, context) do
+          {:ok, groups} ->
+            Enum.reduce_while(groups, {:ok, result}, fn {key, items}, {:ok, acc} ->
+              case eval(value_ast, Enum.reverse(items), context) do
+                {:ok, value} ->
+                  {:cont,
+                   {:ok, if(Value.undefined?(value), do: acc, else: Map.put(acc, key, value))}}
+
+                error ->
+                  {:halt, error}
+              end
+            end)
+            |> case do
+              {:ok, value} -> {:cont, {:ok, value}}
+              error -> {:halt, error}
+            end
+
+          error ->
+            {:halt, error}
+        end
+      end)
+    end
+  end
+
+  defp eval({:sort, left, terms}, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      source
+      |> Value.items()
+      |> Enum.reduce_while({:ok, []}, fn item, {:ok, acc} ->
+        case eval_sort_keys(terms, item, context) do
+          {:ok, keys} -> {:cont, {:ok, [{item, keys} | acc]}}
+          error -> {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, decorated} ->
+          sorted =
+            decorated
+            |> Enum.reverse()
+            |> Enum.sort(fn {_, a}, {_, b} -> compare_sort_keys(a, b) end)
+
+          {:ok, Value.sequence(Enum.map(sorted, &elem(&1, 0)))}
+
+        error ->
+          error
+      end
     end
   end
 
@@ -77,6 +130,18 @@ defmodule Jexata.Evaluator do
   defp eval({:negate, ast}, data, root) do
     with {:ok, value} <- eval(ast, data, root) do
       if is_number(value), do: {:ok, -value}, else: type_error("Unary minus requires a number")
+    end
+  end
+
+  defp eval({:binary, "?:", left, right}, data, context) do
+    with {:ok, value} <- eval(left, data, context) do
+      if Semantics.boolean(value), do: {:ok, value}, else: eval(right, data, context)
+    end
+  end
+
+  defp eval({:binary, "??", left, right}, data, context) do
+    with {:ok, value} <- eval(left, data, context) do
+      if Value.undefined?(value), do: eval(right, data, context), else: {:ok, value}
     end
   end
 
@@ -314,6 +379,58 @@ defmodule Jexata.Evaluator do
     {:ok, result} = Jexata.Functions.String.call("$string", [value])
     result
   end
+
+  defp group_items(items, key_ast, context) do
+    Enum.reduce_while(items, {:ok, %{}}, fn item, {:ok, groups} ->
+      case eval(key_ast, item, context) do
+        {:ok, key} when is_binary(key) ->
+          {:cont, {:ok, Map.update(groups, key, [item], &[item | &1])}}
+
+        {:ok, _} ->
+          {:halt, {:error, Error.new("T1003", "Group key must be a string")}}
+
+        error ->
+          {:halt, error}
+      end
+    end)
+  end
+
+  defp eval_sort_keys(terms, item, context) do
+    Enum.reduce_while(terms, {:ok, []}, fn {direction, ast}, {:ok, keys} ->
+      case eval(ast, item, context) do
+        {:ok, value} when is_number(value) or is_binary(value) ->
+          {:cont, {:ok, [{direction, value} | keys]}}
+
+        {:ok, _} ->
+          {:halt, {:error, Error.new("T2008", "Sort key must be a number or string")}}
+
+        error ->
+          {:halt, error}
+      end
+    end)
+    |> case do
+      {:ok, keys} -> {:ok, Enum.reverse(keys)}
+      error -> error
+    end
+  end
+
+  defp compare_sort_keys([], []), do: true
+
+  defp compare_sort_keys([{direction, left} | rest_a], [{_, right} | rest_b]) do
+    cond do
+      left == right -> compare_sort_keys(rest_a, rest_b)
+      direction == :asc -> left < right
+      true -> left > right
+    end
+  end
+
+  defp descendants(value) when is_list(value), do: Enum.flat_map(value, &descendants/1)
+
+  defp descendants(value) when is_map(value) and not is_struct(value) do
+    [value | Enum.flat_map(value, fn {_key, child} -> descendants(child) end)]
+  end
+
+  defp descendants(value), do: [value]
 
   defp type_error(message), do: {:error, Error.new("T2001", message)}
 end
