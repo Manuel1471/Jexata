@@ -20,6 +20,12 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("[items.x]", %{"items" => [%{"x" => 1}, %{"x" => 2}]}) == {:ok, [1, 2]}
   end
 
+  test "ranges flatten into array constructors and validate endpoints" do
+    assert Jexata.run("[0..3]", %{}) == {:ok, [0, 1, 2, 3]}
+    assert Jexata.run("[5..2]", %{}) == {:ok, []}
+    assert {:error, %Jexata.Error{code: "T2003"}} = Jexata.run("[1.1..5]", %{})
+  end
+
   test "supports filters, constructors and conditions" do
     data = %{"items" => [%{"price" => 1}, %{"price" => 3}]}
     assert Jexata.run("items[price > 2].price", data) == {:ok, 3}
