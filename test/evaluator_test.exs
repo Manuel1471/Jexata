@@ -42,6 +42,8 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("items[price > 2].price", data) == {:ok, 3}
     assert Jexata.run("items[0].price", data) == {:ok, 1}
     assert Jexata.run("{'yes': true ? 2 : 3}", %{}) == {:ok, %{"yes" => 2}}
+    assert Jexata.run("false ? 2", %{}) == {:ok, :undefined}
+    assert Jexata.run("true ? 2", %{}) == {:ok, 2}
   end
 
   test "reports type and arithmetic errors" do

@@ -106,8 +106,7 @@ defmodule Jexata.Parser do
 
   defp infix(left, [%Token{value: "?"} | rest], min_bp) when min_bp < 20 do
     with {:ok, consequent, tail} <- expression(rest, 0),
-         {:ok, tail} <- expect(tail, ":"),
-         {:ok, alternate, tail} <- expression(tail, 19) do
+         {:ok, alternate, tail} <- optional_alternate(tail) do
       infix({:conditional, left, consequent, alternate}, tail, min_bp)
     end
   end
@@ -128,6 +127,9 @@ defmodule Jexata.Parser do
   end
 
   defp infix(left, tokens, _), do: {:ok, left, tokens}
+
+  defp optional_alternate([%Token{value: ":"} | rest]), do: expression(rest, 19)
+  defp optional_alternate(tail), do: {:ok, {:literal, Jexata.Runtime.Value.undefined()}, tail}
 
   defp path_postfix(left, [%Token{value: "("} | rest]) do
     with {:ok, args, tail} <- arguments(rest), do: path_postfix({:call, left, args}, tail)
