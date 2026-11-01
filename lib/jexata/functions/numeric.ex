@@ -5,7 +5,7 @@ defmodule Jexata.Functions.Numeric do
 
   @aggregates ["$sum", "$count", "$max", "$min", "$average"]
   @unary ["$abs", "$floor", "$ceil"]
-  @supported @aggregates ++ @unary ++ ["$round"]
+  @supported @aggregates ++ @unary ++ ["$round", "$number", "$sqrt", "$power", "$formatBase"]
 
   def supported?(name), do: name in @supported
 
@@ -37,6 +37,58 @@ defmodule Jexata.Functions.Numeric do
       type_error(name)
     end
   end
+
+  def call("$number", [value]) when is_number(value), do: {:ok, value}
+  def call("$number", [true]), do: {:ok, 1}
+  def call("$number", [false]), do: {:ok, 0}
+
+  def call("$number", [value]) when is_binary(value) do
+    cond do
+      Regex.match?(~r/\A0[xX][0-9a-fA-F]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(16)}
+
+      Regex.match?(~r/\A0[oO][0-7]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(8)}
+
+      Regex.match?(~r/\A0[bB][01]+\z/, value) ->
+        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(2)}
+
+      Regex.match?(~r/\A-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
+        if String.contains?(value, [".", "e", "E"]) do
+          case Float.parse(value) do
+            {number, ""} -> {:ok, number}
+            _ -> type_error("$number")
+          end
+        else
+          {:ok, String.to_integer(value)}
+        end
+
+      true ->
+        type_error("$number")
+    end
+  end
+
+  def call("$number", [value]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
+  def call("$sqrt", [value]) when is_number(value) and value >= 0, do: {:ok, :math.sqrt(value)}
+
+  def call("$sqrt", [value]) when is_number(value),
+    do: {:error, Error.new("D3060", "Square root of a negative number")}
+
+  def call("$power", [base, exponent]) when is_number(base) and is_number(exponent) do
+    try do
+      {:ok, :math.pow(base, exponent)}
+    rescue
+      ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+    end
+  end
+
+  def call("$formatBase", [value]), do: call("$formatBase", [value, 10])
+
+  def call("$formatBase", [value, base])
+      when is_integer(value) and is_integer(base) and base in 2..36,
+      do: {:ok, Integer.to_string(value, base) |> String.downcase()}
 
   def call("$round", [value]), do: call("$round", [value, 0])
 

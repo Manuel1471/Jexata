@@ -21,4 +21,14 @@ defmodule Jexata.FunctionsNumericTest do
     assert Jexata.run("$round(3.5)", %{}) == {:ok, 4}
     assert {:error, %Jexata.Error{code: "T0412"}} = Jexata.run("$sum([1, 'x'])", %{})
   end
+
+  test "numeric conversion and powers follow JSONata's basic rules" do
+    assert Jexata.run("$number('12.5')", %{}) == {:ok, 12.5}
+    assert Jexata.run("$number('0x12')", %{}) == {:ok, 18}
+    assert Jexata.run("$number(missing)", %{}) == {:ok, :undefined}
+    assert Jexata.run("$sqrt(4)", %{}) == {:ok, 2.0}
+    assert Jexata.run("$power(2, 3)", %{}) == {:ok, 8.0}
+    assert Jexata.run("$formatBase(10, 2)", %{}) == {:ok, "1010"}
+    assert {:error, %Jexata.Error{code: "D3060"}} = Jexata.run("$sqrt(-1)", %{})
+  end
 end

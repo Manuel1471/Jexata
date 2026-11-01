@@ -6,7 +6,18 @@ defmodule Jexata.Functions do
   def call(name, args, context) do
     args =
       if args == [] and
-           name in ["$count", "$abs", "$floor", "$ceil", "$round", "$boolean", "$not", "$exists"],
+           name in [
+             "$count",
+             "$abs",
+             "$floor",
+             "$ceil",
+             "$round",
+             "$number",
+             "$sqrt",
+             "$boolean",
+             "$not",
+             "$exists"
+           ],
          do: [context],
          else: args
 
