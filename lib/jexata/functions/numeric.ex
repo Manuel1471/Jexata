@@ -53,18 +53,18 @@ defmodule Jexata.Functions.Numeric do
       Regex.match?(~r/\A0[bB][01]+\z/, value) ->
         {:ok, value |> String.slice(2..-1//1) |> String.to_integer(2)}
 
-      Regex.match?(~r/\A-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
+      Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
         if String.contains?(value, [".", "e", "E"]) do
           case Float.parse(value) do
             {number, ""} -> {:ok, number}
-            _ -> type_error("$number")
+            _ -> invalid_number()
           end
         else
           {:ok, String.to_integer(value)}
         end
 
       true ->
-        type_error("$number")
+        invalid_number()
     end
   end
 
@@ -122,4 +122,5 @@ defmodule Jexata.Functions.Numeric do
   defp aggregate("$average", values), do: {:ok, Enum.sum(values) / length(values)}
 
   defp type_error(name), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
+  defp invalid_number, do: {:error, Error.new("D3030", "Cannot cast string to number")}
 end
