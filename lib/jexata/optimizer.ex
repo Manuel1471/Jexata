@@ -1,30 +1,115 @@
 defmodule Jexata.Optimizer do
   @moduledoc false
+  alias Jexata.{Evaluator, Semantics}
 
-  # Fold scalar array constructors once per compiled expression. Nested array
-  # constructors stay as nodes because their explicit array shape matters.
-  def optimize(ast), do: optimize(ast, true)
+  # Scalar array constructors are immutable across evaluations. Nested array
+  # constructors retain their node so the parent preserves explicit nesting.
+  def optimize(ast), do: ast |> optimize_node(true) |> elem(0)
 
-  defp optimize({:array, entries}, fold?) do
-    entries =
-      Enum.map(entries, fn
-        {:array, _} = nested -> optimize(nested, false)
-        entry -> optimize(entry, true)
-      end)
+  defp optimize_node({:array, entries} = original, fold?) do
+    {entries, changed?} = optimize_array_entries(entries)
 
-    if fold? and Enum.all?(entries, &scalar_literal?/1),
-      do: {:literal, Enum.map(entries, &elem(&1, 1))},
-      else: {:array, entries}
+    cond do
+      fold? and match?([{:binary, "..", {:literal, _}, {:literal, _}}], entries) ->
+        case fold_small_range(hd(entries)) do
+          {:ok, values} -> {{:literal, values}, true}
+          :no -> if(changed?, do: {{:array, entries}, true}, else: {original, false})
+        end
+
+      fold? and Enum.all?(entries, &scalar_literal?/1) ->
+        {{:literal, Enum.map(entries, &elem(&1, 1))}, true}
+
+      changed? ->
+        {{:array, entries}, true}
+
+      true ->
+        {original, false}
+    end
   end
 
-  defp optimize(ast, _fold?) when is_tuple(ast),
-    do: ast |> Tuple.to_list() |> Enum.map(&optimize(&1, true)) |> List.to_tuple()
+  defp optimize_node({:binary, op, left, right} = original, _fold?)
+       when op in ["+", "-", "*", "/", "%", "&"] do
+    {left, left_changed?} = optimize_node(left, true)
+    {right, right_changed?} = optimize_node(right, true)
+    node = if left_changed? or right_changed?, do: {:binary, op, left, right}, else: original
 
-  defp optimize(ast, _fold?) when is_list(ast), do: Enum.map(ast, &optimize(&1, true))
-  defp optimize(ast, _fold?), do: ast
+    if scalar_literal?(left) and scalar_literal?(right) do
+      case Evaluator.evaluate(node, %{}) do
+        {:ok, value} ->
+          if scalar_value?(value),
+            do: {{:literal, value}, true},
+            else: {node, left_changed? or right_changed?}
+
+        _ ->
+          {node, left_changed? or right_changed?}
+      end
+    else
+      {node, left_changed? or right_changed?}
+    end
+  end
+
+  defp optimize_node({:conditional, test, yes, no} = original, _fold?) do
+    {test, test_changed?} = optimize_node(test, true)
+    {yes, yes_changed?} = optimize_node(yes, true)
+    {no, no_changed?} = optimize_node(no, true)
+
+    if scalar_literal?(test) do
+      {if(Semantics.boolean(elem(test, 1)), do: yes, else: no), true}
+    else
+      changed? = test_changed? or yes_changed? or no_changed?
+      if changed?, do: {{:conditional, test, yes, no}, true}, else: {original, false}
+    end
+  end
+
+  defp optimize_node(ast, _fold?) when is_tuple(ast),
+    do: optimize_tuple(ast, 0, tuple_size(ast), ast, false)
+
+  defp optimize_node(ast, _fold?) when is_list(ast), do: optimize_list(ast)
+  defp optimize_node(ast, _fold?), do: {ast, false}
+
+  defp optimize_tuple(_original, index, index, current, changed?), do: {current, changed?}
+
+  defp optimize_tuple(original, index, size, current, changed?) do
+    {child, child_changed?} = optimize_node(elem(original, index), true)
+    next = if child_changed?, do: put_elem(current, index, child), else: current
+    optimize_tuple(original, index + 1, size, next, changed? or child_changed?)
+  end
+
+  defp optimize_list([]), do: {[], false}
+
+  defp optimize_list([head | tail] = original) do
+    {head, head_changed?} = optimize_node(head, true)
+    {tail, tail_changed?} = optimize_list(tail)
+
+    if head_changed? or tail_changed?,
+      do: {[head | tail], true},
+      else: {original, false}
+  end
+
+  defp optimize_array_entries([]), do: {[], false}
+
+  defp optimize_array_entries([head | tail] = original) do
+    fold? = not match?({:array, _}, head)
+    {head, head_changed?} = optimize_node(head, fold?)
+    {tail, tail_changed?} = optimize_array_entries(tail)
+
+    if head_changed? or tail_changed?,
+      do: {[head | tail], true},
+      else: {original, false}
+  end
 
   defp scalar_literal?({:literal, value}),
-    do: is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value)
+    do: scalar_value?(value)
 
   defp scalar_literal?(_), do: false
+
+  defp scalar_value?(value),
+    do: is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value)
+
+  defp fold_small_range({:binary, "..", {:literal, start}, {:literal, finish}})
+       when is_integer(start) and is_integer(finish) and finish - start < 256 do
+    {:ok, if(start > finish, do: [], else: Enum.to_list(start..finish))}
+  end
+
+  defp fold_small_range(_), do: :no
 end
