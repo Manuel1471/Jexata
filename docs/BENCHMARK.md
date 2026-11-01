@@ -1,6 +1,6 @@
 # Local benchmark
 
-Run `MIX_ENV=prod mix run scripts/benchmark.exs` to measure compilation, evaluation of a compiled expression, and compile-plus-evaluate (`run/2`). Each reported value is the mean of 10,000 consecutive calls after one warm-up call. The script reports both elapsed microseconds and BEAM reductions per operation. It uses generated maps with 10, 100, or 1,000 orders. Results are local measurements, not a comparison with the JavaScript reference.
+Run `MIX_ENV=prod mix run scripts/benchmark.exs` to measure compilation, evaluation of a compiled expression, and compile-plus-evaluate (`run/2`). Each reported value is the mean of the row's `iterations` after one warm-up call. The script reports elapsed microseconds, BEAM reductions, the process heap size after measurement in words, and VM-wide garbage collections per operation. It uses generated maps with 10, 100, or 1,000 orders, plus a root-array input. Results are local measurements, not a comparison with the JavaScript reference.
 
 Measurement environment: Mac16,12 (arm64), Elixir 1.20.2, OTP 29, 10 online schedulers. Selected results from the 1.0.0 run, in microseconds per operation:
 
@@ -12,7 +12,7 @@ Measurement environment: Mac16,12 (arm64), Elixir 1.20.2, OTP 29, 10 online sche
 | `orders[price > 50].price` | 1,000 | 2.708 | 109.727 | 117.153 | 40,403 |
 | `$sum(orders.price)` | 1,000 | 1.474 | 32.759 | 39.048 | 19,090 |
 
-The script reports compilation, evaluation, and `run/2` measurements for each expression and size. Repeated runs may vary with system load and BEAM runtime state. Reductions are less sensitive to that timing noise. The benchmark does not measure memory use, tail latency, or adversarial expressions.
+The script reports compilation, evaluation, and `run/2` measurements for each expression and size. Repeated runs may vary with system load and BEAM runtime state. Reductions are less sensitive to that timing noise. Heap size is a process snapshot, not allocated bytes per operation; VM-wide garbage collection counts include other processes and are diagnostic only. The benchmark does not measure peak memory, tail latency, or adversarial expressions.
 
 ## Evaluator hot paths
 
@@ -27,7 +27,18 @@ The benchmark now includes `$map` with a lambda, string functions inside `$map`,
 
 These are separate local runs; microsecond values are affected by host load. The reduction changes are the stronger evidence. `mix profile.eprof` on `$sum(orders.price)` showed that selecting and flattening `orders.price` dominates its cost; aggregate validation and `Enum.sum/1` were smaller contributors. A profile of `$map` showed repeated signature binding and process dictionary operations, motivating the exact arity change. A direct 1,000-character ASCII function comparison found `$length` at 17.431 versus 2.137 µs, `$substring` at 10.355 versus 2.223 µs, and `$pad` at 22.267 versus 6.379 µs per call before and after the ASCII paths.
 
-CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks four representative 1,000-order workloads and fails when a measurement exceeds 150% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion.
+### Additional compiled evaluation workloads
+
+| Workload on 1,000 orders | Earlier µs/op | Current µs/op | Earlier reductions/op | Current reductions/op |
+| --- | ---: | ---: | ---: | ---: |
+| `price in [10,20,30]` filter, scalar array folding | 188.208 | 86.353 | 89,256 | 31,105 |
+| Transform all orders, batched independent paths | 3,488.720 | 384.480 | 1,607,864 | 100,168 |
+| `$number($string(price))` across orders | 3,397.850 | 656.580 | 177,578 | 149,449 |
+| Signed lambda across orders | 349.940 | 269.647 | 163,174 | 131,280 |
+
+The transform benchmark uses a list of 1,000 objects. Independent paths are updated together; overlapping paths retain sequential evaluation. Returning an unchanged nested 1,000-object subtree measured 106.474 to 72.807 µs and 51,203 to 46,161 reductions per call in a dedicated comparison. These timings come from separate runs and are indicative; the reduction counts are more stable.
+
+CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks twelve representative 1,000-order workloads and fails when a measurement exceeds 150% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
 
 ## Tokenizer comparison
 

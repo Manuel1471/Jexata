@@ -8,3 +8,5 @@
 - Added Hex package metadata, an MIT license, and CI with publication on `master` after passing checks.
 
 The portable JSONata v2.2.0 suite reports 1,271 passing, 0 failing, 0 unsupported, and 0 skipped cases with the documented local runner. Comparator `$sort` now uses a stable merge sort, numeric operators and ASCII string operations have fast paths, `$pad` has a one-million-codepoint output limit, and CI checks reduction budgets for selected workloads. See `docs/COMPATIBILITY.md` for details and execution limits.
+
+The compiler folds scalar array literals once; the evaluator updates independent transform paths in one pass, reuses unchanged output subtrees, caches closure arity, and prepares signed lambda descriptors when the closure is created. The benchmark now records additional hot paths, process heap snapshots, and garbage collection counts.

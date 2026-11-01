@@ -27,6 +27,8 @@ Use `evaluate/4` or `run/4` with `max_function_depth: n` to limit recursive func
 
 `run/2` recompiles its source on every call. For dynamic expressions used repeatedly, keep compiled expressions in an application-owned cache with a bounded number of entries, keyed by source and compilation options. Jexata itself does not maintain global mutable cache state.
 
+For accumulating arrays, avoid repeatedly calling `$append` inside `$reduce`: appending copies the accumulated list on each step. Build the list in the host application or use a transformation that produces the desired sequence directly.
+
 For a local application, use a path dependency while the package is unpublished:
 
 ```elixir
