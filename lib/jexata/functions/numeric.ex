@@ -99,28 +99,43 @@ defmodule Jexata.Functions.Numeric do
   def call(name, _), do: type_error(name)
 
   defp number_from_string(value) do
-    cond do
-      Regex.match?(~r/\A0[xX][0-9a-fA-F]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(16)}
+    case value do
+      <<"0", prefix, digits::binary>> when prefix in [?x, ?X] ->
+        radix_number(digits, 16)
 
-      Regex.match?(~r/\A0[oO][0-7]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(8)}
+      <<"0", prefix, digits::binary>> when prefix in [?o, ?O] ->
+        radix_number(digits, 8)
 
-      Regex.match?(~r/\A0[bB][01]+\z/, value) ->
-        {:ok, value |> String.slice(2..-1//1) |> String.to_integer(2)}
+      <<"0", prefix, digits::binary>> when prefix in [?b, ?B] ->
+        radix_number(digits, 2)
 
-      Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) ->
-        if String.contains?(value, [".", "e", "E"]) do
-          case Float.parse(value) do
-            {number, ""} -> {:ok, number}
-            _ -> invalid_number()
-          end
-        else
-          {:ok, String.to_integer(value)}
-        end
+      _ ->
+        decimal_number(value)
+    end
+  end
 
-      true ->
+  defp radix_number(digits, radix) do
+    case Integer.parse(digits, radix) do
+      {number, ""} when digits != "" and binary_part(digits, 0, 1) not in ["+", "-"] ->
+        {:ok, number}
+
+      _ ->
         invalid_number()
+    end
+  end
+
+  defp decimal_number(value) do
+    if Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) do
+      if String.contains?(value, [".", "e", "E"]) do
+        case Float.parse(value) do
+          {number, ""} -> {:ok, number}
+          _ -> invalid_number()
+        end
+      else
+        {:ok, String.to_integer(value)}
+      end
+    else
+      invalid_number()
     end
   end
 

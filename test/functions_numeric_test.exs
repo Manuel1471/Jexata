@@ -25,6 +25,9 @@ defmodule Jexata.FunctionsNumericTest do
   test "numeric conversion and powers follow JSONata's basic rules" do
     assert Jexata.run("$number('12.5')", %{}) == {:ok, 12.5}
     assert Jexata.run("$number('0x12')", %{}) == {:ok, 18}
+    assert Jexata.run("$number('12.50')", %{}) == {:ok, 12.5}
+    assert Jexata.run("$number('1.25e+2')", %{}) == {:ok, 125.0}
+    assert {:error, %Jexata.Error{code: "D3030"}} = Jexata.run("$number('0x+12')", %{})
     assert Jexata.run("$number(missing)", %{}) == {:ok, :undefined}
     assert Jexata.run("$sqrt(4)", %{}) == {:ok, 2.0}
     assert Jexata.run("$power(2, 3)", %{}) == {:ok, 8.0}
