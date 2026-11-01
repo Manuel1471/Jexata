@@ -1425,6 +1425,29 @@ defmodule Jexata.Evaluator do
     with {:ok, value} <- eval(ast, data, root), do: {:ok, Semantics.boolean(value)}
   end
 
+  defp binary("<", a, b) when is_number(a) and is_number(b), do: {:ok, a < b}
+  defp binary("<=", a, b) when is_number(a) and is_number(b), do: {:ok, a <= b}
+  defp binary(">", a, b) when is_number(a) and is_number(b), do: {:ok, a > b}
+  defp binary(">=", a, b) when is_number(a) and is_number(b), do: {:ok, a >= b}
+
+  defp binary("+", a, b) when is_number(a) and is_number(b) do
+    {:ok, number_result(a + b)}
+  rescue
+    ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+  end
+
+  defp binary("-", a, b) when is_number(a) and is_number(b) do
+    {:ok, number_result(a - b)}
+  rescue
+    ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+  end
+
+  defp binary("*", a, b) when is_number(a) and is_number(b) do
+    {:ok, number_result(a * b)}
+  rescue
+    ArithmeticError -> {:error, Error.new("D1001", "Numeric result is not finite")}
+  end
+
   defp binary(op, a, b) when op in ["<", "<=", ">", ">="] do
     cond do
       not order_operand?(a) or not order_operand?(b) ->
