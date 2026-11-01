@@ -19,6 +19,8 @@ Jason decodes or encodes JSON. Jexata queries and transforms already decoded Eli
 
 Compile once and reuse the returned `%Jexata.Expression{}` for repeated evaluations. The expression is immutable and evaluations keep their own state, including when called from multiple processes. `compile!/1`, `evaluate!/2`, and `run!/2` raise `Jexata.Error` instead of returning an error tuple.
 
+`run/2` recompiles its source on every call. For dynamic expressions used repeatedly, keep compiled expressions in an application-owned cache with a bounded number of entries, keyed by source and compilation options. Jexata itself does not maintain global mutable cache state.
+
 For a local application, use a path dependency while the package is unpublished:
 
 ```elixir

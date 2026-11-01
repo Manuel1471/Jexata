@@ -16,6 +16,7 @@ IO.puts(
 )
 
 IO.puts("Iterations per measurement: #{iterations}")
+IO.puts("size,items,expression,mode,microseconds_per_op,reductions_per_op")
 
 for {size, count} <- sizes do
   data = %{
@@ -35,10 +36,12 @@ for {size, count} <- sizes do
           run: fn -> Jexata.run!(source, data) end
         ] do
       operation.()
+      {_, before_reductions} = Process.info(self(), :reductions)
       {microseconds, _} = :timer.tc(fn -> for _ <- 1..iterations, do: operation.() end)
+      {_, after_reductions} = Process.info(self(), :reductions)
 
       IO.puts(
-        "#{size},#{count},#{name},#{mode},#{Float.round(microseconds / iterations, 3)} us/op"
+        "#{size},#{count},#{name},#{mode},#{Float.round(microseconds / iterations, 3)},#{Float.round((after_reductions - before_reductions) / iterations, 3)}"
       )
     end
   end
