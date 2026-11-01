@@ -81,12 +81,14 @@ defmodule Jexata.Tokenizer do
       Regex.match?(@number, source) ->
         [lexeme] = Regex.run(@number, source)
 
-        value =
-          if String.contains?(lexeme, [".", "e", "E"]),
-            do: String.to_float(lexeme),
-            else: String.to_integer(lexeme)
-
-        emit(source, lexeme, :number, value, position, acc)
+        if String.contains?(lexeme, [".", "e", "E"]) do
+          case Float.parse(lexeme) do
+            {value, ""} -> emit(source, lexeme, :number, value, position, acc)
+            _ -> {:error, Error.new("S0102", "Invalid numeric literal", position)}
+          end
+        else
+          emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
+        end
 
       Regex.match?(@name, source) ->
         [name] = Regex.run(@name, source)

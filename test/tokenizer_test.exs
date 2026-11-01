@@ -28,5 +28,6 @@ defmodule Jexata.TokenizerTest do
     assert {:error, %Jexata.Error{code: "S0103"}} = Tokenizer.tokenize("'oops")
     assert {:error, %Jexata.Error{code: "S0104"}} = Tokenizer.tokenize("'\\x'")
     assert {:error, %Jexata.Error{code: "S0106"}} = Tokenizer.tokenize("/* oops")
+    assert {:error, %Jexata.Error{code: "S0102"}} = Tokenizer.tokenize("1e999999")
   end
 end
