@@ -50,6 +50,42 @@ defmodule Jexata.Evaluator do
   defp eval({:path, {:variable, "$"} = left, {:object, pairs}}, data, context),
     do: eval({:group, left, pairs}, data, context)
 
+  defp eval({:path, {:filter, left, predicate}, {:name, name}}, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      items = Value.items(source)
+      count = length(items)
+      keep_array? = is_struct(source, Value.Sequence) and source.keep_array
+
+      Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
+        case eval(predicate, item, context) do
+          {:ok, result} ->
+            if predicate_matches?(result, index, count) do
+              {:cont, {:ok, [Semantics.select(item, name) | selected], index + 1, kept + 1}}
+            else
+              {:cont, {:ok, selected, index + 1, kept}}
+            end
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, selected, _, kept} ->
+          selected = Enum.reverse(selected)
+
+          values =
+            if kept > 1 or keep_array?,
+              do: Enum.flat_map(selected, &Value.items/1),
+              else: selected
+
+          {:ok, Value.sequence(values, keep_array?)}
+
+        error ->
+          error
+      end
+    end
+  end
+
   defp eval({:path, left, right}, data, root) do
     left =
       if match?({:literal, name} when is_binary(name), left),

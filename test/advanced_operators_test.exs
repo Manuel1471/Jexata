@@ -38,6 +38,15 @@ defmodule Jexata.AdvancedOperatorsTest do
     assert Jexata.run("foo.*.x", data) == {:ok, [1, 2]}
   end
 
+  test "filtered field paths preserve singleton and explicit array semantics" do
+    data = %{"orders" => [%{"price" => [1, 2]}, %{"price" => [3, 4]}]}
+
+    assert Jexata.run("orders[price[0] = 1].price", data) == {:ok, [1, 2]}
+    assert Jexata.run("orders[true].price", data) == {:ok, [1, 2, 3, 4]}
+    assert Jexata.run("orders[][0].price", data) == {:ok, [1, 2]}
+    assert Jexata.run("orders[-1].price", data) == {:ok, [3, 4]}
+  end
+
   test "grouping evaluates values over each group" do
     data = %{
       "items" => [
