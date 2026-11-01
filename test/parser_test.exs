@@ -24,7 +24,7 @@ defmodule Jexata.ParserTest do
   test "rejects incomplete expressions" do
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("a +")
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("[1,")
-    assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("(1")
+    assert {:error, %Jexata.Error{code: "S0203"}} = Parser.parse("(1")
   end
 
   test "reports invalid grouped steps and numeric path segments" do

@@ -348,6 +348,10 @@ defmodule Jexata.Parser do
   end
 
   defp expect([%Token{value: value} | rest], value), do: {:ok, rest}
+
+  defp expect([%Token{type: :eof, position: position} | _], value),
+    do: {:error, Error.new("S0203", "Expected #{inspect(value)}", position)}
+
   defp expect([token | _], value), do: {:error, syntax("Expected #{inspect(value)}", token)}
   defp expect([], value), do: {:error, Error.new("S0201", "Expected #{inspect(value)}")}
 
