@@ -1,18 +1,51 @@
 {
   "filter": {
     "source": "orders[price > 50].price",
-    "baseline": 30443
+    "baseline": 28177
+  },
+  "filter_in_literals": {
+    "source": "orders[price in [10,20,30]].price",
+    "baseline": 31106
   },
   "map_lambda": {
     "source": "$map(orders, function($o){$o.price * 2})",
-    "baseline": 90145
+    "baseline": 75042
+  },
+  "map_signed": {
+    "source": "$map(orders,function($o)<o:n>{$o.price*2})",
+    "baseline": 133064
   },
   "reduce_recursive": {
     "source": "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
-    "baseline": 498184
+    "baseline": 454898
   },
   "sort_comparator": {
     "source": "$sort(orders, function($a,$b){$a.price > $b.price})",
-    "baseline": 615152
+    "baseline": 514942
+  },
+  "transform": {
+    "source": "$ ~> |orders|{'price':price+1}|",
+    "baseline": 104270
+  },
+  "subtree": {
+    "source": "orders",
+    "baseline": 21045
+  },
+  "string_large": {
+    "source": "$string(orders)",
+    "baseline": 74862
+  },
+  "number": {
+    "source": "$map(orders,function($o){$number($string($o.price))})",
+    "baseline": 149972
+  },
+  "eval": {
+    "source": "$eval('$sum(orders.price)')",
+    "baseline": 16430
+  },
+  "root_array": {
+    "source": "price",
+    "input": "root_array",
+    "baseline": 16555
   }
 }

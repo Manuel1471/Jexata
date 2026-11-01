@@ -8,9 +8,11 @@ iterations = 20
 max_ratio = 1.5
 
 failures =
-  Enum.reduce(baselines, [], fn {name, %{"source" => source, "baseline" => baseline}}, failures ->
+  Enum.reduce(baselines, [], fn {name, %{"source" => source, "baseline" => baseline} = config},
+                                failures ->
     expression = Jexata.compile!(source)
-    operation = fn -> Jexata.evaluate!(expression, data) end
+    input = if config["input"] == "root_array", do: data["orders"], else: data
+    operation = fn -> Jexata.evaluate!(expression, input) end
     operation.()
     {_, before_reductions} = Process.info(self(), :reductions)
     Enum.each(1..iterations, fn _ -> operation.() end)
