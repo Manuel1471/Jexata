@@ -33,7 +33,7 @@ defmodule Jexata.Optimizer do
     {right, right_changed?} = optimize_node(right, true)
 
     if (match?({:variable, "$"}, left) and match?({:object, _}, right)) or
-         match?({:filter, _, _}, left) do
+         match?({:compiled_filter, _, _, _}, left) or match?({:filter, _, _}, left) do
       if left_changed? or right_changed?,
         do: {{:path, left, right}, true},
         else: {original, false}
@@ -42,6 +42,12 @@ defmodule Jexata.Optimizer do
       right = right |> path_name() |> contextual_path_call()
       {{:compiled_path, left, right, indexed_path?(left)}, true}
     end
+  end
+
+  defp optimize_node({:filter, left, predicate}, _fold?) do
+    {left, _} = optimize_node(left, true)
+    {predicate, _} = optimize_node(predicate, true)
+    {{:compiled_filter, left, predicate, boolean_predicate?(predicate)}, true}
   end
 
   defp optimize_node({:binary, op, left, right} = original, _fold?)
@@ -159,7 +165,16 @@ defmodule Jexata.Optimizer do
   defp indexed_path?({:path, left, _}), do: indexed_path?(left)
   defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
   defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:compiled_filter, left, _, _}), do: indexed_path?(left)
   defp indexed_path?(_), do: false
+
+  defp boolean_predicate?({:literal, value}) when is_boolean(value), do: true
+
+  defp boolean_predicate?({:binary, op, _, _})
+       when op in ["=", "!=", "<", "<=", ">", ">=", "in", "and", "or"],
+       do: true
+
+  defp boolean_predicate?(_), do: false
 
   defp contextual_path_call({:call, {:variable, name}, args} = call) do
     needs_context =

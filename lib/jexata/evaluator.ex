@@ -139,34 +139,11 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:filter, left, predicate}, data, root) do
-    with {:ok, source} <- eval(left, data, root) do
-      items = Value.items(source)
-      count = if boolean_predicate?(predicate), do: 0, else: length(items)
+    eval_filter(left, predicate, boolean_predicate?(predicate), data, root)
+  end
 
-      items
-      |> Enum.with_index()
-      |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
-        case eval(predicate, item, root) do
-          {:ok, result} ->
-            keep = predicate_matches?(result, index, count)
-            {:cont, {:ok, if(keep, do: [item | acc], else: acc)}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, values} ->
-          {:ok,
-           Value.sequence(
-             Enum.reverse(values),
-             is_struct(source, Value.Sequence) and source.keep_array
-           )}
-
-        error ->
-          error
-      end
-    end
+  defp eval({:compiled_filter, left, predicate, boolean?}, data, root) do
+    eval_filter(left, predicate, boolean?, data, root)
   end
 
   defp eval({:array, expressions}, data, root) do
@@ -525,10 +502,69 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval_filter(left, predicate, boolean?, data, root) do
+    with {:ok, source} <- eval(left, data, root) do
+      items = Value.items(source)
+      count = if boolean?, do: 0, else: length(items)
+
+      items
+      |> Enum.with_index()
+      |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
+        case eval(predicate, item, root) do
+          {:ok, result} ->
+            keep = predicate_matches?(result, index, count)
+            {:cont, {:ok, if(keep, do: [item | acc], else: acc)}}
+
+          error ->
+            {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, values} ->
+          {:ok,
+           Value.sequence(
+             Enum.reverse(values),
+             is_struct(source, Value.Sequence) and source.keep_array
+           )}
+
+        error ->
+          error
+      end
+    end
+  end
+
   defp eval_regular_path({:path, {:filter, left, predicate}, {:name, name}}, data, context) do
+    eval_filtered_path(left, predicate, boolean_predicate?(predicate), name, data, context)
+  end
+
+  defp eval_regular_path(
+         {:path, {:compiled_filter, left, predicate, boolean?}, {:name, name}},
+         data,
+         context
+       ) do
+    eval_filtered_path(left, predicate, boolean?, name, data, context)
+  end
+
+  defp eval_regular_path({:path, left, right}, data, root) do
+    left =
+      if match?({:literal, name} when is_binary(name), left),
+        do: {:name, elem(left, 1)},
+        else: left
+
+    right =
+      if match?({:literal, name} when is_binary(name), right),
+        do: {:name, elem(right, 1)},
+        else: right
+
+    right = contextual_path_call(right)
+
+    eval_path_steps(left, right, data, root)
+  end
+
+  defp eval_filtered_path(left, predicate, boolean?, name, data, context) do
     with {:ok, source} <- eval(left, data, context) do
       items = Value.items(source)
-      count = if boolean_predicate?(predicate), do: 0, else: length(items)
+      count = if boolean?, do: 0, else: length(items)
       keep_array? = is_struct(source, Value.Sequence) and source.keep_array
 
       Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
@@ -559,22 +595,6 @@ defmodule Jexata.Evaluator do
           error
       end
     end
-  end
-
-  defp eval_regular_path({:path, left, right}, data, root) do
-    left =
-      if match?({:literal, name} when is_binary(name), left),
-        do: {:name, elem(left, 1)},
-        else: left
-
-    right =
-      if match?({:literal, name} when is_binary(name), right),
-        do: {:name, elem(right, 1)},
-        else: right
-
-    right = contextual_path_call(right)
-
-    eval_path_steps(left, right, data, root)
   end
 
   defp eval_path_steps(left, right, data, root) do
@@ -625,6 +645,7 @@ defmodule Jexata.Evaluator do
   defp indexed_path?({:path, left, _}), do: indexed_path?(left)
   defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
   defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
+  defp indexed_path?({:compiled_filter, left, _, _}), do: indexed_path?(left)
   defp indexed_path?(_), do: false
 
   defp eval_indexed({:index_bind, left, name}, data, context) do
@@ -1440,6 +1461,9 @@ defmodule Jexata.Evaluator do
     end)
     |> Enum.map(&elem(&1, 0))
   end
+
+  defp selected_paths({:compiled_filter, left, predicate, _boolean?}, refs, context),
+    do: selected_paths({:filter, left, predicate}, refs, context)
 
   defp selected_paths(:wildcard, refs, _context) do
     refs

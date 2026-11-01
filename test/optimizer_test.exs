@@ -38,6 +38,14 @@ defmodule Jexata.OptimizerTest do
     assert Jexata.compile!("1 / 0").ast != {:literal, 0}
   end
 
+  test "prepares filter predicate kind while preserving positional filters" do
+    assert {:compiled_filter, _, _, true} = Jexata.compile!("orders[price > 50]").ast
+    assert {:compiled_filter, _, _, false} = Jexata.compile!("orders[-1]").ast
+
+    assert Jexata.run("orders[-1].price", %{"orders" => [%{"price" => 1}, %{"price" => 2}]}) ==
+             {:ok, 2}
+  end
+
   defp evaluate(ast, data) do
     case Evaluator.evaluate(ast, data) do
       {:ok, value} -> {:ok, Value.public(value)}
