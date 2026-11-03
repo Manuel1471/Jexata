@@ -5,6 +5,12 @@ const {data, cases} = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 const jsonata = require(referencePath);
 
 (async () => {
+  let floorStart = process.hrtime.bigint();
+  for (let index = 0; index < 10000; index++) await Promise.resolve();
+  floorStart = process.hrtime.bigint();
+  for (let index = 0; index < 10000; index++) await Promise.resolve();
+  console.log(JSON.stringify({case: 'promise_floor', ns_per_op: Number(process.hrtime.bigint() - floorStart) / 10000}));
+
   for (const {name, source, mode, iterations} of cases) {
     const compiled = jsonata(source);
     const operation = mode === 'compile'
