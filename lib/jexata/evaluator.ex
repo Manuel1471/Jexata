@@ -213,7 +213,7 @@ defmodule Jexata.Evaluator do
 
       if callable?(value) and callable?(target) do
         arguments =
-          if Enum.any?(values, &is_struct(&1, Placeholder)),
+          if placeholder_args?(values),
             do: values,
             else: [%Placeholder{} | values]
 
@@ -329,7 +329,7 @@ defmodule Jexata.Evaluator do
   defp eval({:call, {:variable, name}, args}, data, context)
        when name in ["$map", "$filter", "$reduce", "$single", "$each", "$sift", "$sort"] do
     with {:ok, values} <- eval_list(args, data, context) do
-      if Enum.any?(values, &is_struct(&1, Placeholder)) do
+      if placeholder_args?(values) do
         {:ok, %Partial{function: %Builtin{name: name}, arguments: values}}
       else
         values =
@@ -391,7 +391,7 @@ defmodule Jexata.Evaluator do
     else
       case eval_list(args, data, context) do
         {:ok, values} ->
-          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+          if placeholder_args?(values) do
             {:ok, %Partial{function: %Builtin{name: "$string"}, arguments: values}}
           else
             Functions.call("$string", values, data)
@@ -413,7 +413,7 @@ defmodule Jexata.Evaluator do
           invoke(with_recursive_bindings(function, context.environment), values, data)
 
         :error ->
-          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+          if placeholder_args?(values) do
             {:ok, %Partial{function: %Builtin{name: "$match"}, arguments: values}}
           else
             case values do
@@ -447,7 +447,7 @@ defmodule Jexata.Evaluator do
           invoke_or_partial(with_recursive_bindings(closure, context.environment), values, data)
 
         :error ->
-          if Enum.any?(values, &is_struct(&1, Placeholder)) do
+          if placeholder_args?(values) do
             if Functions.supported?(name),
               do: {:ok, %Partial{function: %Builtin{name: name}, arguments: values}},
               else: {:error, Error.new("T1008", "Unknown function #{name}")}
@@ -461,7 +461,7 @@ defmodule Jexata.Evaluator do
   defp eval({:call, target, args}, data, context) do
     with {:ok, function} <- eval(target, data, context),
          {:ok, values} <- eval_list(args, data, context) do
-      partial? = Enum.any?(values, &is_struct(&1, Placeholder))
+      partial? = placeholder_args?(values)
 
       if partial? and Value.undefined?(function) do
         code =
@@ -1114,7 +1114,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp invoke_or_partial(function, values, data) do
-    invoke_or_partial(function, values, data, Enum.any?(values, &is_struct(&1, Placeholder)))
+    invoke_or_partial(function, values, data, placeholder_args?(values))
   end
 
   defp invoke_or_partial(function, values, data, partial?) do
@@ -1124,6 +1124,10 @@ defmodule Jexata.Evaluator do
       invoke(function, values, data)
     end
   end
+
+  defp placeholder_args?([%Placeholder{} | _]), do: true
+  defp placeholder_args?([_ | rest]), do: placeholder_args?(rest)
+  defp placeholder_args?([]), do: false
 
   defp with_recursive_bindings(%Closure{references: []} = closure, _environment), do: closure
 
