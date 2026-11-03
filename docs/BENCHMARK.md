@@ -99,6 +99,22 @@ Commit `e28a06f` moved binary operators into [the operators module](../lib/jexat
 
 Commit `8e583f5` moved JSON serialization into [the serialization module](../lib/jexata/functions/string/serialization.ex), reducing `functions/string.ex` from 517 to 434 lines. A [five-round paired comparison](string_split_comparison.json) against `50b8a1c` returned identical result hashes on all 22 workloads. `serialize_orders` moved from 911.33 to 875.84 µs/op (−3.9%); no workload had a positive median time change above 5%. The serialization difference is small enough to treat as diagnostic rather than a proven speedup.
 
+## Further evaluator extraction and navigation
+
+Commit `cc9afe0` moved transforms and higher-order functions to focused modules, reducing the main evaluator to 1,441 lines. A [five-round paired comparison](evaluator_modularity_comparison.json) against `3da8ae3` returned identical result hashes on all 22 workloads. The filter median was 96.48 → 96.15 µs/op, map with lambda 143.37 → 143.41, recursive reduce 1,587.90 → 1,578.40, and comparator sort 1,250.80 → 1,252.50. No workload had a positive median time change above 4%.
+
+The navigation implementation adds parent paths, focus and index joins, and date/integer picture support. The main evaluator is 1,487 lines after the direct grouping path restored its previous speed. A second [five-round paired comparison](navigation_comparison.json), `eefc5ab` against `8925601`, returned identical result hashes on all 22 workloads. Median times (µs/op) and reductions are:
+
+| Workload | Before µs | After µs | Before reductions | After reductions |
+| --- | ---: | ---: | ---: | ---: |
+| Filter, 1,000 orders | 96.84 | 94.23 | 25,754 | 25,758 |
+| Object grouping | 149.82 | 150.09 | 24,786 | 24,792 |
+| Map with lambda | 145.79 | 148.98 | 50,466 | 52,460 |
+| Comparator sort | 1,263.47 | 1,299.70 | 418,142 | 437,909 |
+| Recursive reduce | 1,593.37 | 1,590.50 | 355,204 | 357,337 |
+
+The largest positive median change among the 22 workloads was below 3%; this is a check against a broad regression, not proof that each individual operation became faster. The parent-navigation mode is prepared at compile time, so expressions without `%` do not scan their AST during evaluation.
+
 ## Reproduce
 
 ```bash
