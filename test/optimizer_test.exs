@@ -69,6 +69,29 @@ defmodule Jexata.OptimizerTest do
     assert Jexata.evaluate(expression, %{}, %{}, max_function_depth: 2) == {:ok, 3}
   end
 
+  test "indirect invocation forms still enforce the recursive depth limit" do
+    cases = [
+      {"parameter call", "($g:=function(){1};$f:=function($h){1+$h()};$f($g))", %{}},
+      {"pipeline", "($g:=function($x){$x+1};$f:=function(){1+(1~>$g())};$f())", %{}},
+      {"map callback", "($f:=function(){$map([1,2],function($x){$x+1})};$f())", %{}},
+      {"reduce callback", "($f:=function(){$reduce([1,2],function($a,$x){$a+$x},0)};$f())", %{}},
+      {"partial function", "($g:=function($x){$x+1};$p:=$g(?);$f:=function(){1+$p(1)};$f())",
+       %{}},
+      {"transform", "($g:=function($x){$x+1};$f:=function(){$ ~> |$|{'b':$g(a)}|};$f())",
+       %{"a" => 1}},
+      {"Y-style self parameter", "($f:=function($self,$n){$n=0?0:1+$self($self,$n-1)};$f($f,2))",
+       %{}}
+    ]
+
+    for {name, source, data} <- cases do
+      expression = Jexata.compile!(source)
+
+      assert {:error, %Jexata.Error{code: "U1001"}} =
+               Jexata.evaluate(expression, data, %{}, max_function_depth: 1),
+             name
+    end
+  end
+
   defp evaluate(ast, data) do
     case Evaluator.evaluate(ast, data) do
       {:ok, value} -> {:ok, Value.public(value)}
