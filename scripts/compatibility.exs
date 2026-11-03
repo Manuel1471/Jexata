@@ -174,7 +174,7 @@ end)
 
 if "--assert-baseline" in System.argv() and group_filter == nil and
      "--case-files-only" not in System.argv() do
-  baseline = %{total: 1679, pass: 1319, fail: 204, unsupported: 156}
+  baseline = %{total: 1679, pass: 1676, fail: 3, unsupported: 0}
 
   if length(cases) != baseline.total or result.pass < baseline.pass or
        result.fail > baseline.fail or result.unsupported > baseline.unsupported or

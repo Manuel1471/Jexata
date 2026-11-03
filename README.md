@@ -1,6 +1,6 @@
 # Jexata
 
-Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes 1,319 of 1,679 JSONata v2.2.0 reference cases; 204 fail and 156 are classified as unsupported. The earlier 1,271/1,271 figure covered only files named `case*.json`. See the [compatibility report](docs/COMPATIBILITY.md) for the test method and gaps.
+Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes 1,676 of 1,679 JSONata v2.2.0 reference cases, with three output-order differences and no unsupported cases in that suite. The earlier 1,271/1,271 figure covered only files named `case*.json`. See the [compatibility report](docs/COMPATIBILITY.md) for the test method and remaining gaps.
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 
@@ -49,13 +49,13 @@ Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., m
 
 ## Supported scope
 
-The interpreter supports literals, quoted field names, comments, field paths, wildcards, array predicates, descendants, arithmetic, comparisons, `and`/`or`, concatenation, bounded integer ranges, conditional/default/coalescing expressions, array and object constructors, grouping and order-by, index bindings, blocks, local variable bindings, lambdas, closures, chaining and composition, partial application, immutable transforms, and higher-order functions. It includes numeric, text, regex, array, object, boolean, URL, Base64, and selected date/time functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
+The interpreter supports literals, quoted field names, comments, field paths, wildcards, array predicates, descendants, arithmetic, comparisons, `and`/`or`, concatenation, bounded integer ranges, conditional/default/coalescing expressions, array and object constructors, grouping and order-by, index and focus bindings, parent navigation, blocks, local variable bindings, lambdas, closures, chaining and composition, partial application, immutable transforms, and higher-order functions. It includes numeric, text, regex, array, object, boolean, URL, Base64, integer-picture formatting/parsing, and date/time picture functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
 
-The full reference suite exposes unsupported functions and differences in date/time pictures, parent navigation, joins, and other cases. Elixir maps do not preserve source key order, so `$string` preserves literal object key order directly but may serialize objects obtained from input maps in a different order. Check the expressions your application needs before using it as a drop-in replacement.
+The three remaining reference mismatches involve `$keys(%)` on input objects: Elixir maps do not preserve JSON source key order. `$string` preserves literal object key order directly but may serialize objects obtained from input maps in a different order. `$random` and `$clone` are not implemented; the reference fixtures do not exercise them. Check the expressions your application needs before using Jexata as a drop-in replacement.
 
 ## Limits and trust
 
-`compile/2` accepts positive integer `max_source_bytes`, `max_tokens`, and `max_nesting` options. Defaults are 100,000 bytes, 10,000 tokens, and 128 delimiter levels. Integer ranges are capped at 100,000 generated values. For example:
+`compile/2` accepts positive integer `max_source_bytes`, `max_tokens`, and `max_nesting` options. Defaults are 100,000 bytes, 10,000 tokens, and 128 delimiter levels. Direct integer ranges are capped at 1,000,000 generated values. For example:
 
 ```elixir
 Jexata.compile("orders.price", max_source_bytes: 1_000, max_tokens: 100)
