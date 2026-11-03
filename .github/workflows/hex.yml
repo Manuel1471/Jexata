@@ -10,6 +10,18 @@ permissions:
   contents: read
 
 jobs:
+  dialyzer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.5"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix dialyzer --format github
+
   test:
     runs-on: ubuntu-24.04
     name: Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
@@ -39,7 +51,7 @@ jobs:
         if: matrix.otp == '29'
 
   publish:
-    needs: test
+    needs: [test, dialyzer]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
     concurrency:

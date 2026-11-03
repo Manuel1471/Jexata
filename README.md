@@ -77,6 +77,7 @@ The result limit is measured as Erlang external-term size, not JSON bytes. Bound
 mix format
 mix compile --warnings-as-errors
 mix test
+mix dialyzer --format github
 mix run scripts/reductions_guard.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
 ```
@@ -85,6 +86,6 @@ See [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md)
 
 ## Hex publication
 
-[GitHub Actions](.github/workflows/hex.yml) runs formatting, warning-free compilation, and tests on Elixir 1.20.0 / OTP 27 and Elixir 1.20.5 / OTP 29 for pull requests to `master` and pushes to `master` or `release/**`. The recent toolchain also runs performance guards and a Hex package dry run. A successful push to `master` publishes the version in `mix.exs` if that version does not already exist on Hex. An existing version is skipped.
+[GitHub Actions](.github/workflows/hex.yml) runs formatting, warning-free compilation, and tests on Elixir 1.20.0 / OTP 27 and Elixir 1.20.5 / OTP 29 for pull requests to `master` and pushes to `master` or `release/**`. A separate job runs Dialyzer; the recent toolchain also runs performance guards and a Hex package dry run. A successful push to `master` publishes the version in `mix.exs` if that version does not already exist on Hex. An existing version is skipped.
 
 To enable publication, create a Hex API key with publish permission and add it to the GitHub repository as the `HEX_API_KEY` Actions secret. The first public release needs a key that can create the package; later releases can use a key scoped to `jexata`. If the secret is absent, the publication job fails with a setup message. The package is MIT licensed. This repository does not include a deployment step or publish from a release branch.
