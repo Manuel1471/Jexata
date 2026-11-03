@@ -513,19 +513,7 @@ defmodule Jexata.Evaluator do
       items = Value.items(source)
       count = if boolean?, do: 0, else: length(items)
 
-      items
-      |> Enum.with_index()
-      |> Enum.reduce_while({:ok, []}, fn {item, index}, {:ok, acc} ->
-        case eval(predicate, item, root) do
-          {:ok, result} ->
-            keep = predicate_matches?(result, index, count)
-            {:cont, {:ok, if(keep, do: [item | acc], else: acc)}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
+      case filter_predicate_items(items, predicate, root, count, 0, []) do
         {:ok, values} ->
           {:ok,
            Value.sequence(
@@ -573,21 +561,8 @@ defmodule Jexata.Evaluator do
       count = if boolean?, do: 0, else: length(items)
       keep_array? = is_struct(source, Value.Sequence) and source.keep_array
 
-      Enum.reduce_while(items, {:ok, [], 0, 0}, fn item, {:ok, selected, index, kept} ->
-        case eval(predicate, item, context) do
-          {:ok, result} ->
-            if predicate_matches?(result, index, count) do
-              {:cont, {:ok, [Semantics.select(item, name) | selected], index + 1, kept + 1}}
-            else
-              {:cont, {:ok, selected, index + 1, kept}}
-            end
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, selected, _, kept} ->
+      case filter_path_items(items, predicate, context, count, name, 0, 0, []) do
+        {:ok, selected, kept} ->
           selected = Enum.reverse(selected)
 
           values =
@@ -600,6 +575,46 @@ defmodule Jexata.Evaluator do
         error ->
           error
       end
+    end
+  end
+
+  defp filter_predicate_items([], _predicate, _context, _count, _index, selected),
+    do: {:ok, selected}
+
+  defp filter_predicate_items([item | rest], predicate, context, count, index, selected) do
+    case eval(predicate, item, context) do
+      {:ok, result} ->
+        next = if predicate_matches?(result, index, count), do: [item | selected], else: selected
+        filter_predicate_items(rest, predicate, context, count, index + 1, next)
+
+      error ->
+        error
+    end
+  end
+
+  defp filter_path_items([], _predicate, _context, _count, _name, _index, kept, selected),
+    do: {:ok, selected, kept}
+
+  defp filter_path_items([item | rest], predicate, context, count, name, index, kept, selected) do
+    case eval(predicate, item, context) do
+      {:ok, result} ->
+        if predicate_matches?(result, index, count) do
+          filter_path_items(
+            rest,
+            predicate,
+            context,
+            count,
+            name,
+            index + 1,
+            kept + 1,
+            [Semantics.select(item, name) | selected]
+          )
+        else
+          filter_path_items(rest, predicate, context, count, name, index + 1, kept, selected)
+        end
+
+      error ->
+        error
     end
   end
 
