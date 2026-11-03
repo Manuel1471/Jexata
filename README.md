@@ -4,6 +4,19 @@ Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evalu
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 
+## Jexata and Ecto
+
+Jexata evaluates [JSONata expressions](https://docs.jsonata.org/overview.html) against data already in memory, including API payloads, event messages, configuration, and values fetched from a database. [Ecto queries](https://ecto.hexdocs.pm/Ecto.Query.html) retrieve and update stored data through a repository and let the database filter, join, aggregate, and use indexes. Ecto also supports [schemaless queries](https://ecto.hexdocs.pm/schemaless-queries.html), including queries over database fields without an Ecto schema.
+
+| Need | Use |
+| --- | --- |
+| Filter or aggregate a large database table before loading rows | Ecto query and the database |
+| Persist changes, use transactions, or enforce database constraints | Ecto and `Repo` |
+| Apply a reusable JSONata transformation to an API response or an already loaded document | Jexata |
+| Transform data fetched with Ecto before sending it elsewhere | Ecto to fetch, then Jexata on a JSON-shaped map |
+
+Jexata does not connect to a database, translate JSONata into SQL, or replace Ecto's persistence features. Its role is useful when the input is already a document and the application needs JSONata's path, sequence, function, and transformation semantics. For a simple database aggregate such as `SUM(price)`, run the aggregate in the database with Ecto rather than loading every row to evaluate `$sum` in Jexata.
+
 ## Use
 
 ```elixir
