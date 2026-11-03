@@ -125,19 +125,62 @@ defmodule Jexata.Functions.Numeric do
   end
 
   defp decimal_number(value) do
-    if Regex.match?(~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/, value) do
-      if String.contains?(value, [".", "e", "E"]) do
+    case decimal_kind(value) do
+      :float ->
         case Float.parse(value) do
           {number, ""} -> {:ok, number}
           _ -> invalid_number()
         end
-      else
+
+      :integer ->
         {:ok, String.to_integer(value)}
-      end
-    else
-      invalid_number()
+
+      :invalid ->
+        invalid_number()
     end
   end
+
+  defp decimal_kind(<<"-", rest::binary>>), do: decimal_integral(rest)
+  defp decimal_kind(value), do: decimal_integral(value)
+
+  defp decimal_integral(value) do
+    case decimal_digits(value, 0) do
+      {0, _} -> :invalid
+      {_, rest} -> decimal_fraction(rest)
+    end
+  end
+
+  defp decimal_fraction(<<".", rest::binary>>) do
+    case decimal_digits(rest, 0) do
+      {0, _} -> :invalid
+      {_, tail} -> decimal_exponent(tail, true)
+    end
+  end
+
+  defp decimal_fraction(rest), do: decimal_exponent(rest, false)
+
+  defp decimal_exponent(<<marker, rest::binary>>, _float?) when marker in [?e, ?E] do
+    rest =
+      case rest do
+        <<sign, tail::binary>> when sign in [?+, ?-] -> tail
+        other -> other
+      end
+
+    case decimal_digits(rest, 0) do
+      {0, _} -> :invalid
+      {_, ""} -> :float
+      _ -> :invalid
+    end
+  end
+
+  defp decimal_exponent("", true), do: :float
+  defp decimal_exponent("", false), do: :integer
+  defp decimal_exponent(_, _), do: :invalid
+
+  defp decimal_digits(<<digit, rest::binary>>, count) when digit in ?0..?9,
+    do: decimal_digits(rest, count + 1)
+
+  defp decimal_digits(rest, count), do: {count, rest}
 
   defp aggregate("$sum" = name, values), do: sum(values, 0, name)
   defp aggregate("$average" = name, values), do: average(values, 0, 0, name)

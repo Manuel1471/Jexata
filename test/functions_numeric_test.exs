@@ -37,4 +37,23 @@ defmodule Jexata.FunctionsNumericTest do
     assert Jexata.run("$number('-007')", %{}) == {:ok, -7}
     assert {:error, %Jexata.Error{code: "D3030"}} = Jexata.run("$number('abc')", %{})
   end
+
+  test "decimal parser agrees with the previous lexical rule" do
+    :rand.seed(:exsplus, {11, 22, 33})
+    characters = ~c"0123456789.eE+-q"
+    legacy = ~r/\A-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\z/
+
+    for _ <- 1..5_000 do
+      size = :rand.uniform(11) - 1
+      value = for _ <- List.duplicate(nil, size), into: "", do: <<Enum.random(characters)>>
+      valid? = match?({:ok, _}, Jexata.Functions.Numeric.call("$number", [value]))
+
+      legacy_valid? =
+        Regex.match?(legacy, value) and
+          (not String.contains?(value, [".", "e", "E"]) or
+             match?({_, ""}, Float.parse(value)))
+
+      assert valid? == legacy_valid?, value
+    end
+  end
 end
