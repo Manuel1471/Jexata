@@ -1,92 +1,63 @@
-# Local benchmark
+# Benchmark comparison
 
-Run `MIX_ENV=prod mix run scripts/benchmark.exs` to measure compilation, evaluation of a compiled expression, and compile-plus-evaluate (`run/2`). Each reported value is the mean of the row's `iterations` after one warm-up call. The script reports elapsed microseconds, BEAM reductions, the process heap size after measurement in words, and VM-wide garbage collections per operation. It uses generated maps with 10, 100, or 1,000 orders, plus a root-array input. Results are local measurements, not a comparison with the JavaScript reference.
+This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `ab3f6f8`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
 
-Measurement environment: Mac16,12 (arm64), Elixir 1.20.2, OTP 29, 10 online schedulers. Selected results from the 1.0.0 run, in microseconds per operation:
+On a Mac16,12 (arm64), Elixir 1.20.2 / OTP 29, each commit ran in a separate detached Git worktree. Five rounds alternated checkout order: base/current, current/base, and so on. Each workload used a fresh BEAM process, three warm-up calls, and 30–10,000 measured calls depending on cost. The table reports the median and min–max of the five per-operation times, median reductions, and median **minor GCs of that workload's process**. The two checkouts returned the same result hash for all 22 workloads. A negative time delta means the candidate was faster.
 
-| Expression | Orders | Compile µs | Evaluate µs | Run µs | Evaluate reductions |
+The common input has 1,000 orders with price, customer, text, padded text, decimal text, non-canonical date text, and milliseconds. It also has a 1,000-entry catalog for wildcard selection. `compile_field` measures compilation; all other rows evaluate a previously compiled expression. The added coverage includes grouping with an object constructor, descendants, wildcards, index predicates, chaining, regex match and replacement per item, non-canonical `$toMillis`, `$fromMillis`, `$formatNumber`, `$merge`, and `$spread`.
+
+## Paired results
+
+| Workload | Base `b9d0016` µs med [min–max] | Current `ab3f6f8` µs med [min–max] | Δ time | Reductions med base → current | Minor GCs/op med base → current |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `customer.name` | 10 | 0.989 | 0.421 | 0.887 | 48 |
-| `orders[price > 50].price` | 100 | 2.646 | 7.393 | 9.976 | 3,397 |
-| `$sum(orders.price)` | 100 | 1.351 | 3.272 | 4.489 | 1,973 |
-| `orders[price > 50].price` | 1,000 | 2.708 | 109.727 | 117.153 | 40,403 |
-| `$sum(orders.price)` | 1,000 | 1.474 | 32.759 | 39.048 | 19,090 |
+| `compile_field` | 0.66 [0.65–0.70] | 0.62 [0.61–0.63] | -5.9% | 274 → 267 (-2.5%) | 0.016 → 0.025 |
+| `filter` | 100.52 [98.73–133.55] | 115.96 [114.83–118.65] | +15.4% | 27,700 → 21,657 (-21.8%) | 1.550 → 1.249 |
+| `sum` | 40.98 [39.42–42.90] | 41.17 [40.68–42.76] | +0.5% | 15,248 → 13,247 (-13.1%) | 0.799 → 0.799 |
+| `map_lambda` | 190.32 [183.89–205.54] | 156.10 [152.57–157.69] | -18.0% | 63,284 → 49,469 (-21.8%) | 0.817 → 1.830 |
+| `reduce_recursive` | 1,686.33 [1,666.67–1,700.97] | 1,626.77 [1,609.10–1,652.60] | -3.5% | 381,970 → 354,290 (-7.2%) | 12.133 → 42.267 |
+| `sort_comparator` | 1,520.80 [1,491.67–1,588.93] | 1,289.73 [1,281.07–1,309.07] | -15.2% | 521,910 → 413,257 (-20.8%) | 5.833 → 4.667 |
+| `group_object` | 151.58 [150.89–157.10] | 146.76 [145.61–152.57] | -3.2% | 25,909 → 24,786 (-4.3%) | 0.150 → 2.580 |
+| `descendants` | 326.21 [319.55–366.01] | 316.12 [313.35–319.78] | -3.1% | 203,206 → 205,686 (+1.2%) | 0.130 → 0.040 |
+| `wildcard` | 55.66 [52.71–56.22] | 53.88 [53.30–56.15] | -3.2% | 23,695 → 21,675 (-8.5%) | 1.990 → 1.990 |
+| `index_zero` | 12.78 [12.43–13.18] | 8.81 [8.56–8.94] | -31.1% | 7,141 → 5,132 (-28.1%) | 0.625 → 0.171 |
+| `index_negative` | 18.21 [17.89–18.69] | 14.29 [14.21–14.56] | -21.5% | 11,140 → 9,130 (-18.0%) | 1.291 → 0.341 |
+| `chain_sum` | 43.64 [40.10–50.23] | 41.26 [40.04–42.80] | -5.4% | 15,319 → 13,316 (-13.1%) | 1.334 → 1.334 |
+| `match_each` | 1,046.85 [1,026.35–1,087.59] | 1,039.21 [1,021.34–1,067.43] | -0.7% | 176,580 → 162,823 (-7.8%) | 0.040 → 0.360 |
+| `replace_each` | 1,966.89 [1,879.22–2,048.76] | 1,947.23 [1,930.56–2,019.81] | -1.0% | 171,408 → 190,551 (+11.2%) | 2.210 → 0.260 |
+| `trim_each` | 1,985.85 [1,869.33–2,673.08] | 1,700.06 [1,680.68–1,736.35] | -14.4% | 157,564 → 133,171 (-15.5%) | 1.340 → 0.770 |
+| `number_float_each` | 3,295.60 [3,167.74–3,413.51] | 502.88 [490.74–514.19] | -84.7% | 142,723 → 105,736 (-25.9%) | 3.870 → 1.890 |
+| `to_millis_picture` | 3,383.18 [3,326.14–3,511.84] | 3,406.52 [3,403.96–3,476.94] | +0.7% | 464,960 → 451,014 (-3.0%) | 4.840 → 4.800 |
+| `from_millis_each` | 567.46 [543.04–578.21] | 556.84 [539.28–577.45] | -1.9% | 161,611 → 149,556 (-7.5%) | 1.480 → 1.600 |
+| `format_number_each` | 7,227.74 [7,076.02–7,494.98] | 7,325.56 [7,007.36–7,686.48] | +1.4% | 1,367,430 → 1,353,664 (-1.0%) | 0.320 → 0.860 |
+| `merge_objects` | 16.61 [16.06–17.70] | 16.43 [16.32–16.91] | -1.1% | 7,149 → 7,147 (0.0%) | 0.010 → 0.010 |
+| `spread_each` | 747.31 [742.31–758.28] | 728.18 [725.81–743.29] | -2.6% | 287,602 → 283,558 (-1.4%) | 0.230 → 0.220 |
+| `serialize_orders` | 911.70 [905.89–917.93] | 900.11 [881.98–925.82] | -1.3% | 307,536 → 307,537 (0.0%) | 0.060 → 0.060 |
 
-The script reports compilation, evaluation, and `run/2` measurements for each expression and size. Repeated runs may vary with system load and BEAM runtime state. Reductions are less sensitive to that timing noise. Heap size is a process snapshot, not allocated bytes per operation; VM-wide garbage collection counts include other processes and are diagnostic only. The benchmark does not measure peak memory, tail latency, or adversarial expressions.
+## Reading the result
 
-## Evaluator hot paths
+- The decimal `$number` workload has the largest measured gain: 3,295.60 → 502.88 µs/op (−84.7%). `$map` with a lambda improved 18.0%, comparator `$sort` 15.2%, `[0]` 31.1%, and `[-1]` 21.5% by median time.
+- The filter's median **rose** from 100.52 to 115.96 µs/op (+15.4%) even though reductions fell 21.8% and process minor GCs fell from 1.550 to 1.249/op. This is a real regression for this input and host; the lower reduction count alone does not establish a speedup. The profile below identifies work in selection and flattening, but does not prove the cause of this timing change.
+- `$sum`, `$match`, `$replace`, `$fromMillis`, `$formatNumber`, `$merge`, `$spread`, and serialization have small or overlapping time differences here. `$replace` increased reductions by 11.2% while its median time changed by −1.0%. Avoid inferring a time win from reductions alone for BIF-heavy functions.
+- Minor GC counts come from `Process.info(self(), :garbage_collection)[:minor_gcs]`, never from VM-wide statistics. They depend on the worker heap size and allocation pattern; individual rows such as `reduce_recursive` and `group_object` should be treated as diagnostics, not allocation benchmarks.
 
-The benchmark now includes `$map` with a lambda, string functions inside `$map`, `$reduce` with a lambda, recursive calls inside `$reduce`, and `$sort` with a comparator. The last four use fewer iterations than simple paths so a quadratic sort cannot dominate the entire run. Selected compiled evaluation results for 1,000 orders on the same host:
+## Time canaries in CI
 
-| Workload | Before µs/op | After µs/op | Before reductions/op | After reductions/op |
-| --- | ---: | ---: | ---: | ---: |
-| `orders[price > 50].price`, numeric fast path | 111.394 | 91.578 | 40,434 | 30,443 |
-| `$map(orders, function($o){$o.price * 2})`, exact arity binding | 232.862 | 208.692 | 96,155 | 90,144 |
-| Recursive `$reduce`, targeted closure bindings | 1,956.920 | 1,967.020 | 558,099 | 498,184 |
-| `$sort` with comparator, stable merge sort | 152,581.280 | 1,478.820 | 65,973,184 | 693,908 |
+`mix run scripts/time_canaries.exs` measures four BIF-heavy operations: decimal `$number`, ASCII `$trim`, regex replacement templates, and object serialization. For each operation it measures five alternating batches against a comparable native Elixir/Erlang operation in the same process. CI fails when the median candidate/control time ratio exceeds **2× its recorded baseline ratio** in [time_canaries_baseline.json](../scripts/time_canaries_baseline.json). This relative threshold is more portable than an absolute microsecond ceiling. The script also reports the candidate process's minor GCs/op. It is a coarse regression alarm, not a stable latency SLO.
 
-These are separate local runs; microsecond values are affected by host load. The reduction changes are the stronger evidence. `mix profile.eprof` on `$sum(orders.price)` showed that selecting and flattening `orders.price` dominates its cost; aggregate validation and `Enum.sum/1` were smaller contributors. A profile of `$map` showed repeated signature binding and process dictionary operations, motivating the exact arity change. A direct 1,000-character ASCII function comparison found `$length` at 17.431 versus 2.137 µs, `$substring` at 10.355 versus 2.223 µs, and `$pad` at 22.267 versus 6.379 µs per call before and after the ASCII paths.
+## Profile of remaining evaluator cost
 
-### Additional compiled evaluation workloads
+`mix profile.eprof` on the candidate showed 100,000 lambda invocations for 100 evaluations of `$map` on 1,000 orders. There were 100,000 signature binds, environment merges, and process-depth reads, along with 400,300 `eval/3` calls. In ten evaluations of the recursive `$reduce`, there were 56,000 closure invocations, 102,000 process-depth writes, and 434,060 `eval/3` calls. These counts explain why closure setup and AST dispatch remain the main costs; `eprof` tracing perturbs absolute timings.
 
-| Workload on 1,000 orders | Earlier µs/op | Current µs/op | Earlier reductions/op | Current reductions/op |
-| --- | ---: | ---: | ---: | ---: |
-| `price in [10,20,30]` filter, scalar array folding | 188.208 | 86.353 | 89,256 | 31,105 |
-| Transform all orders, batched independent paths | 3,488.720 | 384.480 | 1,607,864 | 100,168 |
-| `$number($string(price))` across orders | 3,397.850 | 656.580 | 177,578 | 149,449 |
-| Signed lambda across orders | 349.940 | 269.647 | 163,174 | 131,280 |
+For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field selections, 100,000 predicate checks, and 95,100 flattened selected values. The filter timing regression merits a separate allocation and cache-behavior investigation before changing its semantics again. The prior `$sum(orders.price)` profile identified path selection and flattening as more costly than the arithmetic aggregate itself.
 
-The transform benchmark uses a list of 1,000 objects. Independent paths are updated together; overlapping paths retain sequential evaluation. Returning an unchanged nested 1,000-object subtree measured 106.474 to 72.807 µs and 51,203 to 46,161 reductions per call in a dedicated comparison. These timings come from separate runs and are indicative; the reduction counts are more stable.
-
-### Earlier 1.0.0 candidate
-
-After static path dispatch, prepared lambda metadata, short argument evaluation, arity-aware `$map`/`$filter`, one-pass numeric aggregates, and builtin registry dispatch, a local `MIX_ENV=prod mix run scripts/benchmark.exs` run measured the following compiled evaluation workloads. These are current values, not paired before/after trials.
-
-| Workload on 1,000 orders | µs/op | Reductions/op |
-| --- | ---: | ---: |
-| `orders[price > 50].price` | 78.043 | 27,587 |
-| `$sum(orders.price)` | 25.208 | 15,116 |
-| `$map(orders, function($o){$o.price * 2})` | 208.101 | 63,173 |
-| Recursive `$reduce` | 1,610.960 | 380,876 |
-| `$sort` with comparator | 1,205.560 | 471,920 |
-| `$number($string(price))` across orders | 486.940 | 106,760 |
-
-The reduction guard baselines were refreshed from the median of three identical local runs after these changes. The guard retains its 25% ceiling.
-
-### Further local optimization pass
-
-The next pass removed intermediate index lists from path filters, scanned `$reduce` callbacks and long argument lists directly, checked compilation limits in one traversal, and used a stable key sort for one ascending key. It also prepared `$replace` templates once per call, added an ASCII `$trim` path, and built nested `$string` output as iodata. A later local run on the same host measured 1,000-order compiled evaluation at 91.956 µs and 25,584 reductions for the numeric filter, 88.786 µs and 29,096 reductions for the literal-membership filter, 168.666 µs and 62,166 reductions for `$map` with a lambda, and 1,765.290 µs and 376,027 reductions for recursive `$reduce`. These timing samples are from a separate run and should not be read as paired speedups. The reduction guard baselines were refreshed from the median of three measurements with the same 25% ceiling.
-
-A subsequent compile pass identified lambda bodies that cannot invoke functions and avoided process dictionary writes for those calls. Field versus literal binary operations also evaluate the field directly. A fresh 1,000-order run measured 21,583 reductions for the numeric filter, 25,100 for the literal-membership filter, 57,167 for `$map` with a lambda, and 442,345 for `$sort` with a comparator. The new ascending-key workload `orders^(price).price` measured 138.960 µs and 62,219 reductions. These values come from one local run; timing varies with host load. A further direct-recursion change in path selection measured 49,167 reductions and 139.806 µs for `$map`, 363,546 reductions and 977.790 µs for comparator `$sort`, and 61,015 reductions and 112.790 µs for ascending-key sort on a subsequent run. The corresponding reduction guard medians are 49,929, 366,914, and 62,660. Index binding on `orders#$i.price` measured 141.272 µs and 45,308 reductions with the previous `flat_map`/`with_index` path versus 113.316 µs and 35,933 reductions with direct recursion in a dedicated local comparison; its new guard median is 35,651 reductions. Decimal conversion was validated against the previous lexical rule on 5,000 deterministic strings. A direct `$number("12.50")` comparison measured 1.807 µs per call with regex validation and 0.559 µs with the byte scanner. The new 1,000-order `number_float` benchmark measured 1,227.780 µs and 135,027 reductions per compiled evaluation; its guard median was 135,245 reductions before the direct placeholder scan. The direct scan reduced the recorded median to 129,177 reductions; the integer-conversion and recursive-reduce medians also fell from 97,769 to 91,772 and from 368,279 to 354,473 respectively.
-
-A direct 440-byte ASCII `$trim` comparison measured 31.464 µs per call with the previous Unicode regex path and 6.382 µs with the ASCII path. This is a dedicated local comparison, not a general string benchmark. An experiment that encoded binary operators as atoms in the optimized AST increased reductions in the filter and lambda workloads; it was reverted.
-
-CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks fifteen representative 1,000-order workloads and fails when a measurement exceeds 125% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
-
-## Tokenizer comparison
-
-The tokenizer optimization is compared with the implementation immediately before commit `5f41bbd`. Reproduce the check with:
+## Reproduce
 
 ```bash
-git show 5f41bbd^:lib/jexata/tokenizer.ex \
-  | sed 's/defmodule Jexata\.Tokenizer do/defmodule Jexata.TokenizerLegacy do/' \
-  > /tmp/jexata_tokenizer_legacy.ex
-MIX_ENV=prod mix run scripts/tokenizer_bench.exs /tmp/jexata_tokenizer_legacy.ex
+python3 scripts/compare_checkouts.py \
+  --base b9d0016 --current ab3f6f8 --rounds 5 \
+  --output docs/benchmark_comparison_results.json
+mix run scripts/time_canaries.exs
+MIX_ENV=prod mix run scripts/benchmark.exs
 ```
 
-The script first compares exact tokenizer results, including errors and positions, on 42 directed inputs and 50,000 deterministic generated inputs. It stops before timing if any differ. It then alternates 25 batches of 1,000 calls per implementation for each expression. Results on the same Mac16,12 host, in microseconds per tokenization:
-
-| Expression | Legacy median | Optimized median | Legacy p95 | Optimized p95 | Median speedup |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `customer.name` | 7.238 | 0.991 | 8.814 | 1.348 | 7.30× |
-| `$sum(orders.price)` | 13.043 | 1.643 | 13.265 | 1.694 | 7.94× |
-| `orders[price > 50].price` | 21.601 | 2.995 | 21.971 | 3.052 | 7.21× |
-| `añb.日本語` | 7.347 | 2.615 | 7.448 | 2.687 | 2.81× |
-
-The official compatibility suite now passes all 1,271 portable cases; the measurements in this section were taken before the final compatibility fixes. Full compilation of `customer.name` measured 8.421 µs per call before the tokenizer optimization and 0.989 µs per call in this run on the same host; these are separate runs and should be treated as indicative rather than a controlled compiler comparison. The fused filter path reduced compiled evaluation on 1,000 orders from 139.573 to roughly 107–110 µs per operation in separate benchmark runs. A dedicated process measurement also dropped from about 52,116 to 40,494 reductions per operation. Increasing `min_heap_size` to 100,000 reduced the original filter timing from about 150 to 125 µs without materially changing reductions, which supports GC pressure as one contributor.
-
-Additional local before/after measurements used compiled expressions on the same host. `$zip` with two 1,000-item arrays fell from about 1,271 to 97 µs and from 1,050,483 to 32,687 reductions per operation after replacing indexed list access with `Enum.zip/1`. The canonical `$toMillis('2024-06-17T13:42:11.123Z')` path fell from 1.782 to 0.538 µs and from 148 to 131 reductions by trying the ISO parser before the abbreviated-format regexes. These are separate runs, so timing ratios are indicative.
-
-The tokenizer equivalence script still agrees on 42 directed and 50,000 generated inputs after first-byte dispatch, byte-pattern symbol dispatch, and contiguous quoted spans. Compared with the tokenizer before these three changes, median tokenization improved 1.25× for `customer.name`, 1.30× for `$sum(orders.price)`, and 1.22× for `orders[price > 50].price`. A 1,000-character ASCII string literal fell from 40.528 to 1.723 µs and from 2,866 to 218 reductions per tokenization in a dedicated local measurement. The long-string result should not be generalized to all compilation.
-
-Profiling the 1,000-order filter with `mix profile.eprof` showed 1,000,000 predicate checks over 1,000 evaluations, with repeated AST dispatch, comparisons, field selections, and list traversals accounting for most observed work. `Limits` and builtin lookup were not material in that profile. Regex literals are compiled by the parser when the expression is compiled. Converting the whole AST to anonymous functions or adding a global cache would add complexity without evidence from this profile; compile once and reuse the expression for repeated evaluation.
+`compare_checkouts.py` creates and removes temporary detached worktrees, alternates the checkouts, checks identical result hashes, and writes every round plus the summary. `benchmark.exs` remains the broader compilation/evaluation/one-shot smoke benchmark for 10, 100, and 1,000 orders; it now reports process minor GCs/op. Historical benchmark milestones have moved to `CHANGELOG.md`.
