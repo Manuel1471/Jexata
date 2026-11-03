@@ -82,3 +82,9 @@ MIX_ENV=prod mix run scripts/benchmark.exs
 ```
 
 `compare_checkouts.py` creates and removes temporary detached worktrees, alternates the checkouts, checks identical result hashes, and writes every round plus the summary. `benchmark.exs` remains the broader compilation/evaluation/one-shot smoke benchmark for 10, 100, and 1,000 orders; it now reports process minor GCs/op. Historical benchmark milestones have moved to `CHANGELOG.md`.
+
+## Concurrent throughput
+
+`MIX_ENV=prod mix run scripts/concurrent_benchmark.exs` evaluates one compiled filter against the same immutable 1,000-order input from 1, 4, or 10 BEAM processes. Each process performs 1,000 evaluations per round. Three rounds report per-process operation latency and overall throughput; the result hashes must agree. On this Mac16,12, median throughput was about 13,175, 40,555, and 72,649 evaluations/second, respectively; the median p99 latencies were 107, 165, and 253 µs. These are local diagnostics, not service-level targets.
+
+The [nightly benchmark workflow](../.github/workflows/benchmark.yml) runs the JSONata.js comparison and concurrent benchmark on Ubuntu 24.04 x86, then uploads raw artifacts. Its schedule takes effect when the workflow is on the repository's default branch. It does not fail CI for timing changes, because cross-host microsecond thresholds would be unreliable.
