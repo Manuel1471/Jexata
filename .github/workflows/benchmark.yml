@@ -28,6 +28,8 @@ jobs:
           python3 scripts/compare_jsonata.py --reference /tmp/jexata-reference-2.2.0 \
             --rounds 7 --output benchmark-artifacts/jsonata_js_comparison.json \
             > benchmark-artifacts/jsonata_js_comparison.txt
+      - name: Differential fuzz against jsonata.js
+        run: python3 scripts/differential_fuzz.py --count 1000 --output benchmark-artifacts/differential_fuzz_results.json
       - name: Measure concurrent evaluation
         run: MIX_ENV=prod mix run scripts/concurrent_benchmark.exs > benchmark-artifacts/concurrent.jsonl
       - uses: actions/upload-artifact@v4
