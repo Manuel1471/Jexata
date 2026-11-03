@@ -677,17 +677,7 @@ defmodule Jexata.Evaluator do
 
   defp eval_indexed({:index_bind, left, name}, data, context) do
     with {:ok, frames} <- eval_indexed(left, data, context) do
-      {:ok,
-       frames
-       |> Enum.flat_map(fn {value, environment} ->
-         value
-         |> Value.items()
-         |> Enum.map(&{&1, environment})
-       end)
-       |> Enum.with_index()
-       |> Enum.map(fn {{item, environment}, index} ->
-         {item, Map.put(environment, name, index)}
-       end)}
+      {:ok, frames |> bind_index_frames(name, 0, []) |> Enum.reverse()}
     end
   end
 
@@ -736,6 +726,20 @@ defmodule Jexata.Evaluator do
   defp eval_indexed(ast, data, context) do
     with {:ok, value} <- eval(ast, data, context),
          do: {:ok, [{value, context.environment}]}
+  end
+
+  defp bind_index_frames([], _name, _index, acc), do: acc
+
+  defp bind_index_frames([{value, environment} | rest], name, index, acc) do
+    {next_index, next_acc} = bind_index_items(Value.items(value), environment, name, index, acc)
+    bind_index_frames(rest, name, next_index, next_acc)
+  end
+
+  defp bind_index_items([], _environment, _name, index, acc), do: {index, acc}
+
+  defp bind_index_items([item | rest], environment, name, index, acc) do
+    frame = {item, Map.put(environment, name, index)}
+    bind_index_items(rest, environment, name, index + 1, [frame | acc])
   end
 
   defp eval_indexed_path(left, right, data, context) do
