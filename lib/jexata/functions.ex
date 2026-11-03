@@ -1,7 +1,19 @@
 defmodule Jexata.Functions do
   @moduledoc false
   alias Jexata.Error
-  alias Jexata.Functions.{Array, Boolean, Datetime, NumberFormat, Numeric, Object, String, URL}
+
+  alias Jexata.Functions.{
+    Array,
+    Boolean,
+    Datetime,
+    IntegerFormat,
+    NumberFormat,
+    Numeric,
+    Object,
+    String,
+    URL
+  }
+
   alias Jexata.Runtime.Value
 
   @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase)
@@ -11,6 +23,7 @@ defmodule Jexata.Functions do
   @object ~w($keys $lookup $merge $spread)
   @url ~w($encodeUrl $encodeUrlComponent $decodeUrl $decodeUrlComponent)
   @datetime ~w($toMillis $fromMillis)
+  @integer_format ~w($formatInteger $parseInteger)
   @builtin_modules [
     {Numeric, @numeric},
     {Boolean, @boolean},
@@ -18,7 +31,8 @@ defmodule Jexata.Functions do
     {Array, @array},
     {Object, @object},
     {URL, @url},
-    {Datetime, @datetime}
+    {Datetime, @datetime},
+    {IntegerFormat, @integer_format}
   ]
   @module_by_name for {module, names} <- @builtin_modules,
                       name <- names,
