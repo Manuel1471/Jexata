@@ -453,7 +453,9 @@ defmodule Jexata.Evaluator do
   defp eval({:call, target, args}, data, context) do
     with {:ok, function} <- eval(target, data, context),
          {:ok, values} <- eval_list(args, data, context) do
-      if Enum.any?(values, &is_struct(&1, Placeholder)) and Value.undefined?(function) do
+      partial? = Enum.any?(values, &is_struct(&1, Placeholder))
+
+      if partial? and Value.undefined?(function) do
         code =
           case target do
             {:name, name} -> if Functions.supported?("$" <> name), do: "T1007", else: "T1008"
@@ -462,7 +464,7 @@ defmodule Jexata.Evaluator do
 
         {:error, Error.new(code, "Partial application requires a function")}
       else
-        if Enum.any?(values, &is_struct(&1, Placeholder)) and not callable?(function) do
+        if partial? and not callable?(function) do
           {:error, Error.new("T1008", "Partial application requires a function")}
         else
           if Value.undefined?(function) and match?({:name, _}, target),
@@ -476,7 +478,8 @@ defmodule Jexata.Evaluator do
               invoke_or_partial(
                 with_recursive_bindings(function, context.environment),
                 values,
-                data
+                data,
+                partial?
               )
         end
       end
@@ -1084,7 +1087,11 @@ defmodule Jexata.Evaluator do
   end
 
   defp invoke_or_partial(function, values, data) do
-    if Enum.any?(values, &is_struct(&1, Placeholder)) do
+    invoke_or_partial(function, values, data, Enum.any?(values, &is_struct(&1, Placeholder)))
+  end
+
+  defp invoke_or_partial(function, values, data, partial?) do
+    if partial? do
       {:ok, %Partial{function: function, arguments: values}}
     else
       invoke(function, values, data)
