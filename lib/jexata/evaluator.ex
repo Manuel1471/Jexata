@@ -1682,14 +1682,14 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval_list(nodes, data, root) do
-    Enum.reduce_while(nodes, {:ok, []}, fn node, {:ok, acc} ->
-      case eval(node, data, root) do
-        {:ok, value} -> {:cont, {:ok, [value | acc]}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, values} -> {:ok, Enum.reverse(values)}
+    eval_list_many(nodes, data, root, [])
+  end
+
+  defp eval_list_many([], _data, _context, values), do: {:ok, Enum.reverse(values)}
+
+  defp eval_list_many([node | rest], data, context, values) do
+    case eval(node, data, context) do
+      {:ok, value} -> eval_list_many(rest, data, context, [value | values])
       error -> error
     end
   end
