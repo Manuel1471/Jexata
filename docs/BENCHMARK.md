@@ -1,6 +1,6 @@
 # Benchmark comparison
 
-This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `ab8bfd5`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
+This 1.0.0 comparison measures base commit `b9d0016` and candidate `ab8bfd5`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
 
 On a Mac16,12 (arm64), Elixir 1.20.2 / OTP 29, each commit ran in a separate detached Git worktree. Five rounds alternated checkout order: base/current, current/base, and so on. Each workload used a fresh BEAM process, three warm-up calls, and 30–10,000 measured calls depending on cost. The table reports the median and min–max of the five per-operation times, median reductions, and median **minor GCs of that workload's process**. The two checkouts returned the same result hash for all 22 workloads. A negative time delta means the candidate was faster.
 
@@ -90,6 +90,10 @@ python3 scripts/compare_checkouts.py \
 An earlier `mix profile.eprof` run on the evaluator showed 100,000 lambda invocations for 100 evaluations of `$map` on 1,000 orders. There were 100,000 signature binds, environment merges, and process-depth reads, along with 400,300 `eval/3` calls. In ten evaluations of the recursive `$reduce`, there were 56,000 closure invocations, 102,000 process-depth writes, and 434,060 `eval/3` calls. The exact-arity binding and environment merge paths have since been improved; these historical call counts should not be treated as a current profile. `eprof` tracing also perturbs absolute timings.
 
 For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field selections, 100,000 predicate checks, and 95,100 flattened selected values. The focused bisect above found the regression in field-literal binary evaluation; selection-only time stayed stable. The prior `$sum(orders.price)` profile identified path selection and flattening as more costly than the arithmetic aggregate itself.
+
+## Evaluator module extraction
+
+Commit `e28a06f` moved binary operators into `Jexata.Evaluator.Operators`, reducing `evaluator.ex` from 2,068 to 1,902 lines. A [five-round paired comparison](evaluator_split_comparison.json) against `b1a855e` returned identical result hashes on all 22 workloads. The filter median was 96.31 → 94.98 µs, map with lambda 143.60 → 141.99 µs, and comparator sort 1,250.07 → 1,252.33 µs. No workload had a positive median time change above 0.8%; differences this small are within observed run-to-run noise. This measures the extraction itself, not later safety changes.
 
 ## Reproduce
 
