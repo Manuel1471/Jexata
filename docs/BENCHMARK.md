@@ -93,11 +93,11 @@ For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field se
 
 ## Evaluator module extraction
 
-Commit `e28a06f` moved binary operators into `Jexata.Evaluator.Operators`, reducing `evaluator.ex` from 2,068 to 1,902 lines. A [five-round paired comparison](evaluator_split_comparison.json) against `b1a855e` returned identical result hashes on all 22 workloads. The filter median was 96.31 → 94.98 µs, map with lambda 143.60 → 141.99 µs, and comparator sort 1,250.07 → 1,252.33 µs. No workload had a positive median time change above 0.8%; differences this small are within observed run-to-run noise. This measures the extraction itself, not later safety changes.
+Commit `e28a06f` moved binary operators into [the operators module](../lib/jexata/evaluator/operators.ex), reducing `evaluator.ex` from 2,068 to 1,902 lines. A [five-round paired comparison](evaluator_split_comparison.json) against `b1a855e` returned identical result hashes on all 22 workloads. The filter median was 96.31 → 94.98 µs, map with lambda 143.60 → 141.99 µs, and comparator sort 1,250.07 → 1,252.33 µs. No workload had a positive median time change above 0.8%; differences this small are within observed run-to-run noise. This measures the extraction itself, not later safety changes.
 
 ## String serialization module extraction
 
-Commit `8e583f5` moved JSON serialization into `Jexata.Functions.String.Serialization`, reducing `functions/string.ex` from 517 to 434 lines. A [five-round paired comparison](string_split_comparison.json) against `50b8a1c` returned identical result hashes on all 22 workloads. `serialize_orders` moved from 911.33 to 875.84 µs/op (−3.9%); no workload had a positive median time change above 5%. The serialization difference is small enough to treat as diagnostic rather than a proven speedup.
+Commit `8e583f5` moved JSON serialization into [the serialization module](../lib/jexata/functions/string/serialization.ex), reducing `functions/string.ex` from 517 to 434 lines. A [five-round paired comparison](string_split_comparison.json) against `50b8a1c` returned identical result hashes on all 22 workloads. `serialize_orders` moved from 911.33 to 875.84 µs/op (−3.9%); no workload had a positive median time change above 5%. The serialization difference is small enough to treat as diagnostic rather than a proven speedup.
 
 ## Reproduce
 

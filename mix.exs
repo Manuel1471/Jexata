@@ -14,6 +14,7 @@ defmodule Jexata.MixProject do
         extras: [
           "README.md",
           "CONTRIBUTING.md",
+          "SECURITY.md",
           "docs/COMPATIBILITY.md",
           "docs/BENCHMARK.md",
           "docs/JSONATA_JS_COMPARISON.md",
