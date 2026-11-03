@@ -9,23 +9,23 @@
   },
   "map_lambda": {
     "source": "$map(orders, function($o){$o.price * 2})",
-    "baseline": 49929
+    "baseline": 49927
   },
   "map_signed": {
     "source": "$map(orders,function($o)<o:n>{$o.price*2})",
-    "baseline": 107961
+    "baseline": 107957
   },
   "reduce_recursive": {
     "source": "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
-    "baseline": 368279
+    "baseline": 354473
   },
   "sort_comparator": {
     "source": "$sort(orders, function($a,$b){$a.price > $b.price})",
-    "baseline": 366873
+    "baseline": 366866
   },
   "sort_key": {
     "source": "orders^(price).price",
-    "baseline": 63108
+    "baseline": 63109
   },
   "transform": {
     "source": "$ ~> |orders|{'price':price+1}|",
@@ -37,19 +37,19 @@
   },
   "string_large": {
     "source": "$string(orders)",
-    "baseline": 76551
+    "baseline": 76550
   },
   "number": {
     "source": "$map(orders,function($o){$number($string($o.price))})",
-    "baseline": 97769
+    "baseline": 91772
   },
   "number_float": {
     "source": "$map(orders,function($o){$number($string($o.price) & '.50')})",
-    "baseline": 135245
+    "baseline": 129177
   },
   "eval": {
     "source": "$eval('$sum(orders.price)')",
-    "baseline": 13748
+    "baseline": 13727
   },
   "root_array": {
     "source": "price",
@@ -58,6 +58,6 @@
   },
   "index_path": {
     "source": "orders#$i.price",
-    "baseline": 35651
+    "baseline": 35649
   }
 }
