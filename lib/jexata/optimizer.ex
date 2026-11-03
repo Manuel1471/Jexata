@@ -109,7 +109,7 @@ defmodule Jexata.Optimizer do
     references = body |> referenced_variables(MapSet.new()) |> MapSet.to_list()
 
     {{:compiled_lambda, parameters, Signature.prepare(signature, length(parameters)), body,
-      references}, true}
+      references, leaf_expression?(body)}, true}
   end
 
   defp optimize_node(ast, _fold?) when is_tuple(ast),
@@ -173,7 +173,7 @@ defmodule Jexata.Optimizer do
 
   defp referenced_variables({:variable, name}, acc), do: MapSet.put(acc, name)
 
-  defp referenced_variables({:compiled_lambda, _, _, _, references}, acc),
+  defp referenced_variables({:compiled_lambda, _, _, _, references, _}, acc),
     do: Enum.reduce(references, acc, &MapSet.put(&2, &1))
 
   defp referenced_variables(ast, acc) when is_tuple(ast),
@@ -183,6 +183,50 @@ defmodule Jexata.Optimizer do
     do: Enum.reduce(ast, acc, &referenced_variables/2)
 
   defp referenced_variables(_, acc), do: acc
+
+  defp leaf_expression?({:literal, _}), do: true
+  defp leaf_expression?({:name, _}), do: true
+  defp leaf_expression?({:variable, _}), do: true
+  defp leaf_expression?({:negate, ast}), do: leaf_expression?(ast)
+
+  defp leaf_expression?({:binary, op, left, right})
+       when op in [
+              "+",
+              "-",
+              "*",
+              "/",
+              "%",
+              "&",
+              "=",
+              "!=",
+              "<",
+              "<=",
+              ">",
+              ">=",
+              "in",
+              "and",
+              "or"
+            ],
+       do: leaf_expression?(left) and leaf_expression?(right)
+
+  defp leaf_expression?({:compiled_path, left, right, _}),
+    do: leaf_expression?(left) and leaf_expression?(right)
+
+  defp leaf_expression?({:path, left, right}),
+    do: leaf_expression?(left) and leaf_expression?(right)
+
+  defp leaf_expression?({:compiled_filter, left, predicate, _}),
+    do: leaf_expression?(left) and leaf_expression?(predicate)
+
+  defp leaf_expression?({:conditional, test, yes, no}),
+    do: leaf_expression?(test) and leaf_expression?(yes) and leaf_expression?(no)
+
+  defp leaf_expression?({:array, entries}), do: Enum.all?(entries, &leaf_expression?/1)
+  defp leaf_expression?({:constant_array, _}), do: true
+  defp leaf_expression?({:object, pairs}), do: Enum.all?(pairs, &leaf_pair?/1)
+  defp leaf_expression?(_), do: false
+
+  defp leaf_pair?({key, value}), do: leaf_expression?(key) and leaf_expression?(value)
 
   defp path_name({:literal, name}) when is_binary(name), do: {:name, name}
   defp path_name(other), do: other

@@ -9,6 +9,7 @@ defmodule Jexata.Runtime.Closure do
     :root,
     :context_value,
     :signature,
-    references: []
+    references: [],
+    leaf?: false
   ]
 end

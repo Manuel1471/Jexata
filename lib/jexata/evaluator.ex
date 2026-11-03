@@ -293,7 +293,7 @@ defmodule Jexata.Evaluator do
      }}
   end
 
-  defp eval({:compiled_lambda, parameters, signature, body, references}, data, context) do
+  defp eval({:compiled_lambda, parameters, signature, body, references, leaf?}, data, context) do
     {:ok,
      %Closure{
        parameters: parameters,
@@ -303,7 +303,8 @@ defmodule Jexata.Evaluator do
        root: context.root,
        context_value: data,
        signature: signature,
-       references: expand_closure_references(MapSet.new(references), context.environment)
+       references: expand_closure_references(MapSet.new(references), context.environment),
+       leaf?: leaf?
      }}
   end
 
@@ -1165,6 +1166,15 @@ defmodule Jexata.Evaluator do
     do: Enum.reduce(ast, acc, &referenced_variables/2)
 
   defp referenced_variables(_, acc), do: acc
+
+  defp invoke(%Closure{leaf?: true} = closure, values, data) do
+    state = Process.get({__MODULE__, :closure_depth_state})
+    {depth, max_depth} = if state == nil, do: {0, 1024}, else: state
+
+    if depth >= max_depth,
+      do: {:error, Error.new("U1001", "Function recursion limit exceeded")},
+      else: invoke_closure_loop(closure, values, data, 0)
+  end
 
   defp invoke(%Closure{} = closure, values, data) do
     key = {__MODULE__, :closure_depth_state}

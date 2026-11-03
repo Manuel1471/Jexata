@@ -53,6 +53,22 @@ defmodule Jexata.OptimizerTest do
              {:ok, 2}
   end
 
+  test "marks only non-invoking lambda bodies for depth fast path" do
+    {:ok, leaf} = Jexata.compile!("function($x){$x + 1}").ast |> Evaluator.evaluate(%{})
+    assert leaf.leaf?
+
+    {:ok, calling} = Jexata.compile!("function($x){$abs($x)}").ast |> Evaluator.evaluate(%{})
+    refute calling.leaf?
+
+    expression =
+      Jexata.compile!("($g := function($x){$x+1}; $f := function($x){1+$g($x)}; $f(1))")
+
+    assert {:error, %Jexata.Error{code: "U1001"}} =
+             Jexata.evaluate(expression, %{}, %{}, max_function_depth: 1)
+
+    assert Jexata.evaluate(expression, %{}, %{}, max_function_depth: 2) == {:ok, 3}
+  end
+
   defp evaluate(ast, data) do
     case Evaluator.evaluate(ast, data) do
       {:ok, value} -> {:ok, Value.public(value)}
