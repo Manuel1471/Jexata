@@ -1,6 +1,6 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
-  alias Jexata.{Error, Functions, Semantics}
+  alias Jexata.{AST, Error, Functions, Semantics}
   alias Jexata.Evaluator.Operators
   alias Jexata.Runtime.{Builtin, Closure, Composition, Partial, Signature, Transform, Value}
   alias Jexata.Runtime.LimitedRegex
@@ -1208,7 +1208,7 @@ defmodule Jexata.Evaluator do
   defp referenced_variables({:variable, name}, acc), do: MapSet.put(acc, name)
 
   defp referenced_variables(ast, acc) when is_tuple(ast),
-    do: ast |> Tuple.to_list() |> Enum.reduce(acc, &referenced_variables/2)
+    do: ast |> AST.children() |> Enum.reduce(acc, &referenced_variables/2)
 
   defp referenced_variables(ast, acc) when is_list(ast),
     do: Enum.reduce(ast, acc, &referenced_variables/2)

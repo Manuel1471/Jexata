@@ -46,6 +46,9 @@ defmodule Jexata.OptimizerTest do
     sort = {:sort, {:name, "items"}, [{:desc, payload}]}
     assert {:sort, {:name, "items"}, [{:desc, {:literal, 3}}]} = Optimizer.optimize(sort)
     assert AST.children(sort) == [{:name, "items"}, payload]
+
+    {:ok, closure} = Evaluator.evaluate({:lambda, [], nil, {:literal, {:variable, "$x"}}}, %{})
+    assert closure.references == []
   end
 
   test "folds arithmetic, concatenation, small ranges and constant branches" do
