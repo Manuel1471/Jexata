@@ -2,6 +2,7 @@ defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{Error, Functions, Semantics}
   alias Jexata.Runtime.{Builtin, Closure, Composition, Partial, Signature, Transform, Value}
+  alias Jexata.Runtime.LimitedRegex
   alias Jexata.Runtime.Partial.Placeholder
 
   @spec evaluate(Jexata.AST.t(), term()) :: {:ok, term()} | {:error, Error.t()}
@@ -1265,7 +1266,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp invoke(%Regex{} = pattern, [value], _data) when is_binary(value) do
-    case Regex.run(pattern, value, return: :index) do
+    case LimitedRegex.run(pattern, value, return: :index) do
       nil ->
         {:ok, Value.undefined()}
 
@@ -1643,10 +1644,10 @@ defmodule Jexata.Evaluator do
   end
 
   defp replace_callback(value, pattern, callback, limit, data) do
-    if Regex.match?(pattern, "") do
+    if LimitedRegex.match?(pattern, "") do
       {:error, Error.new("D1004", "Regex must not match an empty string")}
     else
-      matches = Regex.scan(pattern, value, return: :index)
+      matches = LimitedRegex.scan(pattern, value, return: :index)
       matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
 
       Enum.reduce_while(matches, {:ok, [], 0}, fn [{start, size} | captures],

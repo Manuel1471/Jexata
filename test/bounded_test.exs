@@ -27,4 +27,30 @@ defmodule Jexata.BoundedTest do
     assert {:error, %Jexata.Error{code: "J1006"}} =
              Jexata.evaluate_bounded(expression, data, timeout_ms: 1_000, max_heap_words: 1_000)
   end
+
+  test "bounded regex calls report backtracking limits" do
+    contains = Jexata.compile!("$contains(s,/a+/)")
+    split = Jexata.compile!("$split(s,/a+/)")
+    data = %{"s" => String.duplicate("a", 100)}
+
+    assert Jexata.evaluate_bounded(contains, data) == {:ok, true}
+
+    assert {:error, %Jexata.Error{code: "J1008"}} =
+             Jexata.evaluate_bounded(contains, data,
+               regex_match_limit: 1,
+               regex_recursion_limit: 1
+             )
+
+    assert {:error, %Jexata.Error{code: "J1008"}} =
+             Jexata.evaluate_bounded(split, data,
+               regex_match_limit: 1,
+               regex_recursion_limit: 1
+             )
+
+    for source <- ["$split(s,/(b)/)", "$match(s,/(b)/)", "$replace(s,/(b)/,'X')"] do
+      expression = Jexata.compile!(source)
+      input = %{"s" => "ab"}
+      assert Jexata.evaluate_bounded(expression, input) == Jexata.evaluate(expression, input)
+    end
+  end
 end

@@ -1,8 +1,15 @@
 defmodule Jexata.Runtime.Bounded do
   @moduledoc false
   alias Jexata.Error
+  alias Jexata.Runtime.LimitedRegex
 
-  @defaults [timeout_ms: 1_000, max_heap_words: 1_000_000, max_result_bytes: 1_000_000]
+  @defaults [
+    timeout_ms: 1_000,
+    max_heap_words: 1_000_000,
+    max_result_bytes: 1_000_000,
+    regex_match_limit: 100_000,
+    regex_recursion_limit: 10_000
+  ]
 
   def evaluate(expression, data, options) when is_list(options) do
     with {:ok, limits} <- validate(options) do
@@ -14,7 +21,14 @@ defmodule Jexata.Runtime.Bounded do
       {pid, monitor} =
         :erlang.spawn_opt(
           fn ->
-            result = Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
+            LimitedRegex.install(limits.regex_match_limit, limits.regex_recursion_limit)
+
+            result =
+              try do
+                Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
+              rescue
+                error in Error -> {:error, error}
+              end
 
             checked =
               case result do

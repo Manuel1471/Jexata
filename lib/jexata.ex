@@ -101,6 +101,7 @@ defmodule Jexata do
 
   Options are `:timeout_ms` (default 1000), `:max_heap_words` (default 1,000,000),
   `:max_result_bytes` (default 1,000,000), `:max_function_depth` (default 1024),
+  `:regex_match_limit` (default 100,000), `:regex_recursion_limit` (default 10,000),
   and `:bindings` (default `%{}`). The result-size limit uses Erlang external-term
   size as an estimate; it is not a JSON byte count.
   """

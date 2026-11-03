@@ -2,6 +2,7 @@ defmodule Jexata.Functions.String do
   @moduledoc false
   alias Jexata.{Error, Semantics}
   alias Jexata.Runtime.Value
+  alias Jexata.Runtime.LimitedRegex
 
   @max_pad_codepoints 1_000_000
 
@@ -200,14 +201,14 @@ defmodule Jexata.Functions.String do
   def call("$contains", [value, %Regex{} = pattern]) when is_binary(value) do
     if plain_regex?(pattern),
       do: {:ok, :binary.match(value, pattern.source) != :nomatch},
-      else: {:ok, Regex.match?(pattern, value)}
+      else: {:ok, LimitedRegex.match?(pattern, value)}
   end
 
   def call("$match", [value, pattern]), do: call("$match", [value, pattern, :all])
 
   def call("$match", [value, %Regex{} = pattern, limit])
       when is_binary(value) and (limit == :all or (is_integer(limit) and limit >= 0)) do
-    matches = Regex.scan(pattern, value, return: :index)
+    matches = LimitedRegex.scan(pattern, value, return: :index)
     matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
 
     results =
@@ -310,7 +311,7 @@ defmodule Jexata.Functions.String do
   defp split_regex_or_plain(value, pattern) do
     if plain_regex?(pattern),
       do: :binary.split(value, pattern.source, [:global]),
-      else: Regex.split(pattern, value)
+      else: LimitedRegex.split(pattern, value)
   end
 
   defp plain_regex?(%Regex{source: source, opts: []}) when source != "",
@@ -346,7 +347,7 @@ defmodule Jexata.Functions.String do
   defp ascii?(_), do: false
 
   defp replace_regex(value, pattern, replacement, limit) do
-    matches = Regex.scan(pattern, value, return: :index)
+    matches = LimitedRegex.scan(pattern, value, return: :index)
     matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
     template = prepare_replacement(replacement)
 
@@ -361,7 +362,7 @@ defmodule Jexata.Functions.String do
   end
 
   defp regex_replace(value, pattern, replacement, limit) do
-    if Regex.match?(pattern, ""),
+    if LimitedRegex.match?(pattern, ""),
       do: {:error, Error.new("D1004", "Regex must not match an empty string")},
       else: {:ok, replace_regex(value, pattern, replacement, limit)}
   end
