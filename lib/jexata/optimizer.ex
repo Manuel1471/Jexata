@@ -28,9 +28,28 @@ defmodule Jexata.Optimizer do
     end
   end
 
+  defp optimize_node({:object, pairs} = original, fold?) do
+    {pairs, changed?} = optimize_list(pairs)
+
+    if fold? and
+         Enum.all?(pairs, fn
+           {{:literal, _}, {:literal, %Jexata.Runtime.Value.Undefined{}}} -> false
+           {{:literal, key}, {:literal, _}} when is_binary(key) -> true
+           _ -> false
+         end) do
+      value = Map.new(pairs, fn {{:literal, key}, {:literal, item}} -> {key, item} end)
+      {{:literal, value}, true}
+    else
+      if changed?, do: {{:object, pairs}, true}, else: {original, false}
+    end
+  end
+
+  defp optimize_node({:call, {:variable, "$string"}, [{:object, _} | _]} = original, _fold?),
+    do: {original, false}
+
   defp optimize_node({:path, left, right} = original, _fold?) do
     {left, left_changed?} = optimize_node(left, true)
-    {right, right_changed?} = optimize_node(right, true)
+    {right, right_changed?} = optimize_node(right, not match?({:object, _}, right))
 
     if (match?({:variable, "$"}, left) and match?({:object, _}, right)) or
          match?({:compiled_filter, _, _, _}, left) or match?({:filter, _, _}, left) do

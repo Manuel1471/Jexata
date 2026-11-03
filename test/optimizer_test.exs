@@ -15,6 +15,9 @@ defmodule Jexata.OptimizerTest do
       {"orders#$i.price", %{"orders" => [%{"price" => 2}, %{"price" => 3}]}},
       {"$ ~> |items|{'double': price * 2}|", %{"items" => [%{"price" => 2}]}},
       {"$string({'b':2,'a':1})", %{}},
+      {"{'a':1,'nested':{'b':[2,3]}}", %{}},
+      {"{'test':()}", %{}},
+      {"items{'x':$sum(price)}", %{"items" => [%{"price" => 2}]}},
       {"[1..5]", %{}},
       {"1 + 2 * 3", %{}},
       {"'a' & 'b'", %{}},
@@ -35,6 +38,7 @@ defmodule Jexata.OptimizerTest do
     assert Jexata.compile!("'a' & 'b'").ast == {:literal, "ab"}
     assert Jexata.compile!("[1..5]").ast == {:literal, [1, 2, 3, 4, 5]}
     assert Jexata.compile!("true ? 2 : 3").ast == {:literal, 2}
+    assert Jexata.compile!("{'a':1,'b':2}").ast == {:literal, %{"a" => 1, "b" => 2}}
     assert Jexata.compile!("1 / 0").ast != {:literal, 0}
   end
 
