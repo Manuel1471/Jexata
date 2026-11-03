@@ -308,6 +308,11 @@ defmodule Jexata.Evaluator do
      }}
   end
 
+  defp eval({:binary, op, {:name, name}, {:literal, value}}, data, _context)
+       when op in ["=", "!=", "<", "<=", ">", ">=", "in", "+", "-", "*", "/", "%"] do
+    binary(op, Semantics.select(data, name), value)
+  end
+
   defp eval({:binary, op, left, right}, data, root) do
     with {:ok, a} <- eval(left, data, root),
          {:ok, b} <- eval(right, data, root) do
