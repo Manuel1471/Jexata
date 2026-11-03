@@ -80,7 +80,8 @@ defmodule Jexata.OptimizerTest do
       {"transform", "($g:=function($x){$x+1};$f:=function(){$ ~> |$|{'b':$g(a)}|};$f())",
        %{"a" => 1}},
       {"Y-style self parameter", "($f:=function($self,$n){$n=0?0:1+$self($self,$n-1)};$f($f,2))",
-       %{}}
+       %{}},
+      {"self parameter call", "($f:=function($self){1+$self($self)};$f($f))", %{}}
     ]
 
     for {name, source, data} <- cases do
