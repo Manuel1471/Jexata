@@ -19,7 +19,10 @@ defmodule Jexata.BoundedTest do
     data = %{"orders" => Enum.to_list(1..100_000)}
 
     assert {:error, %Jexata.Error{code: "J1005"}} =
-             Jexata.evaluate_bounded(expression, data, timeout_ms: 1)
+             Jexata.evaluate_bounded(expression, data,
+               timeout_ms: 1,
+               max_heap_words: 10_000_000
+             )
 
     assert {:error, %Jexata.Error{code: "J1006"}} =
              Jexata.evaluate_bounded(expression, data, timeout_ms: 1_000, max_heap_words: 1_000)

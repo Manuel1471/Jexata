@@ -188,17 +188,20 @@ defmodule Jexata.Functions.String do
 
   def call("$replace", [value, %Regex{} = pattern, replacement])
       when is_binary(value) and is_binary(replacement),
-      do: regex_replace(value, pattern, replacement, :all)
+      do: regex_or_plain_replace(value, pattern, replacement, :all)
 
   def call("$replace", [value, %Regex{} = pattern, replacement, limit])
       when is_binary(value) and is_binary(replacement) and is_integer(limit) and limit >= 0,
-      do: regex_replace(value, pattern, replacement, limit)
+      do: regex_or_plain_replace(value, pattern, replacement, limit)
 
   def call("$contains", [value, token]) when is_binary(value) and is_binary(token),
     do: {:ok, String.contains?(value, token)}
 
-  def call("$contains", [value, %Regex{} = pattern]) when is_binary(value),
-    do: {:ok, Regex.match?(pattern, value)}
+  def call("$contains", [value, %Regex{} = pattern]) when is_binary(value) do
+    if plain_regex?(pattern),
+      do: {:ok, :binary.match(value, pattern.source) != :nomatch},
+      else: {:ok, Regex.match?(pattern, value)}
+  end
 
   def call("$match", [value, pattern]), do: call("$match", [value, pattern, :all])
 
@@ -243,7 +246,7 @@ defmodule Jexata.Functions.String do
     do: {:ok, Value.undefined()}
 
   def call("$split", [value, %Regex{} = pattern]) when is_binary(value),
-    do: {:ok, Regex.split(pattern, value)}
+    do: {:ok, split_regex_or_plain(value, pattern)}
 
   def call("$split", [value, separator, limit])
       when is_binary(value) and is_binary(separator) and is_number(limit) and limit >= 0,
@@ -260,7 +263,7 @@ defmodule Jexata.Functions.String do
 
   def call("$split", [value, %Regex{} = pattern, limit])
       when is_binary(value) and is_integer(limit) and limit >= 0,
-      do: {:ok, pattern |> Regex.split(value) |> Enum.take(limit)}
+      do: {:ok, value |> split_regex_or_plain(pattern) |> Enum.take(limit)}
 
   def call("$join", [values]) when is_list(values), do: call("$join", [values, ""])
   def call("$join", [value]) when is_binary(value), do: {:ok, value}
@@ -293,6 +296,35 @@ defmodule Jexata.Functions.String do
   def call("$join", [_, _]), do: {:error, Error.new("T0412", "$join requires strings")}
 
   def call(name, _), do: type_error(name)
+
+  defp regex_or_plain_replace(value, pattern, replacement, limit) do
+    if plain_regex?(pattern) and :binary.match(replacement, "$") == :nomatch do
+      if limit == :all,
+        do: call("$replace", [value, pattern.source, replacement]),
+        else: call("$replace", [value, pattern.source, replacement, limit])
+    else
+      regex_replace(value, pattern, replacement, limit)
+    end
+  end
+
+  defp split_regex_or_plain(value, pattern) do
+    if plain_regex?(pattern),
+      do: :binary.split(value, pattern.source, [:global]),
+      else: Regex.split(pattern, value)
+  end
+
+  defp plain_regex?(%Regex{source: source, opts: []}) when source != "",
+    do: plain_regex_bytes?(source)
+
+  defp plain_regex?(_), do: false
+
+  defp plain_regex_bytes?(<<>>), do: true
+
+  defp plain_regex_bytes?(<<byte, rest::binary>>)
+       when byte in ?a..?z or byte in ?A..?Z or byte in ?0..?9 or byte in [32, ?_, ?-],
+       do: plain_regex_bytes?(rest)
+
+  defp plain_regex_bytes?(_), do: false
 
   defp substring(value, start, count) do
     if ascii?(value) do

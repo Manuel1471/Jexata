@@ -24,6 +24,16 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$join('hello')", %{}) == {:ok, "hello"}
   end
 
+  test "plain regex fast paths preserve replacement, split and contains semantics" do
+    assert Jexata.run("$replace('OrderOrder', /Order/, 'X')", %{}) == {:ok, "XX"}
+    assert Jexata.run("$replace('OrderOrder', /Order/, 'X', 1)", %{}) == {:ok, "XOrder"}
+    assert Jexata.run("$split('OrderOrder', /Order/)", %{}) == {:ok, ["", "", ""]}
+    assert Jexata.run("$contains('new Order', /Order/)", %{}) == {:ok, true}
+    assert Jexata.run("$replace('Order', /Order/, '$1')", %{}) == {:ok, ""}
+    assert Jexata.run("$replace('a.b', /\\./, '-')", %{}) == {:ok, "a-b"}
+    assert Jexata.run("$contains('ORDER', /Order/i)", %{}) == {:ok, true}
+  end
+
   test "pad repeats Unicode patterns on either side" do
     assert Jexata.run("$pad('foo', 8, '-+')", %{}) == {:ok, "foo-+-+-"}
     assert Jexata.run("$pad('x', 6, 'é𝄞')", %{}) == {:ok, "xé𝄞é𝄞é"}
