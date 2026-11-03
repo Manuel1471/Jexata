@@ -123,19 +123,15 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:group, left, pairs}, data, context) do
-    frames =
-      if indexed_path?(left) or Map.get(context, :parent_mode, false) do
-        eval_indexed(left, data, context)
-      else
-        with {:ok, source} <- eval(left, data, context) do
-          {:ok, Enum.map(Value.items(source), &{&1, context.environment})}
-        end
+    if indexed_path?(left) or Map.get(context, :parent_mode, false) do
+      with {:ok, frames} <- eval_indexed(left, data, context),
+           do: Grouping.run(frames, pairs, context, &eval/3)
+    else
+      with {:ok, source} <- eval(left, data, context) do
+        if source == [] and left == {:variable, "$$"},
+          do: {:ok, %{}},
+          else: Grouping.run_plain(Value.items(source), pairs, context, &eval/3)
       end
-
-    with {:ok, frames} <- frames do
-      if frames == [] and left == {:variable, "$$"},
-        do: {:ok, %{}},
-        else: Grouping.run(frames, pairs, context, &eval/3)
     end
   end
 
