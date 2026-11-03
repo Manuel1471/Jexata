@@ -10,9 +10,10 @@ defmodule Jexata.Evaluator do
   @spec evaluate(Jexata.AST.t(), term(), map()) :: {:ok, term()} | {:error, Error.t()}
   def evaluate(ast, data, environment, max_function_depth)
       when is_integer(max_function_depth) and max_function_depth > 0 do
-    key = {__MODULE__, :max_function_depth}
+    key = {__MODULE__, :closure_depth_state}
     prior = Process.get(key)
-    Process.put(key, max_function_depth)
+    depth = if prior == nil, do: 0, else: elem(prior, 0)
+    Process.put(key, {depth, max_function_depth})
 
     try do
       evaluate(ast, data, environment)
@@ -1142,19 +1143,19 @@ defmodule Jexata.Evaluator do
   defp referenced_variables(_, acc), do: acc
 
   defp invoke(%Closure{} = closure, values, data) do
-    depth = Process.get({__MODULE__, :closure_depth}, 0)
+    key = {__MODULE__, :closure_depth_state}
+    prior = Process.get(key)
+    {depth, max_depth} = if prior == nil, do: {0, 1024}, else: prior
 
-    if depth >= Process.get({__MODULE__, :max_function_depth}, 1024) do
+    if depth >= max_depth do
       {:error, Error.new("U1001", "Function recursion limit exceeded")}
     else
-      Process.put({__MODULE__, :closure_depth}, depth + 1)
+      Process.put(key, {depth + 1, max_depth})
 
       try do
         invoke_closure_loop(closure, values, data, 0)
       after
-        if depth == 0,
-          do: Process.delete({__MODULE__, :closure_depth}),
-          else: Process.put({__MODULE__, :closure_depth}, depth)
+        if prior == nil, do: Process.delete(key), else: Process.put(key, prior)
       end
     end
   end
