@@ -12,6 +12,7 @@ defmodule Jexata.AST do
           | {:filter, t(), t()}
           | {:compiled_filter, t(), t(), boolean()}
           | {:index_bind, t(), String.t()}
+          | {:focus_bind, t(), String.t()}
           | {:keep_array, t()}
           | {:negate, t()}
           | {:lambda, [String.t()], String.t() | nil, t()}
@@ -26,9 +27,12 @@ defmodule Jexata.AST do
           | :placeholder
           | :wildcard
           | :descendants
+          | :parent
+          | {:parent_mode, t()}
 
   # Keep AST traversal separate from tuple-valued literal data and node metadata.
   def children({:binary, _, left, right}), do: [left, right]
+  def children({:parent_mode, ast}), do: [ast]
   def children({:conditional, test, yes, no}), do: [test, yes, no]
   def children({:transform, pattern, update, delete}), do: [pattern, update, delete]
   def children({:path, left, right}), do: [left, right]
@@ -36,6 +40,7 @@ defmodule Jexata.AST do
   def children({:filter, left, predicate}), do: [left, predicate]
   def children({:compiled_filter, left, predicate, _}), do: [left, predicate]
   def children({:index_bind, left, _}), do: [left]
+  def children({:focus_bind, left, _}), do: [left]
   def children({:keep_array, child}), do: [child]
   def children({:negate, child}), do: [child]
   def children({:lambda, _, _, body}), do: [body]
@@ -85,6 +90,9 @@ defmodule Jexata.AST do
 
   def map_children({:index_bind, left, name} = node, fun),
     do: map_fixed(node, [left], fun, fn [updated] -> {:index_bind, updated, name} end)
+
+  def map_children({:focus_bind, left, name} = node, fun),
+    do: map_fixed(node, [left], fun, fn [updated] -> {:focus_bind, updated, name} end)
 
   def map_children({:keep_array, child} = node, fun),
     do: map_fixed(node, [child], fun, fn [updated] -> {:keep_array, updated} end)

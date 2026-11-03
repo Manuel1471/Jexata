@@ -6,6 +6,7 @@ defmodule Jexata do
   """
 
   alias Jexata.{Error, Evaluator, Expression, Optimizer, Parser}
+  alias Jexata.Evaluator.Ancestry
   alias Jexata.Runtime.Limits
 
   @type json ::
@@ -29,8 +30,16 @@ defmodule Jexata do
       if String.trim_leading(source) == "" do
         {:error, Error.new("S0201", "Expression is empty", 0)}
       else
-        with {:ok, ast} <- Parser.parse(source, limits),
-             do: {:ok, %Expression{source: source, ast: Optimizer.optimize(ast)}}
+        with {:ok, ast} <- Parser.parse(source, limits) do
+          optimized = Optimizer.optimize(ast)
+
+          prepared =
+            if Ancestry.contains_parent?(optimized),
+              do: {:parent_mode, optimized},
+              else: optimized
+
+          {:ok, %Expression{source: source, ast: prepared}}
+        end
       end
     else
       false -> {:error, Error.new("J0001", "Expression must be valid UTF-8")}

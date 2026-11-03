@@ -126,6 +126,11 @@ defmodule Jexata.Parser do
 
   defp prefix([%Token{value: "*"} | rest]), do: {:ok, :wildcard, rest}
   defp prefix([%Token{value: "**"} | rest]), do: {:ok, :descendants, rest}
+
+  defp prefix([%Token{value: "%"}, %Token{value: "%"}, %Token{type: :eof}]),
+    do: {:error, Error.new("S0207", "Missing right operand")}
+
+  defp prefix([%Token{value: "%"} | rest]), do: {:ok, :parent, rest}
   defp prefix([%Token{value: "["} | rest]), do: collection(rest, "]", :array)
   defp prefix([%Token{value: "{"} | rest]), do: collection(rest, "}", :object)
 
@@ -153,6 +158,26 @@ defmodule Jexata.Parser do
   defp infix(left, [%Token{value: "#"}, %Token{type: :variable, value: name} | rest], min_bp)
        when min_bp < 100 and name not in ["$", "$$"],
        do: infix({:index_bind, left, name}, rest, min_bp)
+
+  defp infix(_left, [%Token{value: "#"} | _], min_bp) when min_bp < 100,
+    do: {:error, Error.new("S0214", "Index binding requires a variable")}
+
+  defp infix(left, [%Token{value: "@"}, %Token{type: :variable, value: name} | rest], min_bp)
+       when min_bp < 100 and name not in ["$", "$$"] do
+    cond do
+      focus_after_filter?(left) ->
+        {:error, Error.new("S0215", "Focus binding after predicate")}
+
+      match?({:sort, _, _}, left) ->
+        {:error, Error.new("S0216", "Focus binding after sort")}
+
+      true ->
+        infix({:focus_bind, left, name}, rest, min_bp)
+    end
+  end
+
+  defp infix(_left, [%Token{value: "@"} | _], min_bp) when min_bp < 100,
+    do: {:error, Error.new("S0214", "Focus binding requires a variable")}
 
   defp infix(left, [%Token{value: "("} | rest], min_bp) when min_bp < 100 do
     with {:ok, args, tail} <- arguments(rest), do: infix({:call, left, args}, tail, min_bp)
@@ -216,6 +241,10 @@ defmodule Jexata.Parser do
   end
 
   defp infix(left, tokens, _), do: {:ok, left, tokens}
+
+  defp focus_after_filter?({:filter, _, _}), do: true
+  defp focus_after_filter?({:path, _, right}), do: focus_after_filter?(right)
+  defp focus_after_filter?(_), do: false
 
   defp path_prefix([%Token{type: :string, value: name} | rest]), do: {:ok, {:name, name}, rest}
 

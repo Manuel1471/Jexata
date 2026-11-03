@@ -1,7 +1,11 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{AST, Error, Functions, Semantics}
-  alias Jexata.Evaluator.{HigherOrder, Operators, Transforms}
+  alias Jexata.Evaluator.{Ancestry, Grouping, HigherOrder, IndexBindings, Operators, Transforms}
+
+  import Jexata.Evaluator.IndexBindings,
+    only: [indexed_path?: 1, keep_array?: 1, predicate_matches?: 3]
+
   alias Jexata.Runtime.{Builtin, Closure, Composition, Partial, Signature, Transform, Value}
   alias Jexata.Runtime.LimitedRegex
   alias Jexata.Runtime.Partial.Placeholder
@@ -26,11 +30,16 @@ defmodule Jexata.Evaluator do
 
   def evaluate(ast, :undefined, environment) do
     missing = Value.undefined()
-    eval(ast, missing, %{root: missing, environment: environment})
+    evaluate_root(ast, missing, environment)
   end
 
-  def evaluate(ast, data, environment),
-    do: eval(ast, data, %{root: data, environment: environment})
+  def evaluate(ast, data, environment), do: evaluate_root(ast, data, environment)
+
+  defp evaluate_root({:parent_mode, ast}, data, environment),
+    do: eval(ast, data, %{root: data, environment: environment, parent_mode: true})
+
+  defp evaluate_root(ast, data, environment),
+    do: eval(ast, data, %{root: data, environment: environment, parent_mode: false})
 
   defp eval({:literal, value}, _, _), do: {:ok, value}
   defp eval(:placeholder, _, _), do: {:ok, %Placeholder{}}
@@ -48,6 +57,16 @@ defmodule Jexata.Evaluator do
   defp eval({:name, name}, data, _), do: {:ok, Semantics.select(data, name)}
   defp eval({:variable, "$"}, data, _), do: {:ok, data}
   defp eval({:variable, "$$"}, _, %{root: root}), do: {:ok, root}
+
+  defp eval({:call, :parent, _}, _, _),
+    do: {:error, Error.new("T1006", "Parent value is not callable")}
+
+  defp eval(:parent, _, %{environment: environment}) do
+    case Ancestry.pop(environment) do
+      {:ok, parent, _} -> {:ok, parent}
+      :error -> {:error, Error.new("S0217", "No parent context is available")}
+    end
+  end
 
   defp eval({:variable, name}, _, %{environment: environment}) do
     case Map.fetch(environment, name) do
@@ -72,14 +91,20 @@ defmodule Jexata.Evaluator do
 
   defp eval({:compiled_path, _left, _right, true} = path, data, context) do
     with {:ok, frames} <- eval_indexed(path, data, context),
-         do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+         do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)), keep_array?(elem(path, 1)))}
   end
 
-  defp eval({:compiled_path, left, right, false}, data, context),
-    do: eval_path_steps(left, right, data, context)
+  defp eval({:compiled_path, left, right, false} = path, data, context) do
+    if Map.get(context, :parent_mode, false) do
+      with {:ok, frames} <- eval_indexed(path, data, context),
+           do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+    else
+      eval_path_steps(left, right, data, context)
+    end
+  end
 
   defp eval({:path, left, _} = path, data, context) do
-    if indexed_path?(left) do
+    if indexed_path?(left) or Map.get(context, :parent_mode, false) do
       with {:ok, frames} <- eval_indexed(path, data, context),
            do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
     else
@@ -92,48 +117,40 @@ defmodule Jexata.Evaluator do
          do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
   end
 
+  defp eval({:focus_bind, _, _} = path, data, context) do
+    with {:ok, frames} <- eval_indexed(path, data, context),
+         do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
+  end
+
   defp eval({:group, left, pairs}, data, context) do
-    with {:ok, source} <- eval(left, data, context) do
-      Enum.reduce_while(pairs, {:ok, %{}}, fn {key_ast, value_ast}, {:ok, result} ->
-        case group_items(Value.items(source), key_ast, context) do
-          {:ok, groups} ->
-            Enum.reduce_while(groups, {:ok, result}, fn {key, items}, {:ok, acc} ->
-              case eval(value_ast, Enum.reverse(items), context) do
-                {:ok, value} ->
-                  cond do
-                    Value.undefined?(value) ->
-                      {:cont, {:ok, acc}}
-
-                    Map.has_key?(acc, key) ->
-                      {:halt, {:error, Error.new("D1009", "Duplicate object key")}}
-
-                    true ->
-                      {:cont, {:ok, Map.put(acc, key, value)}}
-                  end
-
-                error ->
-                  {:halt, error}
-              end
-            end)
-            |> case do
-              {:ok, value} -> {:cont, {:ok, value}}
-              error -> {:halt, error}
-            end
-
-          error ->
-            {:halt, error}
+    frames =
+      if indexed_path?(left) or Map.get(context, :parent_mode, false) do
+        eval_indexed(left, data, context)
+      else
+        with {:ok, source} <- eval(left, data, context) do
+          {:ok, Enum.map(Value.items(source), &{&1, context.environment})}
         end
-      end)
+      end
+
+    with {:ok, frames} <- frames do
+      if frames == [] and left == {:variable, "$$"},
+        do: {:ok, %{}},
+        else: Grouping.run(frames, pairs, context, &eval/3)
     end
   end
 
   defp eval({:sort, left, terms}, data, context) do
-    if indexed_path?(left) do
+    if indexed_path?(left) or Map.get(context, :parent_mode, false) do
       with {:ok, frames} <- eval_indexed({:sort, left, terms}, data, context),
            do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)))}
     else
       eval_regular_sort(left, terms, data, context)
     end
+  end
+
+  defp eval({:keep_array, {:array, _} = ast}, data, context) do
+    with {:ok, value} <- eval(ast, data, context),
+         do: {:ok, Value.sequence([value], true)}
   end
 
   defp eval({:keep_array, ast}, data, context) do
@@ -142,11 +159,11 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:filter, left, predicate}, data, root) do
-    eval_filter(left, predicate, boolean_predicate?(predicate), data, root)
+    eval_filter_or_indexed(left, predicate, boolean_predicate?(predicate), data, root)
   end
 
   defp eval({:compiled_filter, left, predicate, boolean?}, data, root) do
-    eval_filter(left, predicate, boolean?, data, root)
+    eval_filter_or_indexed(left, predicate, boolean?, data, root)
   end
 
   defp eval({:array, expressions}, data, root) do
@@ -511,6 +528,15 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval_filter_or_indexed(left, predicate, boolean?, data, context) do
+    if indexed_path?(left) or Map.get(context, :parent_mode, false) do
+      with {:ok, frames} <- eval_indexed_filter(left, predicate, boolean?, data, context),
+           do: {:ok, Value.sequence(Enum.map(frames, &elem(&1, 0)), keep_array?(left))}
+    else
+      eval_filter(left, predicate, boolean?, data, context)
+    end
+  end
+
   defp eval_filter(left, {:literal, index}, _boolean?, data, root) when is_integer(index) do
     eval_index_filter(left, index, data, root)
   end
@@ -702,18 +728,42 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp indexed_path?({:index_bind, _, _}), do: true
-  defp indexed_path?({:compiled_path, _, _, indexed?}), do: indexed?
-  defp indexed_path?({:path, left, _}), do: indexed_path?(left)
-  defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
-  defp indexed_path?({:filter, left, _}), do: indexed_path?(left)
-  defp indexed_path?({:compiled_filter, left, _, _}), do: indexed_path?(left)
-  defp indexed_path?(_), do: false
+  defp eval_indexed(
+         {:index_bind, {:focus_bind, {:compiled_path, previous, step, _}, focus_name},
+          index_name},
+         data,
+         context
+       ),
+       do: eval_focus_path(previous, step, focus_name, data, context, index_name)
+
+  defp eval_indexed(
+         {:index_bind, {:focus_bind, {:path, previous, step}, focus_name}, index_name},
+         data,
+         context
+       ),
+       do: eval_focus_path(previous, step, focus_name, data, context, index_name)
+
+  defp eval_indexed({:index_bind, {:compiled_path, previous, step, _}, name}, data, context),
+    do: eval_indexed_step(previous, step, name, data, context)
 
   defp eval_indexed({:index_bind, left, name}, data, context) do
     with {:ok, frames} <- eval_indexed(left, data, context) do
-      {:ok, frames |> bind_index_frames(name, 0, []) |> Enum.reverse()}
+      {:ok, IndexBindings.bind_frames(frames, name)}
     end
+  end
+
+  defp eval_indexed({:focus_bind, {:compiled_path, previous, step, _}, name}, data, context),
+    do: eval_focus_path(previous, step, name, data, context)
+
+  defp eval_indexed({:focus_bind, {:path, previous, step}, name}, data, context),
+    do: eval_focus_path(previous, step, name, data, context)
+
+  defp eval_indexed({:focus_bind, {:name, _} = step, name}, data, context),
+    do: eval_focus_path(nil, step, name, data, context)
+
+  defp eval_indexed({:focus_bind, left, name}, data, context) do
+    with {:ok, frames} <- eval_indexed(left, data, context),
+         do: {:ok, Enum.map(frames, fn {item, env} -> {item, Map.put(env, name, item)} end)}
   end
 
   defp eval_indexed({:path, left, right}, data, context) do
@@ -758,43 +808,71 @@ defmodule Jexata.Evaluator do
     end
   end
 
-  defp eval_indexed(ast, data, context) do
-    with {:ok, value} <- eval(ast, data, context),
-         do: {:ok, [{value, context.environment}]}
-  end
+  defp eval_indexed({:filter, left, predicate}, data, context),
+    do: eval_indexed_filter(left, predicate, boolean_predicate?(predicate), data, context)
 
-  defp bind_index_frames([], _name, _index, acc), do: acc
+  defp eval_indexed({:compiled_filter, left, predicate, boolean?}, data, context),
+    do: eval_indexed_filter(left, predicate, boolean?, data, context)
 
-  defp bind_index_frames([{value, environment} | rest], name, index, acc) do
-    {next_index, next_acc} = bind_index_items(Value.items(value), environment, name, index, acc)
-    bind_index_frames(rest, name, next_index, next_acc)
-  end
+  defp eval_indexed({:keep_array, ast}, data, context), do: eval_indexed(ast, data, context)
+  defp eval_indexed({:block, [ast]}, data, context), do: eval_indexed(ast, data, context)
 
-  defp bind_index_items([], _environment, _name, index, acc), do: {index, acc}
-
-  defp bind_index_items([item | rest], environment, name, index, acc) do
-    frame = {item, Map.put(environment, name, index)}
-    bind_index_items(rest, environment, name, index + 1, [frame | acc])
-  end
-
-  defp eval_indexed_path(left, right, data, context) do
-    with {:ok, frames} <- eval_indexed(left, data, context) do
-      Enum.reduce_while(frames, {:ok, []}, fn {item, environment}, {:ok, acc} ->
-        case eval(right, item, %{context | environment: environment}) do
-          {:ok, value} ->
-            next = Enum.map(Value.items(value), &{&1, environment})
-            {:cont, {:ok, [next | acc]}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, values} -> {:ok, values |> Enum.reverse() |> List.flatten()}
-        error -> error
-      end
+  defp eval_indexed(:parent, _data, context) do
+    case Ancestry.pop(context.environment) do
+      {:ok, parent, environment} -> {:ok, [{parent, environment}]}
+      :error -> {:error, Error.new("S0217", "No parent context is available")}
     end
   end
+
+  defp eval_indexed({:name, name}, data, context) do
+    selected = Semantics.select(data, name)
+
+    environment =
+      if Map.get(context, :parent_mode, false),
+        do: Ancestry.push(context.environment, data),
+        else: context.environment
+
+    {:ok, Enum.map(Value.items(selected), &{&1, environment})}
+  end
+
+  defp eval_indexed(ast, data, context) do
+    with {:ok, value} <- eval(ast, data, context),
+         do: {:ok, Enum.map(Value.items(value), &{&1, context.environment})}
+  end
+
+  defp eval_focus_path(previous, step, name, data, context, index_name \\ nil),
+    do:
+      IndexBindings.expand(
+        :focus,
+        previous,
+        step,
+        name,
+        index_name,
+        data,
+        context,
+        &eval_indexed/3,
+        &eval/3
+      )
+
+  defp eval_indexed_step(previous, step, name, data, context),
+    do:
+      IndexBindings.expand(
+        :index,
+        previous,
+        step,
+        name,
+        nil,
+        data,
+        context,
+        &eval_indexed/3,
+        &eval/3
+      )
+
+  defp eval_indexed_filter(left, predicate, boolean?, data, context),
+    do: IndexBindings.filter(left, predicate, boolean?, data, context, &eval_indexed/3, &eval/3)
+
+  defp eval_indexed_path(left, right, data, context),
+    do: IndexBindings.path(left, right, data, context, &eval_indexed/3, &eval/3)
 
   defp eval_string_call({:call, _, args}, data, context) do
     with {:ok, values} <- eval_list(args, data, context),
@@ -1318,34 +1396,6 @@ defmodule Jexata.Evaluator do
   defp eval_boolean(ast, data, root) do
     with {:ok, value} <- eval(ast, data, root), do: {:ok, Semantics.boolean(value)}
   end
-
-  defp group_items(items, key_ast, context) do
-    Enum.reduce_while(items, {:ok, %{}}, fn item, {:ok, groups} ->
-      case eval(key_ast, item, context) do
-        {:ok, key} when is_binary(key) ->
-          {:cont, {:ok, Map.update(groups, key, [item], &[item | &1])}}
-
-        {:ok, _} ->
-          {:halt, {:error, Error.new("T1003", "Group key must be a string")}}
-
-        error ->
-          {:halt, error}
-      end
-    end)
-  end
-
-  defp predicate_matches?(value, index, count) when is_number(value) do
-    target = floor(value)
-    index == if(target < 0, do: count + target, else: target)
-  end
-
-  defp predicate_matches?(values, index, count) when is_list(values) and values != [] do
-    if Enum.all?(values, &is_number/1),
-      do: Enum.any?(values, &predicate_matches?(&1, index, count)),
-      else: Semantics.boolean(values)
-  end
-
-  defp predicate_matches?(value, _index, _count), do: Semantics.boolean(value)
 
   defp boolean_predicate?({:literal, value}) when is_boolean(value), do: true
 

@@ -224,6 +224,8 @@ defmodule Jexata.Optimizer do
   defp path_name(other), do: other
 
   defp indexed_path?({:index_bind, _, _}), do: true
+  defp indexed_path?({:focus_bind, _, _}), do: true
+  defp indexed_path?({:keep_array, left}), do: indexed_path?(left)
   defp indexed_path?({:compiled_path, _, _, indexed?}), do: indexed?
   defp indexed_path?({:path, left, _}), do: indexed_path?(left)
   defp indexed_path?({:sort, left, _}), do: indexed_path?(left)
