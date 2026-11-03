@@ -1,0 +1,355 @@
+{
+  "commits": {
+    "base": "bb9b98d258314e97d0b891c62204021ce8151176",
+    "current": "5c8b908da1eab637462f1684c9d9de6e8f7cd790"
+  },
+  "order": "alternating base/current and current/base",
+  "raw": {
+    "base": {
+      "contains_plain_regex": [
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 72881.94,
+          "result_hash": 108667591,
+          "us_per_op": 526.21208
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 72882.0,
+          "result_hash": 108667591,
+          "us_per_op": 517.07958
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 72882.0,
+          "result_hash": 108667591,
+          "us_per_op": 533.4975
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.95,
+          "mode": "evaluate",
+          "reductions_per_op": 72824.68,
+          "result_hash": 108667591,
+          "us_per_op": 526.63084
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.95,
+          "mode": "evaluate",
+          "reductions_per_op": 72824.68,
+          "result_hash": 108667591,
+          "us_per_op": 504.03
+        }
+      ],
+      "replace_plain_regex": [
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.53,
+          "mode": "evaluate",
+          "reductions_per_op": 190961.79,
+          "result_hash": 24210486,
+          "us_per_op": 1943.15583
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.53,
+          "mode": "evaluate",
+          "reductions_per_op": 190961.7,
+          "result_hash": 24210486,
+          "us_per_op": 1840.76709
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.53,
+          "mode": "evaluate",
+          "reductions_per_op": 190961.7,
+          "result_hash": 24210486,
+          "us_per_op": 1994.17916
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.48,
+          "mode": "evaluate",
+          "reductions_per_op": 190972.09,
+          "result_hash": 24210486,
+          "us_per_op": 1910.45458
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.48,
+          "mode": "evaluate",
+          "reductions_per_op": 190972.09,
+          "result_hash": 24210486,
+          "us_per_op": 1845.12417
+        }
+      ],
+      "split_plain_regex": [
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 122725.5,
+          "result_hash": 20810191,
+          "us_per_op": 978.09125
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 122725.94,
+          "result_hash": 20810191,
+          "us_per_op": 951.68292
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 122729.54,
+          "result_hash": 20810191,
+          "us_per_op": 992.8275
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 122838.89,
+          "result_hash": 20810191,
+          "us_per_op": 1003.14917
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 122839.49,
+          "result_hash": 20810191,
+          "us_per_op": 942.14166
+        }
+      ]
+    },
+    "current": {
+      "contains_plain_regex": [
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 2.23,
+          "mode": "evaluate",
+          "reductions_per_op": 74868.65,
+          "result_hash": 108667591,
+          "us_per_op": 456.72041
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 74833.65,
+          "result_hash": 108667591,
+          "us_per_op": 444.12292
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 74833.65,
+          "result_hash": 108667591,
+          "us_per_op": 420.11125
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 74833.58,
+          "result_hash": 108667591,
+          "us_per_op": 438.10333
+        },
+        {
+          "case": "contains_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.38,
+          "mode": "evaluate",
+          "reductions_per_op": 74833.58,
+          "result_hash": 108667591,
+          "us_per_op": 438.34625
+        }
+      ],
+      "replace_plain_regex": [
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.68,
+          "mode": "evaluate",
+          "reductions_per_op": 94856.23,
+          "result_hash": 24210486,
+          "us_per_op": 673.17709
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.17,
+          "mode": "evaluate",
+          "reductions_per_op": 94823.12,
+          "result_hash": 24210486,
+          "us_per_op": 653.46792
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.17,
+          "mode": "evaluate",
+          "reductions_per_op": 94823.12,
+          "result_hash": 24210486,
+          "us_per_op": 637.56833
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.17,
+          "mode": "evaluate",
+          "reductions_per_op": 94823.13,
+          "result_hash": 24210486,
+          "us_per_op": 646.70208
+        },
+        {
+          "case": "replace_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.17,
+          "mode": "evaluate",
+          "reductions_per_op": 94823.13,
+          "result_hash": 24210486,
+          "us_per_op": 643.93583
+        }
+      ],
+      "split_plain_regex": [
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.53,
+          "mode": "evaluate",
+          "reductions_per_op": 83940.71,
+          "result_hash": 20810191,
+          "us_per_op": 548.76083
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.06,
+          "mode": "evaluate",
+          "reductions_per_op": 83284.88,
+          "result_hash": 20810191,
+          "us_per_op": 519.47875
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.06,
+          "mode": "evaluate",
+          "reductions_per_op": 83285.52,
+          "result_hash": 20810191,
+          "us_per_op": 510.51417
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.06,
+          "mode": "evaluate",
+          "reductions_per_op": 83284.56,
+          "result_hash": 20810191,
+          "us_per_op": 515.54958
+        },
+        {
+          "case": "split_plain_regex",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.06,
+          "mode": "evaluate",
+          "reductions_per_op": 83285.92,
+          "result_hash": 20810191,
+          "us_per_op": 506.62292
+        }
+      ]
+    }
+  },
+  "rounds": 5,
+  "summary": {
+    "contains_plain_regex": {
+      "base": {
+        "minor_gcs_median": 1.38,
+        "reductions_median": 72881.94,
+        "us_max": 533.4975,
+        "us_median": 526.21208,
+        "us_min": 504.03
+      },
+      "current": {
+        "minor_gcs_median": 1.38,
+        "reductions_median": 74833.65,
+        "us_max": 456.72041,
+        "us_median": 438.34625,
+        "us_min": 420.11125
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 108667591
+    },
+    "replace_plain_regex": {
+      "base": {
+        "minor_gcs_median": 2.53,
+        "reductions_median": 190961.79,
+        "us_max": 1994.17916,
+        "us_median": 1910.45458,
+        "us_min": 1840.76709
+      },
+      "current": {
+        "minor_gcs_median": 1.17,
+        "reductions_median": 94823.13,
+        "us_max": 673.17709,
+        "us_median": 646.70208,
+        "us_min": 637.56833
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 24210486
+    },
+    "split_plain_regex": {
+      "base": {
+        "minor_gcs_median": 0.0,
+        "reductions_median": 122729.54,
+        "us_max": 1003.14917,
+        "us_median": 978.09125,
+        "us_min": 942.14166
+      },
+      "current": {
+        "minor_gcs_median": 0.06,
+        "reductions_median": 83285.52,
+        "us_max": 548.76083,
+        "us_median": 515.54958,
+        "us_min": 506.62292
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 20810191
+    }
+  }
+}

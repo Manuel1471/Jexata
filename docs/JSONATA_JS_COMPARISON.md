@@ -8,20 +8,20 @@ Measured on a Mac16,12 arm64 host with Elixir 1.20.2 / OTP 29 and Node v26.5.0. 
 
 | Workload | Jexata µs med [min–max] | jsonata.js µs med [min–max] | JS − Jexata µs | JS / Jexata | ns/order J / JS |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `compile_field` | 0.64 [0.62–0.66] | 13.03 [12.85–13.45] | +12.39 | 20.44× | — |
-| `field` | 0.10 [0.10–0.11] | 1.74 [1.08–1.86] | +1.64 | 16.89× | — |
-| `filter` | 85.54 [81.45–86.27] | 745.13 [734.95–754.62] | +659.58 | 8.71× | 85.5 / 745.1 |
-| `sum` | 34.93 [33.72–36.30] | 145.92 [140.13–149.49] | +110.99 | 4.18× | 34.9 / 145.9 |
-| `map_lambda` | 140.66 [137.31–150.82] | 1,201.83 [1,189.06–1,223.01] | +1,061.18 | 8.54× | 140.7 / 1201.8 |
-| `reduce_lambda` | 156.57 [151.89–162.13] | 1,211.20 [1,201.02–1,229.23] | +1,054.63 | 7.74× | 156.6 / 1211.2 |
-| `sort_comparator` | 1,140.96 [1,120.82–1,165.41] | 9,443.47 [9,340.02–9,637.20] | +8,302.52 | 8.28× | 1141.0 / 9443.5 |
-| `group_object` | 139.70 [138.62–146.50] | 706.09 [699.48–721.53] | +566.39 | 5.05× | 139.7 / 706.1 |
-| `index_zero` | 0.20 [0.19–0.21] | 1.11 [1.10–1.13] | +0.92 | 5.66× | — |
-| `number_decimal` | 486.81 [473.68–493.74] | 1,605.75 [1,600.00–1,629.62] | +1,118.94 | 3.30× | 486.8 / 1605.7 |
-| `trim` | 1,697.22 [1,678.06–1,716.94] | 1,674.03 [1,658.29–1,686.12] | -23.20 | 0.99× | 1697.2 / 1674.0 |
-| `replace` | 1,964.68 [1,829.92–2,058.22] | 2,235.51 [2,200.75–2,277.83] | +270.83 | 1.14× | 1964.7 / 2235.5 |
+| `compile_field` | 0.64 [0.63–0.66] | 13.17 [13.00–13.78] | +12.53 | 20.74× | — |
+| `field` | 0.11 [0.10–0.11] | 1.81 [1.77–1.98] | +1.70 | 17.05× | — |
+| `filter` | 83.60 [82.25–85.21] | 755.89 [741.81–766.26] | +672.28 | 9.04× | 83.6 / 755.9 |
+| `sum` | 35.70 [34.39–52.29] | 148.85 [143.82–150.96] | +113.15 | 4.17× | 35.7 / 148.9 |
+| `map_lambda` | 139.98 [138.79–143.69] | 1,231.12 [1,201.39–1,237.30] | +1,091.14 | 8.80× | 140.0 / 1231.1 |
+| `reduce_lambda` | 157.15 [155.26–160.39] | 1,247.36 [1,222.71–1,265.59] | +1,090.21 | 7.94× | 157.1 / 1247.4 |
+| `sort_comparator` | 1,154.45 [1,132.48–1,177.07] | 9,702.76 [9,420.15–10,018.36] | +8,548.31 | 8.40× | 1154.4 / 9702.8 |
+| `group_object` | 142.09 [139.51–144.68] | 727.30 [707.86–737.80] | +585.21 | 5.12× | 142.1 / 727.3 |
+| `index_zero` | 0.19 [0.18–0.24] | 1.12 [1.10–1.17] | +0.93 | 5.77× | — |
+| `number_decimal` | 490.44 [480.35–513.53] | 1,637.87 [1,613.68–1,683.53] | +1,147.42 | 3.34× | 490.4 / 1637.9 |
+| `trim` | 1,696.43 [1,675.73–1,739.75] | 1,700.65 [1,667.49–1,710.46] | +4.22 | 1.00× | 1696.4 / 1700.7 |
+| `replace` | 660.47 [639.43–683.33] | 2,237.27 [2,221.84–2,285.94] | +1,576.80 | 3.39× | 660.5 / 2237.3 |
 
-Jexata was faster in eleven of twelve cases. The literal-index fast path brings `orders[0].price` to 0.20 µs versus 1.11 µs in JS. `$trim` remains approximately tied on this input, with overlapping ranges. The simple-field ratio represents only 1.64 µs of absolute difference. The JS API's promise scheduling is included in evaluation time. The empty `await Promise.resolve()` loop measured a 0.060 µs median (0.057–0.066); it is a lower bound for one await, not a correction to subtract from full evaluations. This benchmark does not measure throughput under concurrent load, memory use, or application-level request latency.
+Jexata was faster in eleven of twelve cases. The literal-index fast path brings `orders[0].price` to 0.19 µs versus 1.12 µs in JS. Resolved `$replace` with a plain `/Order/` regex now takes 660.47 µs versus 2,237.27 µs in JS for 1,000 items. `$trim` is approximately tied on this input. The simple-field ratio represents only 1.70 µs of absolute difference. The JS API's promise scheduling is included in evaluation time. The empty `await Promise.resolve()` loop measured a 0.061 µs median (0.059–0.069); it is a lower bound for one await, not a correction to subtract from full evaluations. This benchmark does not measure throughput under concurrent load, memory use, or application-level request latency.
 
 ## Reproduce
 
