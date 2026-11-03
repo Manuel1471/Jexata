@@ -1293,10 +1293,10 @@ defmodule Jexata.Evaluator do
          data,
          steps
        ) do
-    case Signature.bind(closure.signature, parameters, values, data) do
+    case bind_closure_values(closure, values, data) do
       {:ok, bound} ->
-        bindings = bind_parameters(parameters, bound)
-        context = %{root: closure.root, environment: Map.merge(closure.environment, bindings)}
+        environment = bind_closure_environment(closure.environment, parameters, bound)
+        context = %{root: closure.root, environment: environment}
 
         case tail_expression(body, closure.context_value, context) do
           {:tail, %Closure{} = next, arguments} ->
@@ -1316,6 +1316,34 @@ defmodule Jexata.Evaluator do
         error
     end
   end
+
+  defp bind_closure_values(%Closure{signature: nil, arity: 0}, [], _data), do: {:ok, []}
+
+  defp bind_closure_values(%Closure{signature: nil, arity: 1}, [_] = values, _data),
+    do: {:ok, values}
+
+  defp bind_closure_values(%Closure{signature: nil, arity: 2}, [_, _] = values, _data),
+    do: {:ok, values}
+
+  defp bind_closure_values(%Closure{signature: nil, arity: 3}, [_, _, _] = values, _data),
+    do: {:ok, values}
+
+  defp bind_closure_values(closure, values, data),
+    do: Signature.bind(closure.signature, closure.parameters, values, data)
+
+  defp bind_closure_environment(environment, [], []), do: environment
+
+  defp bind_closure_environment(environment, [name], [value]),
+    do: Map.put(environment, name, value)
+
+  defp bind_closure_environment(environment, [a, b], [first, second]),
+    do: environment |> Map.put(a, first) |> Map.put(b, second)
+
+  defp bind_closure_environment(environment, [a, b, c], [first, second, third]),
+    do: environment |> Map.put(a, first) |> Map.put(b, second) |> Map.put(c, third)
+
+  defp bind_closure_environment(environment, parameters, values),
+    do: Map.merge(environment, bind_parameters(parameters, values))
 
   defp bind_parameters([], []), do: %{}
   defp bind_parameters([name], [value]), do: %{name => value}
