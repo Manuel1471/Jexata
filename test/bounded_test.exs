@@ -37,10 +37,11 @@ defmodule Jexata.BoundedTest do
         end
       end)
 
-    :erlang.trace(caller, true, [:procs])
+    :erlang.trace(caller, true, [:procs, :set_on_spawn])
     send(caller, :start)
     assert_receive :caller_started, 1_000
-    assert_receive {:trace, ^caller, :spawn, worker, _}, 1_000
+    assert_receive {:trace, ^caller, :spawn, watcher, _}, 1_000
+    assert_receive {:trace, ^watcher, :spawn, worker, _}, 1_000
     assert Process.alive?(worker)
     worker_monitor = Process.monitor(worker)
     Process.exit(caller, :kill)

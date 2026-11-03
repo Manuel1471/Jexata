@@ -18,46 +18,70 @@ defmodule Jexata.Runtime.Bounded do
       bindings = Keyword.get(options, :bindings, %{})
       depth = Keyword.get(options, :max_function_depth, 1024)
 
-      {pid, monitor} =
-        :erlang.spawn_opt(
-          fn ->
-            LimitedRegex.install(limits.regex_match_limit, limits.regex_recursion_limit)
-
-            result =
-              try do
-                Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
-              rescue
-                error in Error -> {:error, error}
-                error -> internal_error(Exception.message(error))
-              catch
-                kind, reason -> internal_error("#{kind}: #{inspect(reason)}")
-              end
-
-            checked = check_result(result, limits.max_result_bytes)
-
-            send(parent, {tag, checked})
-          end,
-          [
-            :monitor,
-            {:max_heap_size, %{size: limits.max_heap_words, kill: true, error_logger: false}}
-          ]
-        )
-
-      spawn(fn -> watch(parent, pid, limits.timeout_ms) end)
+      {watcher, monitor} =
+        spawn_monitor(fn ->
+          watch(parent, tag, expression, data, bindings, depth, limits)
+        end)
 
       receive do
         {^tag, result} ->
           Process.demonitor(monitor, [:flush])
           result
 
-        {:DOWN, ^monitor, :process, ^pid, reason} ->
-          exit_error(reason)
+        {:DOWN, ^monitor, :process, ^watcher, reason} ->
+          internal_error("Evaluation watcher exited: #{inspect(reason)}")
       end
     end
   end
 
   def evaluate(_expression, _data, _options),
     do: {:error, Error.new("J0007", "Evaluation limits must be a keyword list")}
+
+  defp watch(parent, tag, expression, data, bindings, depth, limits) do
+    parent_monitor = Process.monitor(parent)
+    watcher = self()
+
+    {worker, worker_monitor} =
+      :erlang.spawn_opt(
+        fn ->
+          result = run_worker(expression, data, bindings, depth, limits)
+          send(watcher, {tag, result})
+        end,
+        [
+          :monitor,
+          {:max_heap_size, %{size: limits.max_heap_words, kill: true, error_logger: false}}
+        ]
+      )
+
+    receive do
+      {^tag, result} ->
+        send(parent, {tag, result})
+
+      {:DOWN, ^parent_monitor, :process, ^parent, _} ->
+        Process.exit(worker, :kill)
+
+      {:DOWN, ^worker_monitor, :process, ^worker, reason} ->
+        send(parent, {tag, exit_error(reason)})
+    after
+      limits.timeout_ms ->
+        Process.exit(worker, :kill)
+        send(parent, {tag, {:error, Error.new("J1005", "Evaluation timed out")}})
+    end
+  end
+
+  defp run_worker(expression, data, bindings, depth, limits) do
+    try do
+      LimitedRegex.install(limits.regex_match_limit, limits.regex_recursion_limit)
+
+      Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
+      |> check_result(limits.max_result_bytes)
+    rescue
+      error in Error -> {:error, error}
+      error -> internal_error(Exception.message(error))
+    catch
+      kind, reason -> internal_error("#{kind}: #{inspect(reason)}")
+    end
+  end
 
   defp validate(options) do
     if Keyword.keyword?(options) do
@@ -85,31 +109,13 @@ defmodule Jexata.Runtime.Bounded do
     end
   end
 
-  defp watch(parent, worker, timeout_ms) do
-    parent_monitor = Process.monitor(parent)
-    worker_monitor = Process.monitor(worker)
-
-    receive do
-      {:DOWN, ^parent_monitor, :process, ^parent, _} -> Process.exit(worker, :kill)
-      {:DOWN, ^worker_monitor, :process, ^worker, _} -> :ok
-    after
-      timeout_ms -> Process.exit(worker, :timeout)
-    end
-  end
-
   defp check_result({:ok, value} = result, max_result_bytes) do
-    try do
-      if :erlang.external_size(value) > max_result_bytes,
-        do: {:error, Error.new("J1007", "Evaluation result exceeds size limit")},
-        else: result
-    rescue
-      error -> internal_error(Exception.message(error))
-    end
+    if :erlang.external_size(value) > max_result_bytes,
+      do: {:error, Error.new("J1007", "Evaluation result exceeds size limit")},
+      else: result
   end
 
   defp check_result(result, _max_result_bytes), do: result
-
-  defp exit_error(:timeout), do: {:error, Error.new("J1005", "Evaluation timed out")}
 
   defp exit_error(:killed),
     do: {:error, Error.new("J1006", "Evaluation process exceeded its heap")}
