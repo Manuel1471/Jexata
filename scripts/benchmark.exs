@@ -17,6 +17,7 @@ expressions = [
    "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
    100},
   {:sort_comparator, "$sort(orders, function($a,$b){$a.price > $b.price})", 100},
+  {:sort_key, "orders^(price).price", 100},
   {:transform, "$ ~> |orders|{'price':price+1}|", 50},
   {:subtree, "orders", 1_000},
   {:string_large, "$string(orders)", 100},

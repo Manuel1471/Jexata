@@ -1,31 +1,35 @@
 {
   "filter": {
     "source": "orders[price > 50].price",
-    "baseline": 26308
+    "baseline": 22005
   },
   "filter_in_literals": {
     "source": "orders[price in [10,20,30]].price",
-    "baseline": 29100
+    "baseline": 25099
   },
   "map_lambda": {
     "source": "$map(orders, function($o){$o.price * 2})",
-    "baseline": 62965
+    "baseline": 49929
   },
   "map_signed": {
     "source": "$map(orders,function($o)<o:n>{$o.price*2})",
-    "baseline": 120835
+    "baseline": 107961
   },
   "reduce_recursive": {
     "source": "($f := function($n){$n <= 1 ? 1 : $n * $f($n - 1)}; $reduce(orders, function($acc,$o){$acc + $f($o.price % 10)}, 0))",
-    "baseline": 376294
+    "baseline": 368436
   },
   "sort_comparator": {
     "source": "$sort(orders, function($a,$b){$a.price > $b.price})",
-    "baseline": 470457
+    "baseline": 366914
+  },
+  "sort_key": {
+    "source": "orders^(price).price",
+    "baseline": 62660
   },
   "transform": {
     "source": "$ ~> |orders|{'price':price+1}|",
-    "baseline": 104458
+    "baseline": 100798
   },
   "subtree": {
     "source": "orders",
@@ -33,19 +37,19 @@
   },
   "string_large": {
     "source": "$string(orders)",
-    "baseline": 76035
+    "baseline": 75674
   },
   "number": {
     "source": "$map(orders,function($o){$number($string($o.price))})",
-    "baseline": 105951
+    "baseline": 97958
   },
   "eval": {
     "source": "$eval('$sum(orders.price)')",
-    "baseline": 15742
+    "baseline": 13729
   },
   "root_array": {
     "source": "price",
     "input": "root_array",
-    "baseline": 15327
+    "baseline": 15339
   }
 }

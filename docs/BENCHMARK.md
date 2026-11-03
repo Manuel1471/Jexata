@@ -38,7 +38,7 @@ These are separate local runs; microsecond values are affected by host load. The
 
 The transform benchmark uses a list of 1,000 objects. Independent paths are updated together; overlapping paths retain sequential evaluation. Returning an unchanged nested 1,000-object subtree measured 106.474 to 72.807 µs and 51,203 to 46,161 reductions per call in a dedicated comparison. These timings come from separate runs and are indicative; the reduction counts are more stable.
 
-### Latest 1.0.0 candidate
+### Earlier 1.0.0 candidate
 
 After static path dispatch, prepared lambda metadata, short argument evaluation, arity-aware `$map`/`$filter`, one-pass numeric aggregates, and builtin registry dispatch, a local `MIX_ENV=prod mix run scripts/benchmark.exs` run measured the following compiled evaluation workloads. These are current values, not paired before/after trials.
 
@@ -53,13 +53,15 @@ After static path dispatch, prepared lambda metadata, short argument evaluation,
 
 The reduction guard baselines were refreshed from the median of three identical local runs after these changes. The guard retains its 25% ceiling.
 
-### Final local optimization pass
+### Further local optimization pass
 
 The next pass removed intermediate index lists from path filters, scanned `$reduce` callbacks and long argument lists directly, checked compilation limits in one traversal, and used a stable key sort for one ascending key. It also prepared `$replace` templates once per call, added an ASCII `$trim` path, and built nested `$string` output as iodata. A later local run on the same host measured 1,000-order compiled evaluation at 91.956 µs and 25,584 reductions for the numeric filter, 88.786 µs and 29,096 reductions for the literal-membership filter, 168.666 µs and 62,166 reductions for `$map` with a lambda, and 1,765.290 µs and 376,027 reductions for recursive `$reduce`. These timing samples are from a separate run and should not be read as paired speedups. The reduction guard baselines were refreshed from the median of three measurements with the same 25% ceiling.
 
+A subsequent compile pass identified lambda bodies that cannot invoke functions and avoided process dictionary writes for those calls. Field versus literal binary operations also evaluate the field directly. A fresh 1,000-order run measured 21,583 reductions for the numeric filter, 25,100 for the literal-membership filter, 57,167 for `$map` with a lambda, and 442,345 for `$sort` with a comparator. The new ascending-key workload `orders^(price).price` measured 138.960 µs and 62,219 reductions. These values come from one local run; timing varies with host load. A further direct-recursion change in path selection measured 49,167 reductions and 139.806 µs for `$map`, 363,546 reductions and 977.790 µs for comparator `$sort`, and 61,015 reductions and 112.790 µs for ascending-key sort on a subsequent run. The corresponding reduction guard medians are 49,929, 366,914, and 62,660.
+
 A direct 440-byte ASCII `$trim` comparison measured 31.464 µs per call with the previous Unicode regex path and 6.382 µs with the ASCII path. This is a dedicated local comparison, not a general string benchmark. An experiment that encoded binary operators as atoms in the optimized AST increased reductions in the filter and lambda workloads; it was reverted.
 
-CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks twelve representative 1,000-order workloads and fails when a measurement exceeds 125% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
+CI runs `scripts/reductions_guard.exs` against the recorded [reduction baselines](../scripts/reductions_baseline.json). It checks thirteen representative 1,000-order workloads and fails when a measurement exceeds 125% of its baseline. The margin accommodates runtime and host differences while catching large algorithmic regressions such as comparator sort returning to quadratic insertion or transforms returning to repeated list updates.
 
 ## Tokenizer comparison
 
