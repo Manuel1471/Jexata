@@ -23,7 +23,8 @@ expressions = [
   {:string_large, "$string(orders)", 100},
   {:number, "$map(orders,function($o){$number($string($o.price))})", 100},
   {:eval, "$eval('$sum(orders.price)')", 1_000},
-  {:root_array, "price", 1_000}
+  {:root_array, "price", 1_000},
+  {:index_path, "orders#$i.price", 1_000}
 ]
 
 IO.puts(
