@@ -1,6 +1,6 @@
 # Benchmark comparison
 
-This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `5c8b908`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
+This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `ab8bfd5`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
 
 On a Mac16,12 (arm64), Elixir 1.20.2 / OTP 29, each commit ran in a separate detached Git worktree. Five rounds alternated checkout order: base/current, current/base, and so on. Each workload used a fresh BEAM process, three warm-up calls, and 30–10,000 measured calls depending on cost. The table reports the median and min–max of the five per-operation times, median reductions, and median **minor GCs of that workload's process**. The two checkouts returned the same result hash for all 22 workloads. A negative time delta means the candidate was faster.
 
@@ -8,36 +8,36 @@ The common input has 1,000 orders with price, customer, text, padded text, decim
 
 ## Paired results
 
-| Workload | Base `b9d0016` µs med [min–max] | Current `5c8b908` µs med [min–max] | Δ time | Reductions med base → current | Minor GCs/op med base → current |
+| Workload | Base `b9d0016` µs med [min–max] | Current `ab8bfd5` µs med [min–max] | Δ time | Reductions med base → current | Minor GCs/op med base → current |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `compile_field` | 0.67 [0.64–1.04] | 0.61 [0.60–0.62] | -8.8% | 274 → 267 (-2.5%) | 0.016 → 0.025 |
-| `filter` | 100.17 [99.06–102.41] | 96.36 [94.19–97.04] | -3.8% | 27,700 → 25,754 (-7.0%) | 1.550 → 0.933 |
-| `sum` | 41.58 [41.11–43.31] | 41.51 [40.62–43.07] | -0.2% | 15,248 → 13,247 (-13.1%) | 0.799 → 0.799 |
-| `map_lambda` | 189.19 [186.91–191.70] | 145.75 [142.23–146.95] | -23.0% | 63,284 → 49,469 (-21.8%) | 0.817 → 1.830 |
-| `reduce_recursive` | 1,683.70 [1,665.17–1,699.80] | 1,605.47 [1,560.13–1,634.97] | -4.6% | 381,970 → 354,204 (-7.3%) | 12.133 → 39.367 |
-| `sort_comparator` | 1,521.10 [1,511.97–1,596.10] | 1,269.93 [1,244.73–1,273.20] | -16.5% | 521,911 → 413,242 (-20.8%) | 5.833 → 4.667 |
-| `group_object` | 154.59 [152.17–160.40] | 149.30 [145.75–152.09] | -3.4% | 25,909 → 24,786 (-4.3%) | 0.150 → 2.580 |
-| `descendants` | 351.17 [334.95–368.07] | 327.35 [325.60–339.02] | -6.8% | 203,207 → 205,687 (+1.2%) | 0.130 → 0.040 |
-| `wildcard` | 56.75 [55.34–58.70] | 56.01 [55.56–56.81] | -1.3% | 23,695 → 21,675 (-8.5%) | 1.990 → 1.990 |
-| `index_zero` | 13.29 [12.54–13.80] | 0.20 [0.18–0.20] | -98.5% | 7,141 → 80 (-98.9%) | 0.625 → 0.001 |
-| `index_negative` | 18.56 [18.07–18.65] | 1.73 [1.66–1.94] | -90.7% | 11,140 → 1,142 (-89.7%) | 1.291 → 0.001 |
-| `chain_sum` | 41.86 [41.38–42.93] | 41.89 [40.45–42.97] | +0.1% | 15,319 → 13,316 (-13.1%) | 1.334 → 1.334 |
-| `match_each` | 1,046.64 [1,035.39–1,414.76] | 1,023.73 [1,019.40–1,042.78] | -2.2% | 176,583 → 162,825 (-7.8%) | 0.040 → 0.360 |
-| `replace_each` | 1,884.41 [1,856.53–1,967.09] | 682.51 [655.82–733.00] | -63.8% | 171,409 → 94,290 (-45.0%) | 2.210 → 0.270 |
-| `trim_each` | 1,913.25 [1,892.75–2,021.69] | 1,737.13 [1,689.87–1,760.08] | -9.2% | 157,564 → 133,171 (-15.5%) | 1.340 → 0.770 |
-| `number_float_each` | 3,285.30 [3,133.86–3,422.52] | 500.21 [484.66–521.12] | -84.8% | 142,723 → 105,736 (-25.9%) | 3.870 → 1.890 |
-| `to_millis_picture` | 3,373.48 [3,320.74–3,506.92] | 3,371.58 [3,346.70–3,553.24] | -0.1% | 464,960 → 451,014 (-3.0%) | 4.840 → 4.800 |
-| `from_millis_each` | 564.32 [550.09–587.39] | 556.24 [545.18–586.92] | -1.4% | 161,610 → 149,558 (-7.5%) | 1.480 → 1.600 |
-| `format_number_each` | 7,182.02 [7,122.64–7,671.82] | 7,322.78 [7,168.68–7,734.68] | +2.0% | 1,367,430 → 1,353,669 (-1.0%) | 0.320 → 0.860 |
-| `merge_objects` | 16.96 [16.55–17.00] | 16.84 [16.60–17.98] | -0.7% | 7,149 → 7,147 (-0.0%) | 0.010 → 0.010 |
-| `spread_each` | 754.56 [742.71–764.15] | 735.52 [731.05–753.99] | -2.5% | 287,609 → 283,583 (-1.4%) | 0.230 → 0.220 |
-| `serialize_orders` | 912.30 [900.47–1,330.71] | 918.96 [914.46–930.06] | +0.7% | 307,551 → 307,393 (-0.1%) | 0.060 → 0.270 |
+| `chain_sum` | 42.23 [41.37–42.88] | 42.70 [40.68–44.00] | +1.1% | 15,319 → 13,316 (-13.1%) | 1.334 → 1.334 |
+| `compile_field` | 0.64 [0.63–0.65] | 0.61 [0.61–0.92] | -4.5% | 274 → 255 (-6.9%) | 0.016 → 0.009 |
+| `descendants` | 352.24 [326.66–370.70] | 323.97 [320.54–328.57] | -8.0% | 203,208 → 205,687 (+1.2%) | 0.130 → 0.040 |
+| `filter` | 99.86 [98.91–102.13] | 96.23 [93.66–97.47] | -3.6% | 27,700 → 25,754 (-7.0%) | 1.550 → 0.933 |
+| `format_number_each` | 7,261.90 [7,030.84–7,339.48] | 7,199.08 [7,152.70–7,337.96] | -0.9% | 1,367,430 → 1,353,511 (-1.0%) | 0.320 → 1.380 |
+| `from_millis_each` | 556.79 [547.56–574.72] | 543.35 [527.13–573.87] | -2.4% | 161,611 → 149,556 (-7.5%) | 1.480 → 1.600 |
+| `group_object` | 151.46 [150.29–162.75] | 149.51 [147.37–151.02] | -1.3% | 25,910 → 24,786 (-4.3%) | 0.150 → 2.580 |
+| `index_negative` | 18.24 [17.95–18.85] | 1.89 [1.64–2.04] | -89.6% | 11,140 → 1,142 (-89.7%) | 1.291 → 0.001 |
+| `index_zero` | 13.15 [12.48–13.33] | 0.20 [0.19–0.20] | -98.5% | 7,141 → 80 (-98.9%) | 0.625 → 0.001 |
+| `map_lambda` | 189.06 [187.24–207.45] | 146.62 [143.15–148.28] | -22.5% | 63,284 → 49,469 (-21.8%) | 0.817 → 1.830 |
+| `match_each` | 1,083.32 [1,037.76–1,096.56] | 1,055.11 [1,008.61–1,072.25] | -2.6% | 176,581 → 168,823 (-4.4%) | 0.040 → 0.360 |
+| `merge_objects` | 16.91 [16.42–17.44] | 16.99 [16.78–17.60] | +0.5% | 7,149 → 7,147 (-0.0%) | 0.010 → 0.010 |
+| `number_float_each` | 3,421.80 [3,220.99–3,466.68] | 501.35 [492.98–627.60] | -85.3% | 142,727 → 105,735 (-25.9%) | 3.870 → 1.890 |
+| `reduce_recursive` | 1,679.97 [1,677.87–1,736.57] | 1,573.40 [1,555.37–1,612.00] | -6.3% | 381,970 → 354,204 (-7.3%) | 12.133 → 39.367 |
+| `replace_each` | 2,002.39 [1,913.65–2,323.55] | 674.90 [664.38–694.25] | -66.3% | 171,408 → 94,290 (-45.0%) | 2.210 → 0.270 |
+| `serialize_orders` | 901.94 [886.61–930.00] | 902.80 [895.02–927.64] | +0.1% | 307,541 → 307,538 (-0.0%) | 0.060 → 0.060 |
+| `sort_comparator` | 1,537.80 [1,485.43–1,563.43] | 1,257.60 [1,250.10–1,278.43] | -18.2% | 521,911 → 413,242 (-20.8%) | 5.833 → 4.667 |
+| `spread_each` | 754.04 [736.20–758.42] | 735.24 [719.56–776.76] | -2.5% | 287,603 → 283,573 (-1.4%) | 0.230 → 0.220 |
+| `sum` | 42.61 [41.65–43.53] | 42.61 [41.00–43.48] | +0.0% | 15,248 → 13,247 (-13.1%) | 0.799 → 0.799 |
+| `to_millis_picture` | 3,483.90 [3,398.50–3,517.70] | 3,407.56 [3,313.72–3,483.16] | -2.2% | 464,960 → 451,014 (-3.0%) | 4.840 → 4.800 |
+| `trim_each` | 1,990.50 [1,984.43–2,005.46] | 1,723.87 [1,656.04–1,763.12] | -13.4% | 157,564 → 133,170 (-15.5%) | 1.340 → 0.770 |
+| `wildcard` | 56.89 [53.94–66.69] | 56.42 [54.24–56.78] | -0.8% | 23,695 → 21,675 (-8.5%) | 1.990 → 1.990 |
 
 ## Reading the result
 
-- The decimal `$number` workload remains the largest gain: 3,285.30 → 500.21 µs/op. Literal `[0]` now selects directly and falls from 13.29 to 0.20 µs/op.
-- The filter regression was traced to `69c64cd`, which inlined field-literal binary evaluation. Removing that shortcut in `bc2139c` improved the filter despite raising reductions relative to the immediately preceding revision. In this five-round release comparison, filter time is 100.17 → 96.36 µs/op (-3.8%), with reductions 27,700 → 25,754. See [filter_regression_analysis.json](filter_regression_analysis.json) for focused predicate and selection measurements.
-- Exact-arity closure binding was improved in `959e9b0`; a paired five-round run against `bc2139c` measured `$map` with lambda at 151.36 → 143.53 µs/op (−5.2%). Plain unflagged ASCII regex patterns are now dispatched through binary operations in resolved `$replace`, `$contains`, and `$split` calls; the broad `replace_each` workload falls from 1,884.41 to 682.51 µs/op. Small or overlapping time differences should not be inferred as wins solely from lower reductions.
+- The decimal `$number` workload is 3,421.80 → 501.35 µs/op (-85.3%); literal `[0]` is 13.15 → 0.20 µs/op (-98.5%).
+- The filter regression was traced to `69c64cd`, which inlined field-literal binary evaluation. Removing that shortcut in `bc2139c` improved the filter despite raising reductions relative to the immediately preceding revision. In this five-round release comparison, filter time is 99.86 → 96.23 µs/op (-3.6%); reductions are 27,700 → 25,754. See [filter_regression_analysis.json](filter_regression_analysis.json) for focused predicate and selection measurements.
+- Exact-arity closure binding was improved in `959e9b0`; a paired five-round run against `bc2139c` measured `$map` with lambda at 151.36 → 143.53 µs/op (−5.2%). Plain unflagged ASCII regex patterns are now dispatched through binary operations in resolved `$replace`, `$contains`, and `$split` calls; the broad `replace_each` workload is 2,002.39 → 674.90 µs/op (-66.3%). Small or overlapping time differences should not be inferred as wins solely from lower reductions.
 - Minor GC counts come from `Process.info(self(), :garbage_collection)[:minor_gcs]` and depend on each worker's heap; use them as diagnostics.
 
 ## Filter regression bisect
@@ -95,7 +95,7 @@ For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field se
 
 ```bash
 python3 scripts/compare_checkouts.py \
-  --base b9d0016 --current 5c8b908 --rounds 5 \
+  --base b9d0016 --current ab8bfd5 --rounds 5 \
   --output docs/benchmark_comparison_results.json
 mix run scripts/time_canaries.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
