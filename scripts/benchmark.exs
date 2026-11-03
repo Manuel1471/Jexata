@@ -33,7 +33,7 @@ IO.puts(
 )
 
 IO.puts(
-  "size,items,expression,mode,iterations,microseconds_per_op,reductions_per_op,heap_words_after,gc_collections_per_op"
+  "size,items,expression,mode,iterations,microseconds_per_op,reductions_per_op,heap_words_after,minor_gcs_per_op"
 )
 
 for {size, count} <- sizes do
@@ -56,10 +56,12 @@ for {size, count} <- sizes do
         ] do
       operation.()
       {_, before_reductions} = Process.info(self(), :reductions)
-      {before_gc, _, _} = :erlang.statistics(:garbage_collection)
+      {_, before_gc_info} = Process.info(self(), :garbage_collection)
+      before_gc = Keyword.fetch!(before_gc_info, :minor_gcs)
       {microseconds, _} = :timer.tc(fn -> for _ <- 1..iterations, do: operation.() end)
       {_, after_reductions} = Process.info(self(), :reductions)
-      {after_gc, _, _} = :erlang.statistics(:garbage_collection)
+      {_, after_gc_info} = Process.info(self(), :garbage_collection)
+      after_gc = Keyword.fetch!(after_gc_info, :minor_gcs)
       {_, heap_words} = Process.info(self(), :heap_size)
 
       IO.puts(
