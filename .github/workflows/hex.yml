@@ -24,6 +24,7 @@ jobs:
       - run: mix compile --warnings-as-errors
       - run: mix test
       - run: mix run scripts/reductions_guard.exs
+      - run: mix run scripts/time_canaries.exs
       - run: mix hex.publish --dry-run --yes
 
   publish:

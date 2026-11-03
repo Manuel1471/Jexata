@@ -1,0 +1,1 @@
+{"number_decimal":{"minor_gcs_per_op":0.03759,"ratio":3.360789430761703,"us_per_op":0.20605},"replace_template":{"minor_gcs_per_op":0.0075,"ratio":2.5271881532075247,"us_per_op":42.9205},"serialize_object":{"minor_gcs_per_op":0.046,"ratio":2.390371389270977,"us_per_op":13.031},"trim_ascii":{"minor_gcs_per_op":0.2638,"ratio":1.1729452514566496,"us_per_op":4.3841}}
