@@ -12,20 +12,31 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    name: Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
+    strategy:
+      matrix:
+        include:
+          - elixir: "1.20.0"
+            otp: "27"
+          - elixir: "1.20.5"
+            otp: "29"
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "29"
-          elixir-version: "1.20.2"
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
       - run: mix local.hex --force
       - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix compile --warnings-as-errors
       - run: mix test
       - run: mix run scripts/reductions_guard.exs
+        if: matrix.otp == '29'
       - run: mix run scripts/time_canaries.exs
+        if: matrix.otp == '29'
       - run: mix hex.publish --dry-run --yes
+        if: matrix.otp == '29'
 
   publish:
     needs: test
@@ -39,7 +50,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "29"
-          elixir-version: "1.20.2"
+          elixir-version: "1.20.5"
       - run: mix local.hex --force
       - run: mix deps.get
       - run: mix compile --warnings-as-errors
