@@ -16,6 +16,7 @@ defmodule Jexata.MixProject do
           "CONTRIBUTING.md",
           "docs/COMPATIBILITY.md",
           "docs/BENCHMARK.md",
+          "docs/JSONATA_JS_COMPARISON.md",
           "docs/ARCHITECTURE.md"
         ]
       ],
