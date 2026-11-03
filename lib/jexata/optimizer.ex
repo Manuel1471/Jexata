@@ -3,22 +3,23 @@ defmodule Jexata.Optimizer do
   alias Jexata.{Evaluator, Semantics}
   alias Jexata.Runtime.Signature
 
-  # Scalar array constructors are immutable across evaluations. Nested array
-  # constructors retain their node so the parent preserves explicit nesting.
+  # Nested constant arrays use a distinct node so array construction preserves
+  # their brackets even when a surrounding constructor remains dynamic.
   def optimize(ast), do: ast |> optimize_node(true) |> elem(0)
 
   defp optimize_node({:array, entries} = original, fold?) do
     {entries, changed?} = optimize_array_entries(entries)
 
     cond do
-      fold? and match?([{:binary, "..", {:literal, _}, {:literal, _}}], entries) ->
+      match?([{:binary, "..", {:literal, _}, {:literal, _}}], entries) ->
         case fold_small_range(hd(entries)) do
-          {:ok, values} -> {{:literal, values}, true}
+          {:ok, values} -> {constant_array_node(values, fold?), true}
           :no -> if(changed?, do: {{:array, entries}, true}, else: {original, false})
         end
 
-      fold? and Enum.all?(entries, &scalar_literal?/1) ->
-        {{:literal, Enum.map(entries, &elem(&1, 1))}, true}
+      Enum.all?(entries, &constant_array_entry?/1) ->
+        {:ok, values} = Evaluator.evaluate({:array, entries}, %{})
+        {constant_array_node(values, fold?), true}
 
       changed? ->
         {{:array, entries}, true}
@@ -152,6 +153,13 @@ defmodule Jexata.Optimizer do
     do: scalar_value?(value)
 
   defp scalar_literal?(_), do: false
+
+  defp constant_array_entry?({:literal, _}), do: true
+  defp constant_array_entry?({:constant_array, _}), do: true
+  defp constant_array_entry?(_), do: false
+
+  defp constant_array_node(values, true), do: {:literal, values}
+  defp constant_array_node(values, false), do: {:constant_array, values}
 
   defp scalar_value?(value),
     do: is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value)

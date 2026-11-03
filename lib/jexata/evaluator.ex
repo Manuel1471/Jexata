@@ -151,6 +151,8 @@ defmodule Jexata.Evaluator do
     eval_array_items(expressions, data, root, [])
   end
 
+  defp eval({:constant_array, values}, _data, _context), do: {:ok, values}
+
   defp eval({:object, pairs}, data, root) do
     Enum.reduce_while(pairs, {:ok, %{}}, fn {key_ast, value_ast}, {:ok, acc} ->
       with {:ok, key} <- eval(key_ast, data, root),
@@ -1639,6 +1641,7 @@ defmodule Jexata.Evaluator do
   end
 
   defp append_array_item({:array, _}, value, acc), do: [value | acc]
+  defp append_array_item({:constant_array, _}, value, acc), do: [value | acc]
   defp append_array_item(_, %Value.Sequence{items: items}, acc), do: Enum.reverse(items, acc)
   defp append_array_item(_, value, acc) when is_list(value), do: Enum.reverse(value, acc)
   defp append_array_item(_, %Value.Undefined{}, acc), do: acc
