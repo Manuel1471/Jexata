@@ -1618,42 +1618,38 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval_each(items, {:name, name}, _root, flatten_arrays?, keep_array?) do
-    values =
-      Enum.reduce(items, [], fn item, acc ->
-        selected = Semantics.select(item, name)
-        selected_values = if flatten_arrays?, do: Value.items(selected), else: [selected]
-        Enum.reduce(selected_values, acc, fn value, acc -> [value | acc] end)
-      end)
-
+    values = select_each_items(items, name, flatten_arrays?, [])
     {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
   end
 
   defp eval_each(items, {:variable, _} = ast, context, _flatten_arrays?, keep_array?) do
-    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, values} ->
-      case eval(ast, item, context) do
-        {:ok, []} -> {:cont, {:ok, values}}
-        {:ok, value} -> {:cont, {:ok, [value | values]}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
+    case eval_each_items(items, ast, context, [], true) do
       {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
       error -> error
     end
   end
 
   defp eval_each(items, ast, root, _flatten_arrays?, keep_array?) do
-    Enum.reduce_while(items, {:ok, []}, fn item, {:ok, acc} ->
-      case eval(ast, item, root) do
-        {:ok, value} ->
-          {:cont, {:ok, [value | acc]}}
-
-        error ->
-          {:halt, error}
-      end
-    end)
-    |> case do
+    case eval_each_items(items, ast, root, [], false) do
       {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
+      error -> error
+    end
+  end
+
+  defp select_each_items([], _name, _flatten?, values), do: values
+
+  defp select_each_items([item | rest], name, flatten?, values) do
+    selected = Semantics.select(item, name)
+    next = if flatten?, do: Enum.reverse(Value.items(selected), values), else: [selected | values]
+    select_each_items(rest, name, flatten?, next)
+  end
+
+  defp eval_each_items([], _ast, _context, values, _skip_empty?), do: {:ok, values}
+
+  defp eval_each_items([item | rest], ast, context, values, skip_empty?) do
+    case eval(ast, item, context) do
+      {:ok, []} when skip_empty? -> eval_each_items(rest, ast, context, values, skip_empty?)
+      {:ok, value} -> eval_each_items(rest, ast, context, [value | values], skip_empty?)
       error -> error
     end
   end
