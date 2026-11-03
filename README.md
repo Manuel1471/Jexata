@@ -1,6 +1,6 @@
 # Jexata
 
-Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes all 1,271 cases in the portable JSONata v2.2.0 test suite; see the [compatibility report](docs/COMPATIBILITY.md) for the test method and limits of that result.
+Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes 1,319 of 1,679 JSONata v2.2.0 reference cases; 204 fail and 156 are classified as unsupported. The earlier 1,271/1,271 figure covered only files named `case*.json`. See the [compatibility report](docs/COMPATIBILITY.md) for the test method and gaps.
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 
@@ -51,7 +51,7 @@ Non-bang functions return `{:ok, value}` or `{:error, %Jexata.Error{code: ..., m
 
 The interpreter supports literals, quoted field names, comments, field paths, wildcards, array predicates, descendants, arithmetic, comparisons, `and`/`or`, concatenation, bounded integer ranges, conditional/default/coalescing expressions, array and object constructors, grouping and order-by, index bindings, blocks, local variable bindings, lambdas, closures, chaining and composition, partial application, immutable transforms, and higher-order functions. It includes numeric, text, regex, array, object, boolean, URL, Base64, and selected date/time functions. See [the compatibility report](docs/COMPATIBILITY.md) for exact coverage and gaps.
 
-Passing the portable suite does not establish compatibility with every JSONata expression. In particular, Elixir maps do not preserve source key order, so `$string` preserves literal object key order directly but may serialize objects obtained from input maps in a different order. Check the expressions your application needs before using it as a drop-in replacement.
+The full reference suite exposes unsupported functions and differences in date/time pictures, parent navigation, joins, and other cases. Elixir maps do not preserve source key order, so `$string` preserves literal object key order directly but may serialize objects obtained from input maps in a different order. Check the expressions your application needs before using it as a drop-in replacement.
 
 ## Limits and trust
 

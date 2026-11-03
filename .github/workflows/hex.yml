@@ -43,6 +43,12 @@ jobs:
       - run: mix format --check-formatted
       - run: mix compile --warnings-as-errors
       - run: mix test
+      - name: Check full JSONata v2.2.0 reference fixtures
+        if: matrix.otp == '29'
+        run: |
+          git clone --depth 1 --branch v2.2.0 https://github.com/jsonata-js/jsonata.git /tmp/jexata-reference-2.2.0
+          test "$(git -C /tmp/jexata-reference-2.2.0 rev-parse HEAD)" = "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03"
+          mix run scripts/compatibility.exs /tmp/jexata-reference-2.2.0/test/test-suite --assert-baseline
       - run: mix run scripts/reductions_guard.exs
         if: matrix.otp == '29'
       - run: mix run scripts/time_canaries.exs

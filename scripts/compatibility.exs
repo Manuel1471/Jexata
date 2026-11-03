@@ -1,4 +1,5 @@
 # Run with: mix run scripts/compatibility.exs /path/to/jsonata/test/test-suite
+# --case-files-only reproduces the earlier 1,271-case subset.
 # Reference: jsonata-js/jsonata v2.2.0 (8ee4476f8a228bfc7a62979ae0a9c13a4043cd03)
 [suite | _] = System.argv()
 
@@ -9,10 +10,11 @@ group_filter =
   end)
 
 files =
-  Path.wildcard(Path.join([suite, "groups", "*", "case*.json"]))
+  Path.wildcard(Path.join([suite, "groups", "*", "*.json"]))
   |> Enum.sort()
   |> Enum.filter(fn file ->
-    is_nil(group_filter) or Path.basename(Path.dirname(file)) == group_filter
+    (is_nil(group_filter) or Path.basename(Path.dirname(file)) == group_filter) and
+      ("--case-files-only" not in System.argv() or String.starts_with?(Path.basename(file), "case"))
   end)
 
 normalize = fn recursive, value ->
@@ -169,6 +171,18 @@ IO.puts("Total: #{length(cases)}")
 Enum.each([:pass, :fail, :unsupported, :skipped, :crashes], fn key ->
   IO.puts("#{key}: #{result[key]}")
 end)
+
+if "--assert-baseline" in System.argv() and group_filter == nil and
+     "--case-files-only" not in System.argv() do
+  baseline = %{total: 1679, pass: 1319, fail: 204, unsupported: 156}
+
+  if length(cases) != baseline.total or result.pass < baseline.pass or
+       result.fail > baseline.fail or result.unsupported > baseline.unsupported or
+       result.skipped != 0 or result.crashes != 0 do
+    IO.puts(:stderr, "Full reference compatibility baseline regressed")
+    System.halt(1)
+  end
+end
 
 if "--details" in System.argv() do
   Process.get(:compat_groups, %{})
