@@ -1,6 +1,31 @@
 defmodule Jexata.AST do
   @moduledoc false
-  @type t :: term()
+  @type t ::
+          {:literal, term()}
+          | {:constant_array, [term()]}
+          | {:name, String.t()}
+          | {:variable, String.t()}
+          | {:binary, String.t(), t(), t()}
+          | {:conditional, t(), t(), t()}
+          | {:path, t(), t()}
+          | {:compiled_path, t(), t(), boolean()}
+          | {:filter, t(), t()}
+          | {:compiled_filter, t(), t(), boolean()}
+          | {:index_bind, t(), String.t()}
+          | {:keep_array, t()}
+          | {:negate, t()}
+          | {:lambda, [String.t()], String.t() | nil, t()}
+          | {:compiled_lambda, [String.t()], term(), t(), [String.t()], boolean()}
+          | {:call, t(), [t()]}
+          | {:array, [t()]}
+          | {:object, [{t(), t()}]}
+          | {:group, t(), [{t(), t()}]}
+          | {:sort, t(), [{:asc | :desc, t()}]}
+          | {:block, [t()]}
+          | {:transform, t(), t(), t() | nil}
+          | :placeholder
+          | :wildcard
+          | :descendants
 
   # Keep AST traversal separate from tuple-valued literal data and node metadata.
   def children({:binary, _, left, right}), do: [left, right]
