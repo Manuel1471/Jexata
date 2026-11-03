@@ -96,6 +96,19 @@ defmodule Jexata do
 
   def evaluate(_, _, _, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
+  @doc """
+  Evaluates in a separate BEAM process with time, heap, and result-size limits.
+
+  Options are `:timeout_ms` (default 1000), `:max_heap_words` (default 1,000,000),
+  `:max_result_bytes` (default 1,000,000), `:max_function_depth` (default 1024),
+  and `:bindings` (default `%{}`). The result-size limit uses Erlang external-term
+  size as an estimate; it is not a JSON byte count.
+  """
+  @spec evaluate_bounded(Expression.t(), input(), keyword()) ::
+          {:ok, result()} | {:error, Error.t()}
+  def evaluate_bounded(expression, data, options \\ []),
+    do: Jexata.Runtime.Bounded.evaluate(expression, data, options)
+
   @doc "Compiles and evaluates a JSONata expression in one call."
   @spec run(String.t(), input()) :: {:ok, result()} | {:error, Error.t()}
   def run(source, data) do

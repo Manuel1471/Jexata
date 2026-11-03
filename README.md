@@ -61,7 +61,15 @@ Passing the portable suite does not establish compatibility with every JSONata e
 Jexata.compile("orders.price", max_source_bytes: 1_000, max_tokens: 100)
 ```
 
-There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation), a 100,000 iteration limit for supported tail calls, and a one-million-codepoint output limit for `$pad`, but no general evaluation time, step, memory, output size, or regular expression limit. These compilation checks do not make execution of arbitrary user expressions sandbox safe. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
+There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation), a 100,000 iteration limit for supported tail calls, and a one-million-codepoint output limit for `$pad`. For untrusted or expensive expressions, `evaluate_bounded/3` runs the compiled expression in a separate BEAM process with time, process-heap, and result-size limits:
+
+```elixir
+expression = Jexata.compile!("orders.price")
+Jexata.evaluate_bounded(expression, data,
+  timeout_ms: 500, max_heap_words: 1_000_000, max_result_bytes: 200_000)
+```
+
+The result limit is measured as Erlang external-term size, not JSON bytes. There is no regex-specific backtracking budget or global step count. A bounded BEAM process is useful for containment but does not make arbitrary expressions a complete security sandbox. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
 
 ## Development
 
