@@ -22,7 +22,7 @@ defmodule Jexata.Functions do
   @array ~w($append $reverse $sort $distinct $zip $shuffle)
   @object ~w($keys $lookup $merge $spread)
   @url ~w($encodeUrl $encodeUrlComponent $decodeUrl $decodeUrlComponent)
-  @datetime ~w($toMillis $fromMillis)
+  @datetime ~w($toMillis $fromMillis $now $millis)
   @integer_format ~w($formatInteger $parseInteger)
   @builtin_modules [
     {Numeric, @numeric},
@@ -60,7 +60,8 @@ defmodule Jexata.Functions do
              "$uppercase",
              "$lowercase",
              "$trim",
-             "$string"
+             "$string",
+             "$fromMillis"
            ],
          do: [context],
          else: args

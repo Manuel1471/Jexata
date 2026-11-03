@@ -233,24 +233,32 @@ defmodule Jexata.Functions.IntegerFormat do
   defp parse_integer(value, {:letters, casing}) do
     base = if casing == :upper, do: ?A, else: ?a
 
-    number =
-      Enum.reduce(String.to_charlist(value), 0, fn char, acc -> acc * 26 + char - base + 1 end)
+    if value == "" or not Enum.all?(String.to_charlist(value), &(&1 in base..(base + 25))) do
+      {:error, Error.new("D3130", "Invalid integer text")}
+    else
+      number =
+        Enum.reduce(String.to_charlist(value), 0, fn char, acc -> acc * 26 + char - base + 1 end)
 
-    {:ok, number}
+      {:ok, number}
+    end
   end
 
   defp parse_integer(value, {:roman, _}) do
-    {number, _} =
-      value
-      |> String.upcase()
-      |> String.to_charlist()
-      |> Enum.reverse()
-      |> Enum.reduce({0, 1}, fn char, {sum, max_seen} ->
-        digit = %{?M => 1000, ?D => 500, ?C => 100, ?L => 50, ?X => 10, ?V => 5, ?I => 1}[char]
-        if digit < max_seen, do: {sum - digit, max_seen}, else: {sum + digit, digit}
-      end)
+    if value != "" and not Regex.match?(~r/\A[MDCLXVI]+\z/i, value) do
+      {:error, Error.new("D3130", "Invalid integer text")}
+    else
+      {number, _} =
+        value
+        |> String.upcase()
+        |> String.to_charlist()
+        |> Enum.reverse()
+        |> Enum.reduce({0, 1}, fn char, {sum, max_seen} ->
+          digit = %{?M => 1000, ?D => 500, ?C => 100, ?L => 50, ?X => 10, ?V => 5, ?I => 1}[char]
+          if digit < max_seen, do: {sum - digit, max_seen}, else: {sum + digit, digit}
+        end)
 
-    {:ok, number}
+      {:ok, number}
+    end
   end
 
   defp parse_integer(value, {:words, _, _}) do
@@ -260,18 +268,31 @@ defmodule Jexata.Functions.IntegerFormat do
       value
       |> String.downcase()
       |> String.split(~r/,\s|\sand\s|[\s-]+/, trim: true)
-      |> Enum.reduce([0], fn word, [top | rest] ->
-        number = Map.fetch!(lookup, word)
+      |> Enum.reduce_while({:ok, [0]}, fn word, {:ok, [top | rest]} ->
+        case Map.fetch(lookup, word) do
+          {:ok, number} when number < 100 ->
+            next = if top >= 1_000, do: [number, top | rest], else: [top + number | rest]
+            {:cont, {:ok, next}}
 
-        if number < 100 do
-          if top >= 1_000, do: [number, top | rest], else: [top + number | rest]
-        else
-          [top * number | rest]
+          {:ok, number} ->
+            {:cont, {:ok, [top * number | rest]}}
+
+          :error ->
+            {:halt, {:error, Error.new("D3130", "Invalid integer text")}}
         end
       end)
 
-    number = Enum.sum(segments)
-    {:ok, if(abs(number) > 9_007_199_254_740_991, do: number * 1.0, else: number)}
+    case segments do
+      {:ok, values} when value != "" ->
+        number = Enum.sum(values)
+        {:ok, if(abs(number) > 9_007_199_254_740_991, do: number * 1.0, else: number)}
+
+      {:ok, _} ->
+        {:error, Error.new("D3130", "Invalid integer text")}
+
+      error ->
+        error
+    end
   end
 
   defp parse_integer(value, {:decimal, zero, _mandatory, separators, ordinal?}) do

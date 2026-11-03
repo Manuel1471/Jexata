@@ -16,4 +16,19 @@ defmodule Jexata.FunctionsDatetimeTest do
     assert Jexata.run("$fromMillis(1509380732935)", %{}) == {:ok, "2017-10-30T16:25:32.935Z"}
     assert Jexata.run("$fromMillis(missing)", %{}) == {:ok, :undefined}
   end
+
+  test "parses and formats date pictures, including names and timezone offsets" do
+    assert Jexata.run("$toMillis('27th April 2008', '[D1o] [MNn] [Y0001]')", %{}) ==
+             {:ok, 1_209_254_400_000}
+
+    assert Jexata.run(
+             "$toMillis('2020-09-09 08:00:00 +02:00', '[Y0001]-[M01]-[D01] [H01]:[m01]:[s01] [Z]')",
+             %{}
+           ) == {:ok, 1_599_631_200_000}
+
+    assert Jexata.run(
+             "$fromMillis(1522159380123, '[Y0001]-[M01]-[D01] [H01]:[m01]', '+0530')",
+             %{}
+           ) == {:ok, "2018-03-27 19:33"}
+  end
 end

@@ -3,18 +3,66 @@ defmodule Jexata.Functions.Datetime do
   alias Jexata.Error
   alias Jexata.Runtime.Value
 
-  def supported?(name), do: name in ["$toMillis", "$fromMillis"]
+  def supported?(name), do: name in ["$toMillis", "$fromMillis", "$now", "$millis"]
+
+  def call("$now", []),
+    do: {:ok, DateTime.utc_now() |> DateTime.truncate(:millisecond) |> DateTime.to_iso8601()}
+
+  def call("$millis", []), do: {:ok, DateTime.utc_now() |> DateTime.to_unix(:millisecond)}
 
   def call("$toMillis", [value]) when is_struct(value, Value.Undefined),
     do: {:ok, Value.undefined()}
 
+  def call("$toMillis", [value, _picture]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
   def call("$toMillis", [value]) when is_binary(value), do: parse_iso(value)
 
-  def call("$toMillis", [value, picture]) when is_binary(value) and is_binary(picture),
-    do: parse_picture(value, picture)
+  def call("$toMillis", [value, "[Y]-[M]-[D]"]) when is_binary(value),
+    do:
+      case(parse_short_iso(value),
+        do: (
+          {:error, _} -> {:ok, Value.undefined()}
+          result -> result
+        )
+      )
+
+  def call("$toMillis", [value, picture]) when is_binary(value) and is_binary(picture) do
+    case parse_picture(value, picture) do
+      {:error, %Error{code: "D3130"}} -> Jexata.Functions.DatePicture.parse(value, picture)
+      result -> result
+    end
+  end
 
   def call("$fromMillis", [value]) when is_struct(value, Value.Undefined),
     do: {:ok, Value.undefined()}
+
+  def call("$fromMillis", [value, _picture]) when is_struct(value, Value.Undefined),
+    do: {:ok, Value.undefined()}
+
+  def call("$fromMillis", [value, _picture, _timezone])
+      when is_struct(value, Value.Undefined),
+      do: {:ok, Value.undefined()}
+
+  def call("$fromMillis", [value, picture]) when is_number(value) and is_binary(picture),
+    do: Jexata.Functions.DatePicture.format(value, picture)
+
+  def call("$fromMillis", [value, picture])
+      when is_number(value) and is_struct(picture, Value.Undefined),
+      do: call("$fromMillis", [value])
+
+  def call("$fromMillis", [value, picture, timezone])
+      when is_number(value) and is_binary(picture) and is_binary(timezone),
+      do: Jexata.Functions.DatePicture.format(value, picture, timezone)
+
+  def call("$fromMillis", [value, picture, timezone])
+      when is_number(value) and is_struct(picture, Value.Undefined) and is_binary(timezone),
+      do:
+        Jexata.Functions.DatePicture.format(
+          value,
+          "[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01].[f001][Z01:01t]",
+          timezone
+        )
 
   def call("$fromMillis", [value]) when is_number(value) do
     case DateTime.from_unix(trunc(value), :millisecond) do
