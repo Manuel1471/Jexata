@@ -22,6 +22,7 @@ expressions = [
   {:subtree, "orders", 1_000},
   {:string_large, "$string(orders)", 100},
   {:number, "$map(orders,function($o){$number($string($o.price))})", 100},
+  {:number_float, "$map(orders,function($o){$number($string($o.price) & '.50')})", 100},
   {:eval, "$eval('$sum(orders.price)')", 1_000},
   {:root_array, "price", 1_000},
   {:index_path, "orders#$i.price", 1_000}
