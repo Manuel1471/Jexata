@@ -109,6 +109,9 @@ defmodule Jexata.Evaluator.Operators do
   def binary("&", a, b), do: {:ok, string(a) <> string(b)}
 
   def binary("..", a, b) do
+    a = if is_float(a) and a == trunc(a), do: trunc(a), else: a
+    b = if is_float(b) and b == trunc(b), do: trunc(b), else: b
+
     cond do
       Value.undefined?(a) and not is_integer(b) ->
         {:error, Error.new("T2004", "Range end must be an integer")}
@@ -125,7 +128,7 @@ defmodule Jexata.Evaluator.Operators do
       not is_integer(b) ->
         {:error, Error.new("T2004", "Range end must be an integer")}
 
-      b - a + 1 > 100_000 ->
+      b - a + 1 > 1_000_000 ->
         {:error, Error.new("D2014", "Range exceeds the configured limit")}
 
       a > b ->

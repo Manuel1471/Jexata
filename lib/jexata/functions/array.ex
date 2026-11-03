@@ -11,6 +11,9 @@ defmodule Jexata.Functions.Array do
   def call("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
   def call("$reverse", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
   def call("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
+  def call("$distinct", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  def call("$distinct", [%Value.Sequence{} = value]), do: {:ok, Enum.uniq(Value.items(value))}
+  def call("$distinct", [value]) when not is_list(value), do: {:ok, value}
   def call("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
   def call("$shuffle", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
   def call("$shuffle", [value]), do: {:ok, value |> Value.items() |> Enum.shuffle()}

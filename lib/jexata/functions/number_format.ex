@@ -60,6 +60,9 @@ defmodule Jexata.Functions.NumberFormat do
 
     code =
       cond do
+        not required and not optional ->
+          if(exponent_parts == [], do: "D3086", else: "D3085")
+
         occurrences(picture, decimal) > 1 ->
           "D3081"
 
@@ -71,9 +74,6 @@ defmodule Jexata.Functions.NumberFormat do
 
         String.contains?(picture, percent) and String.contains?(picture, permille) ->
           "D3084"
-
-        not required and not optional ->
-          "D3085"
 
         String.contains?(active, "+") ->
           "D3086"
