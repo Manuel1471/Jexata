@@ -1,6 +1,6 @@
 defmodule Jexata.OptimizerTest do
   use ExUnit.Case, async: true
-  alias Jexata.{Evaluator, Optimizer, Parser}
+  alias Jexata.{AST, Evaluator, Optimizer, Parser}
   alias Jexata.Runtime.Value
 
   test "optimized and original ASTs agree on literals and contextual expressions" do
@@ -20,6 +20,9 @@ defmodule Jexata.OptimizerTest do
       {"{'a':1,'nested':{'b':[2,3]}}", %{}},
       {"{'test':()}", %{}},
       {"items{'x':$sum(price)}", %{"items" => [%{"price" => 2}]}},
+      {"items^(>price).price", %{"items" => [%{"price" => 1}, %{"price" => 3}]}},
+      {"items{kind:$sum(price)}", %{"items" => [%{"kind" => "a", "price" => 2}]}},
+      {"($x:=2; $x+3)", %{}},
       {"[1..5]", %{}},
       {"1 + 2 * 3", %{}},
       {"'a' & 'b'", %{}},
@@ -33,6 +36,16 @@ defmodule Jexata.OptimizerTest do
       optimized = Optimizer.optimize(original)
       assert evaluate(original, data) == evaluate(optimized, data), source
     end
+  end
+
+  test "AST traversal leaves literal payloads and metadata untouched" do
+    payload = {:binary, "+", {:literal, 1}, {:literal, 2}}
+    assert Optimizer.optimize({:literal, payload}) == {:literal, payload}
+    assert AST.children({:literal, payload}) == []
+
+    sort = {:sort, {:name, "items"}, [{:desc, payload}]}
+    assert {:sort, {:name, "items"}, [{:desc, {:literal, 3}}]} = Optimizer.optimize(sort)
+    assert AST.children(sort) == [{:name, "items"}, payload]
   end
 
   test "folds arithmetic, concatenation, small ranges and constant branches" do

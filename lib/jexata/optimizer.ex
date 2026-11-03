@@ -1,6 +1,6 @@
 defmodule Jexata.Optimizer do
   @moduledoc false
-  alias Jexata.{Evaluator, Semantics}
+  alias Jexata.{AST, Evaluator, Semantics}
   alias Jexata.Runtime.Signature
 
   # Nested constant arrays use a distinct node so array construction preserves
@@ -113,18 +113,10 @@ defmodule Jexata.Optimizer do
   end
 
   defp optimize_node(ast, _fold?) when is_tuple(ast),
-    do: optimize_tuple(ast, 0, tuple_size(ast), ast, false)
+    do: AST.map_children(ast, &optimize_node(&1, true))
 
   defp optimize_node(ast, _fold?) when is_list(ast), do: optimize_list(ast)
   defp optimize_node(ast, _fold?), do: {ast, false}
-
-  defp optimize_tuple(_original, index, index, current, changed?), do: {current, changed?}
-
-  defp optimize_tuple(original, index, size, current, changed?) do
-    {child, child_changed?} = optimize_node(elem(original, index), true)
-    next = if child_changed?, do: put_elem(current, index, child), else: current
-    optimize_tuple(original, index + 1, size, next, changed? or child_changed?)
-  end
 
   defp optimize_list([]), do: {[], false}
 
@@ -177,7 +169,7 @@ defmodule Jexata.Optimizer do
     do: Enum.reduce(references, acc, &MapSet.put(&2, &1))
 
   defp referenced_variables(ast, acc) when is_tuple(ast),
-    do: ast |> Tuple.to_list() |> Enum.reduce(acc, &referenced_variables/2)
+    do: ast |> AST.children() |> Enum.reduce(acc, &referenced_variables/2)
 
   defp referenced_variables(ast, acc) when is_list(ast),
     do: Enum.reduce(ast, acc, &referenced_variables/2)
