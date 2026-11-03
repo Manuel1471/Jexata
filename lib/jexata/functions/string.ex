@@ -57,7 +57,8 @@ defmodule Jexata.Functions.String do
   def call("$string", [value, true]) do
     if Value.undefined?(value),
       do: {:ok, Value.undefined()},
-      else: {:ok, value |> Value.public() |> json_value() |> pretty_json(0)}
+      else:
+        {:ok, value |> Value.public() |> json_value() |> pretty_json(0) |> IO.iodata_to_binary()}
   end
 
   def call("$string", [value]) do
@@ -379,27 +380,32 @@ defmodule Jexata.Functions.String do
     end
   end
 
-  def stringify_ordered(value, pretty), do: ordered_json(value, pretty, 0)
+  def stringify_ordered(value, pretty),
+    do: value |> ordered_json(pretty, 0) |> IO.iodata_to_binary()
 
   defp ordered_json({:ordered_object, pairs}, false, level) do
     entries =
       Enum.map(pairs, fn {key, value} ->
-        encode_json(key) <> ":" <> ordered_json(value, false, level + 1)
+        [encode_json(key), ":", ordered_json(value, false, level + 1)]
       end)
 
-    "{" <> Enum.join(entries, ",") <> "}"
+    ["{", Enum.intersperse(entries, ","), "}"]
   end
 
   defp ordered_json({:ordered_object, pairs}, true, level) do
     entries =
       Enum.map(pairs, fn {key, value} ->
-        String.duplicate("  ", level + 1) <>
-          encode_json(key) <> ": " <> ordered_json(value, true, level + 1)
+        [
+          String.duplicate("  ", level + 1),
+          encode_json(key),
+          ": ",
+          ordered_json(value, true, level + 1)
+        ]
       end)
 
     if entries == [],
       do: "{}",
-      else: "{\n" <> Enum.join(entries, ",\n") <> "\n" <> String.duplicate("  ", level) <> "}"
+      else: ["{\n", Enum.intersperse(entries, ",\n"), "\n", String.duplicate("  ", level), "}"]
   end
 
   defp ordered_json(values, pretty, level) when is_list(values) do
@@ -408,12 +414,15 @@ defmodule Jexata.Functions.String do
     if pretty do
       if entries == [],
         do: "[]",
-        else:
-          "[\n" <>
-            Enum.map_join(entries, ",\n", &(String.duplicate("  ", level + 1) <> &1)) <>
-            "\n" <> String.duplicate("  ", level) <> "]"
+        else: [
+          "[\n",
+          Enum.intersperse(Enum.map(entries, &[String.duplicate("  ", level + 1), &1]), ",\n"),
+          "\n",
+          String.duplicate("  ", level),
+          "]"
+        ]
     else
-      "[" <> Enum.join(entries, ",") <> "]"
+      ["[", Enum.intersperse(entries, ","), "]"]
     end
   end
 
@@ -434,24 +443,23 @@ defmodule Jexata.Functions.String do
   defp pretty_json(value, level) when is_map(value) do
     entries =
       Enum.map(value, fn {key, item} ->
-        String.duplicate("  ", level + 1) <>
-          encode_json(key) <> ": " <> pretty_json(item, level + 1)
+        [String.duplicate("  ", level + 1), encode_json(key), ": ", pretty_json(item, level + 1)]
       end)
 
     if entries == [],
       do: "{}",
-      else: "{\n" <> Enum.join(entries, ",\n") <> "\n" <> String.duplicate("  ", level) <> "}"
+      else: ["{\n", Enum.intersperse(entries, ",\n"), "\n", String.duplicate("  ", level), "}"]
   end
 
   defp pretty_json(value, level) when is_list(value) do
     entries =
       Enum.map(value, fn item ->
-        String.duplicate("  ", level + 1) <> pretty_json(item, level + 1)
+        [String.duplicate("  ", level + 1), pretty_json(item, level + 1)]
       end)
 
     if entries == [],
       do: "[]",
-      else: "[\n" <> Enum.join(entries, ",\n") <> "\n" <> String.duplicate("  ", level) <> "]"
+      else: ["[\n", Enum.intersperse(entries, ",\n"), "\n", String.duplicate("  ", level), "]"]
   end
 
   defp pretty_json(value, _level), do: encode_json(value)
