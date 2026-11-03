@@ -514,6 +514,14 @@ defmodule Jexata.Evaluator do
     end
   end
 
+  defp eval_filter(left, {:literal, index}, _boolean?, data, root) when is_integer(index) do
+    eval_index_filter(left, index, data, root)
+  end
+
+  defp eval_filter(left, {:negate, {:literal, index}}, _boolean?, data, root)
+       when is_integer(index),
+       do: eval_index_filter(left, -index, data, root)
+
   defp eval_filter(left, predicate, boolean?, data, root) do
     with {:ok, source} <- eval(left, data, root) do
       items = Value.items(source)
@@ -530,6 +538,13 @@ defmodule Jexata.Evaluator do
         error ->
           error
       end
+    end
+  end
+
+  defp eval_index_filter(left, index, data, root) do
+    with {:ok, source} <- eval(left, data, root) do
+      keep_array? = is_struct(source, Value.Sequence) and source.keep_array
+      {:ok, Value.sequence([Enum.at(Value.items(source), index, Value.undefined())], keep_array?)}
     end
   end
 
@@ -561,6 +576,14 @@ defmodule Jexata.Evaluator do
     eval_path_steps(left, right, data, root)
   end
 
+  defp eval_filtered_path(left, {:literal, index}, _boolean?, name, data, context)
+       when is_integer(index),
+       do: eval_index_filtered_path(left, index, name, data, context)
+
+  defp eval_filtered_path(left, {:negate, {:literal, index}}, _boolean?, name, data, context)
+       when is_integer(index),
+       do: eval_index_filtered_path(left, -index, name, data, context)
+
   defp eval_filtered_path(left, predicate, boolean?, name, data, context) do
     with {:ok, source} <- eval(left, data, context) do
       items = Value.items(source)
@@ -580,6 +603,21 @@ defmodule Jexata.Evaluator do
 
         error ->
           error
+      end
+    end
+  end
+
+  defp eval_index_filtered_path(left, index, name, data, context) do
+    with {:ok, source} <- eval(left, data, context) do
+      keep_array? = is_struct(source, Value.Sequence) and source.keep_array
+      item = Enum.at(Value.items(source), index, Value.undefined())
+
+      if Value.undefined?(item) do
+        {:ok, Value.sequence([], keep_array?)}
+      else
+        selected = Semantics.select(item, name)
+        values = if keep_array?, do: Value.items(selected), else: [selected]
+        {:ok, Value.sequence(values, keep_array?)}
       end
     end
   end

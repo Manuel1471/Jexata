@@ -68,6 +68,19 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("true ? 2", %{}) == {:ok, 2}
   end
 
+  test "literal index filters keep per-context and out-of-range semantics" do
+    data = %{
+      "orders" => [%{"price" => 11}, %{"price" => 22}],
+      "groups" => [%{"prices" => [1, 2]}, %{"prices" => [3, 4]}]
+    }
+
+    assert Jexata.run("orders[0].price", data) == {:ok, 11}
+    assert Jexata.run("orders[-1].price", data) == {:ok, 22}
+    assert Jexata.run("orders[9].price", data) == {:ok, :undefined}
+    assert Jexata.run("groups.prices[0]", data) == {:ok, [1, 3]}
+    assert Jexata.run("groups.prices[-1]", data) == {:ok, [2, 4]}
+  end
+
   test "reports type and arithmetic errors" do
     assert {:error, %Jexata.Error{code: "T2001"}} = Jexata.run("'a' + 2", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 / 0", %{})
