@@ -4,6 +4,7 @@ defmodule Jexata.FunctionsStringTest do
   test "string functions handle Unicode and arrays" do
     assert Jexata.run("$length('hé')", %{}) == {:ok, 2}
     assert Jexata.run("$uppercase('abc')", %{}) == {:ok, "ABC"}
+    assert Jexata.run("$trim('  a\\t b\\n c  ')", %{}) == {:ok, "a b c"}
     assert Jexata.run("$substring('hello', 1, 3)", %{}) == {:ok, "ell"}
     assert Jexata.run("$contains('hello', 'ell')", %{}) == {:ok, true}
     assert Jexata.run("$join(['a','b'], '-')", %{}) == {:ok, "a-b"}

@@ -83,8 +83,19 @@ defmodule Jexata.Functions.String do
   def call("$uppercase", [value]) when is_binary(value), do: {:ok, String.upcase(value)}
   def call("$lowercase", [value]) when is_binary(value), do: {:ok, String.downcase(value)}
 
-  def call("$trim", [value]) when is_binary(value),
-    do: {:ok, value |> String.trim() |> String.replace(~r/\s+/u, " ")}
+  def call("$trim", [value]) when is_binary(value) do
+    result =
+      if ascii?(value) do
+        value
+        |> :binary.split([" ", "\t", "\n", "\r", "\v", "\f"], [:global])
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join(" ")
+      else
+        value |> String.trim() |> String.replace(~r/\s+/u, " ")
+      end
+
+    {:ok, result}
+  end
 
   def call("$pad", [value, width]), do: call("$pad", [value, width, " "])
 
