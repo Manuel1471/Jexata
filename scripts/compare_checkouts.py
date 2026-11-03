@@ -22,9 +22,9 @@ def checkout(commit, directory):
     command("git", "worktree", "add", "--detach", str(directory), commit)
 
 
-def measure(directory):
+def measure(directory, benchmark):
     env = dict(os.environ, MIX_ENV="prod")
-    result = command("mix", "run", str(BENCHMARK), cwd=directory, env=env)
+    result = command("mix", "run", str(benchmark), cwd=directory, env=env)
     return [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
 
 
@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--base", required=True)
     parser.add_argument("--current", required=True)
     parser.add_argument("--rounds", type=int, default=5)
+    parser.add_argument("--benchmark", type=Path, default=BENCHMARK)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.rounds < 1:
@@ -66,7 +67,7 @@ def main():
             for round_number in range(args.rounds):
                 order = ("base", "current") if round_number % 2 == 0 else ("current", "base")
                 for name in order:
-                    rows = measure(directories[name])
+                    rows = measure(directories[name], args.benchmark.resolve())
                     if len(rows) != len({row["case"] for row in rows}):
                         raise RuntimeError(f"Duplicate benchmark case in {name}")
                     for row in rows:

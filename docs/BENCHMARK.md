@@ -1,6 +1,6 @@
 # Benchmark comparison
 
-This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `ab3f6f8`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
+This is the current 1.0.0 comparison. The base is commit `b9d0016` and the candidate is `959e9b0`. The workloads, raw observations, and summary statistics are in [benchmark_comparison_results.json](benchmark_comparison_results.json). Exact expressions and iteration counts are in `scripts/benchmark_compare.exs`.
 
 On a Mac16,12 (arm64), Elixir 1.20.2 / OTP 29, each commit ran in a separate detached Git worktree. Five rounds alternated checkout order: base/current, current/base, and so on. Each workload used a fresh BEAM process, three warm-up calls, and 30–10,000 measured calls depending on cost. The table reports the median and min–max of the five per-operation times, median reductions, and median **minor GCs of that workload's process**. The two checkouts returned the same result hash for all 22 workloads. A negative time delta means the candidate was faster.
 
@@ -8,37 +8,58 @@ The common input has 1,000 orders with price, customer, text, padded text, decim
 
 ## Paired results
 
-| Workload | Base `b9d0016` µs med [min–max] | Current `ab3f6f8` µs med [min–max] | Δ time | Reductions med base → current | Minor GCs/op med base → current |
+| Workload | Base `b9d0016` µs med [min–max] | Current `959e9b0` µs med [min–max] | Δ time | Reductions med base → current | Minor GCs/op med base → current |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `compile_field` | 0.66 [0.65–0.70] | 0.62 [0.61–0.63] | -5.9% | 274 → 267 (-2.5%) | 0.016 → 0.025 |
-| `filter` | 100.52 [98.73–133.55] | 115.96 [114.83–118.65] | +15.4% | 27,700 → 21,657 (-21.8%) | 1.550 → 1.249 |
-| `sum` | 40.98 [39.42–42.90] | 41.17 [40.68–42.76] | +0.5% | 15,248 → 13,247 (-13.1%) | 0.799 → 0.799 |
-| `map_lambda` | 190.32 [183.89–205.54] | 156.10 [152.57–157.69] | -18.0% | 63,284 → 49,469 (-21.8%) | 0.817 → 1.830 |
-| `reduce_recursive` | 1,686.33 [1,666.67–1,700.97] | 1,626.77 [1,609.10–1,652.60] | -3.5% | 381,970 → 354,290 (-7.2%) | 12.133 → 42.267 |
-| `sort_comparator` | 1,520.80 [1,491.67–1,588.93] | 1,289.73 [1,281.07–1,309.07] | -15.2% | 521,910 → 413,257 (-20.8%) | 5.833 → 4.667 |
-| `group_object` | 151.58 [150.89–157.10] | 146.76 [145.61–152.57] | -3.2% | 25,909 → 24,786 (-4.3%) | 0.150 → 2.580 |
-| `descendants` | 326.21 [319.55–366.01] | 316.12 [313.35–319.78] | -3.1% | 203,206 → 205,686 (+1.2%) | 0.130 → 0.040 |
-| `wildcard` | 55.66 [52.71–56.22] | 53.88 [53.30–56.15] | -3.2% | 23,695 → 21,675 (-8.5%) | 1.990 → 1.990 |
-| `index_zero` | 12.78 [12.43–13.18] | 8.81 [8.56–8.94] | -31.1% | 7,141 → 5,132 (-28.1%) | 0.625 → 0.171 |
-| `index_negative` | 18.21 [17.89–18.69] | 14.29 [14.21–14.56] | -21.5% | 11,140 → 9,130 (-18.0%) | 1.291 → 0.341 |
-| `chain_sum` | 43.64 [40.10–50.23] | 41.26 [40.04–42.80] | -5.4% | 15,319 → 13,316 (-13.1%) | 1.334 → 1.334 |
-| `match_each` | 1,046.85 [1,026.35–1,087.59] | 1,039.21 [1,021.34–1,067.43] | -0.7% | 176,580 → 162,823 (-7.8%) | 0.040 → 0.360 |
-| `replace_each` | 1,966.89 [1,879.22–2,048.76] | 1,947.23 [1,930.56–2,019.81] | -1.0% | 171,408 → 190,551 (+11.2%) | 2.210 → 0.260 |
-| `trim_each` | 1,985.85 [1,869.33–2,673.08] | 1,700.06 [1,680.68–1,736.35] | -14.4% | 157,564 → 133,171 (-15.5%) | 1.340 → 0.770 |
-| `number_float_each` | 3,295.60 [3,167.74–3,413.51] | 502.88 [490.74–514.19] | -84.7% | 142,723 → 105,736 (-25.9%) | 3.870 → 1.890 |
-| `to_millis_picture` | 3,383.18 [3,326.14–3,511.84] | 3,406.52 [3,403.96–3,476.94] | +0.7% | 464,960 → 451,014 (-3.0%) | 4.840 → 4.800 |
-| `from_millis_each` | 567.46 [543.04–578.21] | 556.84 [539.28–577.45] | -1.9% | 161,611 → 149,556 (-7.5%) | 1.480 → 1.600 |
-| `format_number_each` | 7,227.74 [7,076.02–7,494.98] | 7,325.56 [7,007.36–7,686.48] | +1.4% | 1,367,430 → 1,353,664 (-1.0%) | 0.320 → 0.860 |
-| `merge_objects` | 16.61 [16.06–17.70] | 16.43 [16.32–16.91] | -1.1% | 7,149 → 7,147 (0.0%) | 0.010 → 0.010 |
-| `spread_each` | 747.31 [742.31–758.28] | 728.18 [725.81–743.29] | -2.6% | 287,602 → 283,558 (-1.4%) | 0.230 → 0.220 |
-| `serialize_orders` | 911.70 [905.89–917.93] | 900.11 [881.98–925.82] | -1.3% | 307,536 → 307,537 (0.0%) | 0.060 → 0.060 |
+| `compile_field` | 0.65 [0.64–0.65] | 0.62 [0.61–0.63] | -4.3% | 274 → 267 (-2.5%) | 0.016 → 0.025 |
+| `filter` | 98.92 [98.05–99.56] | 96.60 [94.34–97.90] | -2.3% | 27,700 → 25,754 (-7.0%) | 1.550 → 0.933 |
+| `sum` | 41.95 [40.89–42.43] | 41.05 [40.58–41.83] | -2.1% | 15,248 → 13,247 (-13.1%) | 0.799 → 0.799 |
+| `map_lambda` | 190.76 [184.94–201.03] | 146.65 [142.96–153.06] | -23.1% | 63,284 → 49,469 (-21.8%) | 0.817 → 1.830 |
+| `reduce_recursive` | 1,658.17 [1,647.60–1,690.67] | 1,590.63 [1,571.37–1,592.67] | -4.1% | 381,971 → 354,226 (-7.3%) | 12.133 → 40.533 |
+| `sort_comparator` | 1,536.20 [1,490.53–1,567.53] | 1,265.37 [1,234.27–1,280.97] | -17.6% | 521,910 → 413,241 (-20.8%) | 5.833 → 4.667 |
+| `group_object` | 151.93 [150.23–159.18] | 148.91 [145.98–150.43] | -2.0% | 25,909 → 24,786 (-4.3%) | 0.150 → 2.580 |
+| `descendants` | 330.89 [324.59–365.42] | 324.06 [317.66–331.84] | -2.1% | 203,206 → 205,683 (+1.2%) | 0.130 → 0.040 |
+| `wildcard` | 56.21 [55.79–56.60] | 55.80 [55.44–56.46] | -0.7% | 23,695 → 21,675 (-8.5%) | 1.990 → 1.990 |
+| `index_zero` | 12.98 [12.59–13.57] | 0.19 [0.19–0.20] | -98.5% | 7,141 → 80 (-98.9%) | 0.625 → 0.001 |
+| `index_negative` | 18.18 [17.89–19.25] | 1.74 [1.68–1.75] | -90.5% | 11,140 → 1,142 (-89.7%) | 1.291 → 0.001 |
+| `chain_sum` | 42.14 [41.12–43.05] | 40.95 [40.87–42.54] | -2.8% | 15,319 → 13,316 (-13.1%) | 1.334 → 1.334 |
+| `match_each` | 1,036.61 [1,035.05–1,058.76] | 1,018.25 [1,013.93–1,050.47] | -1.8% | 176,578 → 162,400 (-8.0%) | 0.040 → 1.140 |
+| `replace_each` | 1,881.42 [1,857.97–1,984.67] | 1,890.80 [1,860.85–2,014.40] | +0.5% | 171,407 → 190,568 (+11.2%) | 2.210 → 1.500 |
+| `trim_each` | 1,901.00 [1,870.91–2,039.85] | 1,730.67 [1,706.13–1,759.63] | -9.0% | 157,564 → 133,206 (-15.5%) | 1.340 → 0.220 |
+| `number_float_each` | 3,425.69 [3,255.36–3,435.08] | 507.22 [498.49–514.59] | -85.2% | 142,723 → 105,698 (-25.9%) | 3.870 → 0.230 |
+| `to_millis_picture` | 3,515.76 [3,238.36–3,620.26] | 3,405.40 [3,352.68–3,426.54] | -3.1% | 464,960 → 450,982 (-3.0%) | 4.840 → 4.820 |
+| `from_millis_each` | 561.06 [545.28–571.77] | 553.49 [538.10–556.56] | -1.3% | 161,609 → 149,580 (-7.4%) | 1.070 → 1.460 |
+| `format_number_each` | 7,171.82 [7,067.28–7,443.62] | 7,204.28 [6,992.28–7,407.76] | +0.5% | 1,367,173 → 1,353,345 (-1.0%) | 0.680 → 1.160 |
+| `merge_objects` | 17.05 [16.84–17.39] | 17.25 [16.58–17.35] | +1.2% | 7,149 → 7,147 (-0.0%) | 0.010 → 0.010 |
+| `spread_each` | 744.48 [730.17–759.58] | 727.28 [720.09–740.63] | -2.3% | 287,595 → 282,587 (-1.7%) | 0.230 → 0.190 |
+| `serialize_orders` | 894.20 [871.63–908.47] | 898.23 [884.95–916.57] | +0.5% | 307,528 → 307,384 (-0.0%) | 0.060 → 0.270 |
 
 ## Reading the result
 
-- The decimal `$number` workload has the largest measured gain: 3,295.60 → 502.88 µs/op (−84.7%). `$map` with a lambda improved 18.0%, comparator `$sort` 15.2%, `[0]` 31.1%, and `[-1]` 21.5% by median time.
-- The filter's median **rose** from 100.52 to 115.96 µs/op (+15.4%) even though reductions fell 21.8% and process minor GCs fell from 1.550 to 1.249/op. This is a real regression for this input and host; the lower reduction count alone does not establish a speedup. The profile below identifies work in selection and flattening, but does not prove the cause of this timing change.
-- `$sum`, `$match`, `$replace`, `$fromMillis`, `$formatNumber`, `$merge`, `$spread`, and serialization have small or overlapping time differences here. `$replace` increased reductions by 11.2% while its median time changed by −1.0%. Avoid inferring a time win from reductions alone for BIF-heavy functions.
-- Minor GC counts come from `Process.info(self(), :garbage_collection)[:minor_gcs]`, never from VM-wide statistics. They depend on the worker heap size and allocation pattern; individual rows such as `reduce_recursive` and `group_object` should be treated as diagnostics, not allocation benchmarks.
+- The decimal `$number` workload remains the largest gain: 3,425.69 → 507.22 µs/op. Literal `[0]` now selects directly and falls from 12.98 to 0.19 µs/op.
+- The filter regression was traced to `69c64cd`, which inlined field-literal binary evaluation. Removing that shortcut in `bc2139c` improved the filter despite raising reductions relative to the immediately preceding revision. In this five-round release comparison, filter time is 98.92 → 96.60 µs/op (-2.3%), with reductions 27,700 → 25,754. See [filter_regression_analysis.json](filter_regression_analysis.json) for focused predicate and selection measurements.
+- Exact-arity closure binding was subsequently improved in `959e9b0`; a paired five-round run against `bc2139c` measured `$map` with lambda at 151.36 → 143.53 µs/op (−5.2%). Small or overlapping time differences should not be inferred as wins solely from lower reductions. Minor GC counts come from `Process.info(self(), :garbage_collection)[:minor_gcs]` and depend on each worker's heap; use them as diagnostics.
+
+## Filter regression bisect
+
+The focused [filter_profile.exs](../scripts/filter_profile.exs) benchmark separates the full expression, the filter without field selection, the boolean predicate as a path step, and plain field selection. Five alternating rounds immediately before and after `69c64cd` locate the regression in its field-literal binary shortcut:
+
+| Expression | Before `69c64cd` µs med | After `69c64cd` µs med | After removal in `bc2139c` µs med |
+| --- | ---: | ---: | ---: |
+| `orders[price > 50].price` | 68.48 | 88.37 | 68.93 |
+| `orders[price > 50]` | 78.40 | 97.16 | 76.36 |
+| `orders.(price > 50)` | 75.02 | 92.69 | 68.82 |
+| `orders.price` | 35.13 | 35.35 | 35.66 |
+
+The last column comes from a separate paired run against `cfbe669`, whose full-filter median was 90.91 µs. Therefore the rows are not one continuous three-way trial. See the raw [introduction](filter_regression_bisect.json) and [removal](filter_regression_analysis.json) observations. The broader 22-workload comparison between `cfbe669` and `bc2139c` showed an 18.8% median filter improvement; no other workload moved by more than 5% in that paired run.
+
+```bash
+python3 scripts/compare_checkouts.py \
+  --base 69c64cd^ --current 69c64cd --rounds 5 \
+  --benchmark scripts/filter_profile.exs --output /tmp/filter-introduction.json
+python3 scripts/compare_checkouts.py \
+  --base cfbe669 --current bc2139c --rounds 5 \
+  --benchmark scripts/filter_profile.exs --output /tmp/filter-removal.json
+```
 
 ## Time canaries in CI
 
@@ -46,15 +67,15 @@ The common input has 1,000 orders with price, customer, text, padded text, decim
 
 ## Profile of remaining evaluator cost
 
-`mix profile.eprof` on the candidate showed 100,000 lambda invocations for 100 evaluations of `$map` on 1,000 orders. There were 100,000 signature binds, environment merges, and process-depth reads, along with 400,300 `eval/3` calls. In ten evaluations of the recursive `$reduce`, there were 56,000 closure invocations, 102,000 process-depth writes, and 434,060 `eval/3` calls. These counts explain why closure setup and AST dispatch remain the main costs; `eprof` tracing perturbs absolute timings.
+An earlier `mix profile.eprof` run on the evaluator showed 100,000 lambda invocations for 100 evaluations of `$map` on 1,000 orders. There were 100,000 signature binds, environment merges, and process-depth reads, along with 400,300 `eval/3` calls. In ten evaluations of the recursive `$reduce`, there were 56,000 closure invocations, 102,000 process-depth writes, and 434,060 `eval/3` calls. The exact-arity binding and environment merge paths have since been improved; these historical call counts should not be treated as a current profile. `eprof` tracing also perturbs absolute timings.
 
-For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field selections, 100,000 predicate checks, and 95,100 flattened selected values. The filter timing regression merits a separate allocation and cache-behavior investigation before changing its semantics again. The prior `$sum(orders.price)` profile identified path selection and flattening as more costly than the arithmetic aggregate itself.
+For 100 evaluations of the 1,000-order filter, `eprof` recorded 195,100 field selections, 100,000 predicate checks, and 95,100 flattened selected values. The focused bisect above found the regression in field-literal binary evaluation; selection-only time stayed stable. The prior `$sum(orders.price)` profile identified path selection and flattening as more costly than the arithmetic aggregate itself.
 
 ## Reproduce
 
 ```bash
 python3 scripts/compare_checkouts.py \
-  --base b9d0016 --current ab3f6f8 --rounds 5 \
+  --base b9d0016 --current 959e9b0 --rounds 5 \
   --output docs/benchmark_comparison_results.json
 mix run scripts/time_canaries.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
