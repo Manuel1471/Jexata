@@ -69,7 +69,7 @@ Jexata.evaluate_bounded(expression, data,
   timeout_ms: 500, max_heap_words: 1_000_000, max_result_bytes: 200_000)
 ```
 
-The result limit is measured as Erlang external-term size, not JSON bytes. Bounded evaluation also passes `regex_match_limit` and `regex_recursion_limit` to Erlang's regex engine; they default to 100,000 and 10,000 respectively. There is no global step count. A bounded BEAM process is useful for containment but does not make arbitrary expressions a complete security sandbox. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities.
+The result limit is measured as Erlang external-term size, not JSON bytes. The copied input and bindings count against the worker's heap limit; raise `max_heap_words` when processing large input. A separate watcher enforces the timeout even if the caller exits. Unknown option names return `J0007`. Bounded evaluation also passes `regex_match_limit` and `regex_recursion_limit` to Erlang's regex engine; they default to 100,000 and 10,000 respectively. There is no global step count. A bounded BEAM process is useful for containment but does not make arbitrary expressions a complete security sandbox. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities. See [SECURITY.md](SECURITY.md).
 
 ## Development
 

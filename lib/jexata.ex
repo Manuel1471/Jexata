@@ -103,7 +103,9 @@ defmodule Jexata do
   `:max_result_bytes` (default 1,000,000), `:max_function_depth` (default 1024),
   `:regex_match_limit` (default 100,000), `:regex_recursion_limit` (default 10,000),
   and `:bindings` (default `%{}`). The result-size limit uses Erlang external-term
-  size as an estimate; it is not a JSON byte count.
+  size as an estimate; it is not a JSON byte count. The process heap includes
+  the copied input and bindings. A separate watcher enforces the timeout even
+  if the caller exits.
   """
   @spec evaluate_bounded(Expression.t(), input(), keyword()) ::
           {:ok, result()} | {:error, Error.t()}

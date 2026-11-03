@@ -27,6 +27,7 @@ defmodule Jexata.MixProject do
           "README.md",
           "CHANGELOG.md",
           "CONTRIBUTING.md",
+          "SECURITY.md",
           "LICENSE",
           "docs"
         ],

@@ -10,8 +10,41 @@ defmodule Jexata.BoundedTest do
     assert {:error, %Jexata.Error{code: "J0007"}} =
              Jexata.evaluate_bounded(expression, data, timeout_ms: 0)
 
+    assert {:error, %Jexata.Error{code: "J0007"}} =
+             Jexata.evaluate_bounded(expression, data, timeout: 1)
+
     assert {:error, %Jexata.Error{code: "J1007"}} =
              Jexata.evaluate_bounded(expression, data, max_result_bytes: 1)
+  end
+
+  test "internal worker exceptions have their own error code" do
+    expression = %Jexata.Expression{source: "invalid", ast: {:unknown_node}}
+
+    assert {:error, %Jexata.Error{code: "J1009"}} =
+             Jexata.evaluate_bounded(expression, %{})
+  end
+
+  test "the worker stops when its caller dies" do
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        receive do
+          :start ->
+            expression = Jexata.compile!("($f:=function($n){$f($n+1)};$f(0))")
+            send(parent, :caller_started)
+            Jexata.evaluate_bounded(expression, %{}, timeout_ms: 30_000)
+        end
+      end)
+
+    :erlang.trace(caller, true, [:procs])
+    send(caller, :start)
+    assert_receive :caller_started, 1_000
+    assert_receive {:trace, ^caller, :spawn, worker, _}, 1_000
+    assert Process.alive?(worker)
+    worker_monitor = Process.monitor(worker)
+    Process.exit(caller, :kill)
+    assert_receive {:DOWN, ^worker_monitor, :process, ^worker, :killed}, 1_000
   end
 
   test "time and heap limits stop expensive expressions" do
@@ -52,5 +85,25 @@ defmodule Jexata.BoundedTest do
       input = %{"s" => "ab"}
       assert Jexata.evaluate_bounded(expression, input) == Jexata.evaluate(expression, input)
     end
+
+    pathological = Jexata.compile!("$contains(s,/(a+)+$/)")
+    hostile = %{"s" => String.duplicate("a", 200) <> "!"}
+
+    assert {:error, %Jexata.Error{code: "J1008"}} =
+             Jexata.evaluate_bounded(pathological, hostile,
+               regex_match_limit: 1_000,
+               regex_recursion_limit: 1_000
+             )
+  end
+
+  test "large generated collections and padding stay bounded" do
+    range = Jexata.compile!("[1..100000].[1..100000]")
+    pad = Jexata.compile!("$pad('x', 1000000000)")
+
+    assert {:error, %Jexata.Error{code: code}} =
+             Jexata.evaluate_bounded(range, %{}, timeout_ms: 100, max_heap_words: 100_000)
+
+    assert code in ["J1005", "J1006", "J1007"]
+    assert {:error, _} = Jexata.evaluate_bounded(pad, %{})
   end
 end

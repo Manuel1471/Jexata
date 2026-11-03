@@ -28,18 +28,12 @@ defmodule Jexata.Runtime.Bounded do
                 Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
               rescue
                 error in Error -> {:error, error}
+                error -> internal_error(Exception.message(error))
+              catch
+                kind, reason -> internal_error("#{kind}: #{inspect(reason)}")
               end
 
-            checked =
-              case result do
-                {:ok, value} ->
-                  if :erlang.external_size(value) > limits.max_result_bytes,
-                    do: {:error, Error.new("J1007", "Evaluation result exceeds size limit")},
-                    else: result
-
-                _ ->
-                  result
-              end
+            checked = check_result(result, limits.max_result_bytes)
 
             send(parent, {tag, checked})
           end,
@@ -49,30 +43,15 @@ defmodule Jexata.Runtime.Bounded do
           ]
         )
 
+      spawn(fn -> watch(parent, pid, limits.timeout_ms) end)
+
       receive do
         {^tag, result} ->
           Process.demonitor(monitor, [:flush])
           result
 
-        {:DOWN, ^monitor, :process, ^pid, _reason} ->
-          {:error, Error.new("J1006", "Evaluation process exceeded its heap or exited")}
-      after
-        limits.timeout_ms ->
-          Process.exit(pid, :kill)
-
-          receive do
-            {:DOWN, ^monitor, :process, ^pid, _reason} -> :ok
-          after
-            1_000 -> :ok
-          end
-
-          receive do
-            {^tag, _late_result} -> :ok
-          after
-            0 -> :ok
-          end
-
-          {:error, Error.new("J1005", "Evaluation timed out")}
+        {:DOWN, ^monitor, :process, ^pid, reason} ->
+          exit_error(reason)
       end
     end
   end
@@ -82,16 +61,61 @@ defmodule Jexata.Runtime.Bounded do
 
   defp validate(options) do
     if Keyword.keyword?(options) do
-      limits =
-        Map.new(@defaults, fn {name, default} -> {name, Keyword.get(options, name, default)} end)
+      allowed = Keyword.keys(@defaults) ++ [:bindings, :max_function_depth]
+      unknown = Enum.find(Keyword.keys(options), &(&1 not in allowed))
 
-      if Enum.all?(limits, fn {_name, value} -> is_integer(value) and value > 0 end) do
-        {:ok, limits}
-      else
-        {:error, Error.new("J0007", "Evaluation limits must be positive integers")}
+      cond do
+        unknown != nil ->
+          {:error, Error.new("J0007", "Unknown bounded evaluation option: #{unknown}")}
+
+        true ->
+          limits =
+            Map.new(@defaults, fn {name, default} ->
+              {name, Keyword.get(options, name, default)}
+            end)
+
+          if Enum.all?(limits, fn {_name, value} -> is_integer(value) and value > 0 end) do
+            {:ok, limits}
+          else
+            {:error, Error.new("J0007", "Evaluation limits must be positive integers")}
+          end
       end
     else
       {:error, Error.new("J0007", "Evaluation limits must be a keyword list")}
     end
   end
+
+  defp watch(parent, worker, timeout_ms) do
+    parent_monitor = Process.monitor(parent)
+    worker_monitor = Process.monitor(worker)
+
+    receive do
+      {:DOWN, ^parent_monitor, :process, ^parent, _} -> Process.exit(worker, :kill)
+      {:DOWN, ^worker_monitor, :process, ^worker, _} -> :ok
+    after
+      timeout_ms -> Process.exit(worker, :timeout)
+    end
+  end
+
+  defp check_result({:ok, value} = result, max_result_bytes) do
+    try do
+      if :erlang.external_size(value) > max_result_bytes,
+        do: {:error, Error.new("J1007", "Evaluation result exceeds size limit")},
+        else: result
+    rescue
+      error -> internal_error(Exception.message(error))
+    end
+  end
+
+  defp check_result(result, _max_result_bytes), do: result
+
+  defp exit_error(:timeout), do: {:error, Error.new("J1005", "Evaluation timed out")}
+
+  defp exit_error(:killed),
+    do: {:error, Error.new("J1006", "Evaluation process exceeded its heap")}
+
+  defp exit_error(reason), do: internal_error("Evaluation process exited: #{inspect(reason)}")
+
+  defp internal_error(message),
+    do: {:error, Error.new("J1009", "Evaluation failed unexpectedly: " <> message)}
 end
