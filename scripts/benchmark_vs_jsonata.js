@@ -32,7 +32,8 @@ const jsonata = require(referencePath);
       mode,
       iterations,
       ns_per_op: Number(elapsed) / iterations,
-      result
+      result: result === undefined ? null : result,
+      undefined: result === undefined
     }));
   }
 })().catch(error => {

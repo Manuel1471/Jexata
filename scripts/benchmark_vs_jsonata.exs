@@ -20,7 +20,14 @@ for %{"name" => name, "source" => source, "mode" => mode, "iterations" => iterat
       Enum.each(1..iterations, fn _ -> operation.() end)
       elapsed = System.monotonic_time(:nanosecond) - started
 
-      %{case: name, mode: mode, iterations: iterations, ns_per_op: elapsed / iterations, result: result}
+      %{
+        case: name,
+        mode: mode,
+        iterations: iterations,
+        ns_per_op: elapsed / iterations,
+        result: if(result == :undefined, do: :null, else: result),
+        undefined: result == :undefined
+      }
     end)
     |> Task.await(:infinity)
 
