@@ -131,10 +131,11 @@ defmodule Jexata.Evaluator.HigherOrder do
   defp higher_order(name, _, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 
   defp map_items([], _callback, _data, _items, _index, acc),
-    do: {:ok, Value.sequence(Enum.reverse(acc))}
+    do: {:ok, Value.sequence_from_items(Enum.reverse(acc))}
 
   defp map_items([item | rest], callback, context, items, index, acc) do
     case invoke_indexed_callback(callback, item, index, items, context) do
+      {:ok, %Value.Undefined{}} -> map_items(rest, callback, context, items, index + 1, acc)
       {:ok, value} -> map_items(rest, callback, context, items, index + 1, [value | acc])
       error -> error
     end

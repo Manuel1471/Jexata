@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 REFERENCE_SHA = "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03"
 KNOWN_DIFFERENCES = {
     "known_wildcard_order": "Native Elixir maps do not preserve JSON input key order",
-    "known_match_shape": "$match inside $map loses a nested sequence boundary",
 }
 
 
@@ -102,7 +101,7 @@ def main():
          "data": {"order": {"price": 1, "customer": "x", "decimal": "1.50",
                             "padded": "  x ", "text": "Order 1", "active": True,
                             "date": "2024-01-02T03:04:05Z", "epoch": 1704164645000}}},
-        {"name": "known_match_shape",
+        {"name": "match_shape_regression",
          "source": "$map(orders,function($o){$match($o.text,/Order/)})",
          "data": {"orders": [{"text": "Order 1"}, {"text": "Order 2"}]}},
     ]

@@ -68,7 +68,7 @@ defmodule Jexata do
       environment = Map.new(bindings, fn {name, value} -> {"$" <> name, value} end)
 
       with {:ok, value} <- Evaluator.evaluate(ast, data, environment),
-           do: {:ok, Jexata.Runtime.Value.public(value)}
+           do: {:ok, Jexata.Runtime.Value.public_root(value)}
     else
       {:error, Error.new("J0005", "Bindings must use names without a leading $")}
     end
@@ -99,7 +99,7 @@ defmodule Jexata do
         environment = Map.new(bindings, fn {name, value} -> {"$" <> name, value} end)
 
         with {:ok, value} <- Evaluator.evaluate(ast, data, environment, max_depth),
-             do: {:ok, Jexata.Runtime.Value.public(value)}
+             do: {:ok, Jexata.Runtime.Value.public_root(value)}
     end
   end
 

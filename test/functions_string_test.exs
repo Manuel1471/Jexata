@@ -34,6 +34,16 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$contains('ORDER', /Order/i)", %{}) == {:ok, true}
   end
 
+  test "$match keeps its array boundary inside $map" do
+    match = %{"match" => "Order", "index" => 0, "groups" => []}
+    data = %{"orders" => [%{"text" => "Order 1"}, %{"text" => "Order 2"}]}
+
+    assert Jexata.run("$match('Order 1',/Order/)", %{}) == {:ok, match}
+
+    assert Jexata.run("$map(orders,function($o){$match($o.text,/Order/)})", data) ==
+             {:ok, [[match], [match]]}
+  end
+
   test "pad repeats Unicode patterns on either side" do
     assert Jexata.run("$pad('foo', 8, '-+')", %{}) == {:ok, "foo-+-+-"}
     assert Jexata.run("$pad('x', 6, 'é𝄞')", %{}) == {:ok, "xé𝄞é𝄞é"}

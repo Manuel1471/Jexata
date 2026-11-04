@@ -67,6 +67,10 @@ defmodule Jexata.Runtime.Value do
 
   def public(value), do: value
 
+  def public_root(%Sequence{items: [], keep_array: false}), do: :undefined
+  def public_root(%Sequence{items: [item], keep_array: false}), do: public(item)
+  def public_root(value), do: public(value)
+
   defp public_list([]), do: {[], false}
 
   defp public_list([head | tail] = original) do

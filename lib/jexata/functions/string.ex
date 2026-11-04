@@ -222,7 +222,11 @@ defmodule Jexata.Functions.String do
         %{"match" => binary_part(value, index, length), "index" => index, "groups" => groups}
       end)
 
-    {:ok, Value.sequence(results)}
+    case results do
+      [] -> {:ok, Value.undefined()}
+      [_] -> {:ok, %Value.Sequence{items: results}}
+      _ -> {:ok, Value.sequence(results)}
+    end
   end
 
   def call("$substring", [value, start]) when is_binary(value) and is_number(start),
