@@ -56,6 +56,7 @@ def expression(rng):
         lambda: "$formatInteger(a + 50,'I')",
         lambda: "$parseInteger('XIV','I')",
         lambda: "$formatNumber(a / 3,'0.00')",
+        lambda: "$formatNumber(a * 1000,'#,##0')",
         lambda: "$clone(single)",
         lambda: "$clone(orders)",
         lambda: "$clone(a)",

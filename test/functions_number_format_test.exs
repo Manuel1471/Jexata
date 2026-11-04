@@ -9,6 +9,20 @@ defmodule Jexata.FunctionsNumberFormatTest do
     assert Jexata.run("$formatNumber(missing, '#0.00')", %{}) == {:ok, :undefined}
   end
 
+  test "integer grouping fast path handles boundaries and signs" do
+    for {value, expected} <- [
+          {0, "0"},
+          {9, "9"},
+          {999, "999"},
+          {1_000, "1,000"},
+          {12_345_678, "12,345,678"},
+          {-1, "-1"},
+          {-1_000_000, "-1,000,000"}
+        ] do
+      assert Jexata.Functions.NumberFormat.call([value, "#,##0"]) == {:ok, expected}
+    end
+  end
+
   test "rejects malformed pictures with JSONata codes" do
     assert {:error, %Jexata.Error{code: "D3080"}} =
              Jexata.run("$formatNumber(20, '#;#;#')", %{})

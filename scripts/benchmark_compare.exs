@@ -47,6 +47,8 @@ workloads = [
    50},
   {"format_number_each", "$map(orders,function($o){$formatNumber($o.price,'#,###.00')})",
    :evaluate, 50},
+  {"format_number_integer", "$map(orders,function($o){$formatNumber($o.price,'#,##0')})",
+   :evaluate, 50},
   {"merge_objects", "$merge(orders)", :evaluate, 100},
   {"spread_each", "$map(orders,function($o){$spread($o)})", :evaluate, 100},
   {"serialize_orders", "$string(orders)", :evaluate, 100}

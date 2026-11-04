@@ -6,6 +6,27 @@ defmodule Jexata.Functions.NumberFormat do
   def call([value, _picture]) when is_struct(value, Value.Undefined),
     do: {:ok, Value.undefined()}
 
+  def call([value, "#,##0"]) when is_integer(value) do
+    digits = value |> abs() |> Integer.to_string()
+    width = byte_size(digits)
+
+    grouped =
+      if width <= 3 do
+        digits
+      else
+        first =
+          case rem(width, 3) do
+            0 -> 3
+            remainder -> remainder
+          end
+
+        <<head::binary-size(^first), tail::binary>> = digits
+        IO.iodata_to_binary([head | group_thousands(tail, [])])
+      end
+
+    {:ok, if(value < 0, do: "-" <> grouped, else: grouped)}
+  end
+
   def call([value, picture]), do: call([value, picture, %{}])
 
   def call([value, picture, options])
@@ -32,6 +53,11 @@ defmodule Jexata.Functions.NumberFormat do
   end
 
   def call(_), do: {:error, Error.new("T0410", "Invalid arguments for $formatNumber")}
+
+  defp group_thousands(<<>>, acc), do: Enum.reverse(acc)
+
+  defp group_thousands(<<part::binary-size(3), rest::binary>>, acc),
+    do: group_thousands(rest, [part, "," | acc])
 
   defp validate(pictures, options) do
     Enum.reduce_while(pictures, :ok, fn picture, _ ->
