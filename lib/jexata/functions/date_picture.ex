@@ -53,6 +53,9 @@ defmodule Jexata.Functions.DatePicture do
   defp parse_parts(parts, fields) do
     Enum.reduce_while(parts, {:ok, fields}, fn {marker, text}, {:ok, fields} ->
       case parse_part(marker, text) do
+        {:ok, :invalid, nil} ->
+          {:halt, {:ok, nil}}
+
         {:ok, :fraction, number} ->
           {:cont,
            {:ok,
@@ -150,7 +153,7 @@ defmodule Jexata.Functions.DatePicture do
 
     case result do
       {:ok, number} -> {:ok, key, number}
-      _ -> {:ok, nil, nil}
+      _ -> if(text == "", do: {:ok, nil, nil}, else: {:ok, :invalid, nil})
     end
   end
 

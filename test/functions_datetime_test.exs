@@ -40,4 +40,14 @@ defmodule Jexata.FunctionsDatetimeTest do
                Jexata.Functions.DatePicture.format(millis, picture)
     end
   end
+
+  test "date picture does not accept trailing timestamp components" do
+    assert Jexata.run(
+             "$toMillis('2024-01-02T03:04:05Z', '[Y0001]-[M01]-[D01]')",
+             %{}
+           ) == {:ok, :undefined}
+
+    assert Jexata.run("$toMillis('2024-01-02', '[Y0001]-[M01]-[D01]')", %{}) ==
+             {:ok, 1_704_153_600_000}
+  end
 end

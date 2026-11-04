@@ -191,6 +191,14 @@ defmodule Jexata.Functions.NumberFormat do
       |> String.trim_trailing("0")
       |> String.pad_trailing(min_fraction, "0")
 
+    {whole, fractional} =
+      if min_integer == 0 and fractional_picture != "" and exponent_picture == [] and
+           whole == "0" do
+        {"", if(fractional == "", do: "0", else: fractional)}
+      else
+        {whole, fractional}
+      end
+
     whole = group_integer(whole, integer_picture, group)
     fractional = group_fraction(fractional, fractional_picture, group)
     point = if fraction_picture != [] and fractional != "", do: decimal, else: ""

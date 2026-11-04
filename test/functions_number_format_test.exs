@@ -6,6 +6,9 @@ defmodule Jexata.FunctionsNumberFormatTest do
     assert Jexata.run("$formatNumber(0.14, '01%')", %{}) == {:ok, "14%"}
     assert Jexata.run("$formatNumber(1234.5678, '00.000e0')", %{}) == {:ok, "12.346e2"}
     assert Jexata.run("$formatNumber(2, '000.000')", %{}) == {:ok, "002.000"}
+    assert Jexata.run("$formatNumber(0, '#,###.00')", %{}) == {:ok, ".00"}
+    assert Jexata.run("$formatNumber(0.4, '#.##')", %{}) == {:ok, ".4"}
+    assert Jexata.run("$formatNumber(0, '#.##')", %{}) == {:ok, ".0"}
     assert Jexata.run("$formatNumber(missing, '#0.00')", %{}) == {:ok, :undefined}
   end
 

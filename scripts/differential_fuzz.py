@@ -60,6 +60,12 @@ def expression(rng):
         lambda: "$clone(orders)",
         lambda: "$clone(a)",
         lambda: "$match(s,/foo/).match",
+        lambda: f"$contains(s,/{rng.choice(['foo', 'bar', 'f.o', '^foo'])}/)",
+        lambda: f"$replace(s,/{rng.choice(['foo', 'bar', '(foo)', 'f.o'])}/,'X')",
+        lambda: f"$split(s,/{rng.choice(['foo', 'bar', 'f.o'])}/)",
+        lambda: f"$formatNumber(a * {rng.choice([1, 10, 1000])},'{rng.choice(['#,##0', '0.00', '#,###.00'])}')",
+        lambda: f"$fromMillis(epoch,'{rng.choice(['[Y0001]-[M01]-[D01]', '[D01]/[M01]/[Y0001]'])}')",
+        lambda: f"$toMillis(date,'{rng.choice(['[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z', '[Y0001]-[M01]-[D01]'])}')",
         lambda: "$map(orders,function($o){$contains($o.text,/foo/)})",
         lambda: "$number('not a number')",
         lambda: "a + s",
@@ -112,8 +118,8 @@ def main():
             "orders": [{"price": rng.randint(0, 20), "text": rng.choice(["foo", "bar"])}
                        for _ in range(rng.randint(0, 8))],
             "single": {"value": rng.randint(0, 20)},
-            "date": "2024-01-02T03:04:05Z",
-            "epoch": 1704164645000,
+            "date": rng.choice(["2024-01-02T03:04:05Z", "2024-01-02"]),
+            "epoch": rng.choice([0, 1704164645000, 253402300799000]),
         }
         cases.append({"name": f"case_{index:05}", "source": expression(rng), "data": data})
 
