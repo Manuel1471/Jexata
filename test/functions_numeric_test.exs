@@ -19,6 +19,10 @@ defmodule Jexata.FunctionsNumericTest do
     assert Jexata.run("$ceil(2.1)", %{}) == {:ok, 3}
     assert Jexata.run("$round(2.5)", %{}) == {:ok, 2}
     assert Jexata.run("$round(3.5)", %{}) == {:ok, 4}
+    assert Jexata.run("$round(1.25, 1)", %{}) == {:ok, 1.2}
+    assert Jexata.run("$round(1.35, 1)", %{}) == {:ok, 1.4}
+    assert Jexata.run("$round(-1.25, 1)", %{}) == {:ok, -1.2}
+    assert Jexata.run("$round(1234.5678, 2)", %{}) == {:ok, 1234.57}
     assert {:error, %Jexata.Error{code: "T0412"}} = Jexata.run("$sum([1, 'x'])", %{})
   end
 

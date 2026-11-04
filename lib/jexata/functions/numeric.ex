@@ -230,15 +230,26 @@ defmodule Jexata.Functions.Numeric do
         do: Integer.to_string(value),
         else: :erlang.float_to_binary(value, [:short])
 
-    sign = if String.starts_with?(text, "-"), do: -1, else: 1
-    text = String.trim_leading(text, "-")
-    [mantissa | exponent] = String.split(text, ~r/[eE]/)
-    [whole | fraction] = String.split(mantissa, ".")
-    fractional = Enum.at(fraction, 0, "")
-    coefficient = String.to_integer(whole <> fractional)
+    {sign, text} =
+      case text do
+        <<"-", rest::binary>> -> {-1, rest}
+        _ -> {1, text}
+      end
+
+    [mantissa | exponent] = :binary.split(text, ["e", "E"])
+    [whole | fraction] = :binary.split(mantissa, ".")
+
+    fractional =
+      case fraction do
+        [digits] -> digits
+        [] -> ""
+      end
+
+    coefficient = :erlang.binary_to_integer(whole <> fractional)
 
     scale =
-      if(exponent == [], do: 0, else: String.to_integer(hd(exponent))) - String.length(fractional) +
+      if(exponent == [], do: 0, else: :erlang.binary_to_integer(hd(exponent))) -
+        byte_size(fractional) +
         precision
 
     rounded =
