@@ -31,4 +31,13 @@ defmodule Jexata.FunctionsDatetimeTest do
              %{}
            ) == {:ok, "2018-03-27 19:33"}
   end
+
+  test "canonical date-picture fast path matches the general formatter" do
+    picture = "[Y0001]-[M01]-[D01]"
+
+    for millis <- [-86_400_001, 0, 1_704_164_645_000, 1_709_164_800_000] do
+      assert Jexata.Functions.Datetime.call("$fromMillis", [millis, picture]) ==
+               Jexata.Functions.DatePicture.format(millis, picture)
+    end
+  end
 end

@@ -44,6 +44,17 @@ defmodule Jexata.Functions.Datetime do
       when is_struct(value, Value.Undefined),
       do: {:ok, Value.undefined()}
 
+  def call("$fromMillis", [value, "[Y0001]-[M01]-[D01]"])
+      when is_number(value) do
+    case DateTime.from_unix(trunc(value), :millisecond) do
+      {:ok, datetime} when datetime.year in 1..9999 ->
+        {:ok, datetime |> DateTime.to_date() |> Date.to_iso8601()}
+
+      _ ->
+        Jexata.Functions.DatePicture.format(value, "[Y0001]-[M01]-[D01]")
+    end
+  end
+
   def call("$fromMillis", [value, picture]) when is_number(value) and is_binary(picture),
     do: Jexata.Functions.DatePicture.format(value, picture)
 
