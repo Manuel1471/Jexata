@@ -90,12 +90,15 @@ The result limit is measured as Erlang external-term size, not JSON bytes. The c
 mix format
 mix compile --warnings-as-errors
 mix test
+mix test --cover
 mix dialyzer --format github
 mix run scripts/reductions_guard.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
 ```
 
 See [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md), [benchmark](docs/BENCHMARK.md), [jsonata.js comparison](docs/JSONATA_JS_COMPARISON.md), and [contributing](CONTRIBUTING.md). The 1.0.0 package metadata and branch are prepared locally; no Hex package or GitHub release has been published by this work.
+
+CI checks a minimum 70% ExUnit line coverage and a maximum of 1,300 **physical** lines in `lib/jexata/evaluator.ex`. The reference compatibility runner is a separate gate; its cases are not included in the ExUnit coverage percentage.
 
 ## Hex publication
 

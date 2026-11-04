@@ -6,6 +6,8 @@
 - Added paths, sequences, operators, constructors, grouping and sorting, blocks, closures, chaining, composition, partial application, transforms, regex, and selected built-ins.
 - Added compilation limits, ExUnit coverage, a reference compatibility runner, and a reproducible benchmark script.
 - Added Hex package metadata, an MIT license, and CI with publication on `master` after passing checks.
+- Split constructors, path selection, and regex callbacks into focused modules; CI enforces 1,300 physical lines for the main evaluator and a 70% ExUnit coverage floor.
+- Linked bounded evaluation workers to their watcher so an externally killed watcher also stops its worker.
 
 The complete JSONata v2.2.0 reference fixture set reports 1,676 passing, three output-order differences, zero unsupported, and zero skipped cases. The earlier 1,271/1,271 result covered only `case*.json` files. The remaining differences are `$keys(%)` order on native Elixir input maps. Version 1.0.0 adds date/time picture parsing and formatting, integer-picture functions, `$now`, `$millis`, focus and index joins, and parent navigation. Comparator `$sort` uses a stable merge sort, numeric operators and ASCII string operations have fast paths, `$pad` has a one-million-codepoint output limit, and CI checks reduction budgets for selected workloads. See `docs/COMPATIBILITY.md` for details and execution limits.
 

@@ -1,7 +1,18 @@
 defmodule Jexata.Evaluator do
   @moduledoc false
   alias Jexata.{AST, Error, Functions, Semantics}
-  alias Jexata.Evaluator.{Ancestry, Grouping, HigherOrder, IndexBindings, Operators, Transforms}
+
+  alias Jexata.Evaluator.{
+    Ancestry,
+    Constructors,
+    Grouping,
+    HigherOrder,
+    IndexBindings,
+    Operators,
+    PathSelection,
+    RegexCallbacks,
+    Transforms
+  }
 
   import Jexata.Evaluator.IndexBindings,
     only: [indexed_path?: 1, keep_array?: 1, predicate_matches?: 3]
@@ -84,7 +95,9 @@ defmodule Jexata.Evaluator do
     do: {:ok, Value.sequence(Enum.flat_map(Map.values(data), &Value.items/1))}
 
   defp eval(:wildcard, data, _root), do: {:ok, Value.sequence(Value.items(data))}
-  defp eval(:descendants, data, _context), do: {:ok, Value.sequence(descendants(data))}
+
+  defp eval(:descendants, data, _context),
+    do: {:ok, Value.sequence(PathSelection.descendants(data))}
 
   defp eval({:path, {:variable, "$"} = left, {:object, pairs}}, data, context),
     do: eval({:group, left, pairs}, data, context)
@@ -163,22 +176,13 @@ defmodule Jexata.Evaluator do
   end
 
   defp eval({:array, expressions}, data, root) do
-    eval_array_items(expressions, data, root, [])
+    Constructors.array(expressions, data, root, &eval/3)
   end
 
   defp eval({:constant_array, values}, _data, _context), do: {:ok, values}
 
   defp eval({:object, pairs}, data, root) do
-    Enum.reduce_while(pairs, {:ok, %{}}, fn {key_ast, value_ast}, {:ok, acc} ->
-      with {:ok, key} <- eval(key_ast, data, root),
-           {:ok, value} <- eval(value_ast, data, root),
-           true <- is_binary(key) do
-        {:cont, {:ok, if(Value.undefined?(value), do: acc, else: Map.put(acc, key, value))}}
-      else
-        false -> {:halt, {:error, Error.new("T1003", "Object key must be a string")}}
-        error -> {:halt, error}
-      end
-    end)
+    Constructors.object(pairs, data, root, &eval/3)
   end
 
   defp eval({:negate, ast}, data, root) do
@@ -370,11 +374,11 @@ defmodule Jexata.Evaluator do
         :error ->
           case values do
             [value, %Regex{} = pattern, %Closure{} = callback] when is_binary(value) ->
-              replace_callback(value, pattern, callback, :all, data)
+              RegexCallbacks.replace(value, pattern, callback, :all, data, &invoke_callback/3)
 
             [value, %Regex{} = pattern, %Closure{} = callback, limit]
             when is_binary(value) and is_integer(limit) and limit >= 0 ->
-              replace_callback(value, pattern, callback, limit, data)
+              RegexCallbacks.replace(value, pattern, callback, limit, data, &invoke_callback/3)
 
             _ ->
               Functions.call("$replace", values, data)
@@ -389,7 +393,7 @@ defmodule Jexata.Evaluator do
       eval_string_call(ast, data, context)
     else
       with {:ok, pretty} <- string_pretty_option(rest, data, context),
-           {:ok, ordered} <- eval_ordered_value(object, data, context) do
+           {:ok, ordered} <- Constructors.ordered_value(object, data, context, &eval/3) do
         {:ok, Jexata.Functions.String.stringify_ordered(ordered, pretty)}
       end
     end
@@ -428,7 +432,7 @@ defmodule Jexata.Evaluator do
           else
             case values do
               [value, %Closure{} = matcher] when is_binary(value) ->
-                match_callback(matcher, value)
+                RegexCallbacks.match(matcher, value, &with_recursive_bindings/2, &invoke/3)
 
               _ ->
                 Functions.call("$match", values, data)
@@ -685,12 +689,13 @@ defmodule Jexata.Evaluator do
     with {:ok, source} <- eval(left, data, root) do
       source
       |> Value.items()
-      |> eval_each(
+      |> PathSelection.evaluate(
         right,
         root,
         is_list(source) or is_struct(source, Value.Sequence),
         (is_struct(source, Value.Sequence) and source.keep_array) or
-          match?({:keep_array, _}, right)
+          match?({:keep_array, _}, right),
+        &eval/3
       )
     end
   end
@@ -884,57 +889,6 @@ defmodule Jexata.Evaluator do
       error -> error
     end
   end
-
-  defp eval_ordered_value({:object, pairs}, data, context) do
-    Enum.reduce_while(pairs, {:ok, %{}, []}, fn {key_ast, value_ast}, {:ok, values, keys} ->
-      with {:ok, key} <- eval(key_ast, data, context),
-           true <- is_binary(key),
-           {:ok, value} <- eval_ordered_value(value_ast, data, context) do
-        if Value.undefined?(value) do
-          {:cont, {:ok, values, keys}}
-        else
-          keys = if Map.has_key?(values, key), do: keys, else: [key | keys]
-          {:cont, {:ok, Map.put(values, key, value), keys}}
-        end
-      else
-        false -> {:halt, {:error, Error.new("T1003", "Object key must be a string")}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, values, keys} ->
-        {:ok, {:ordered_object, Enum.map(Enum.reverse(keys), &{&1, values[&1]})}}
-
-      error ->
-        error
-    end
-  end
-
-  defp eval_ordered_value({:array, expressions}, data, context) do
-    Enum.reduce_while(expressions, {:ok, []}, fn expression, {:ok, values} ->
-      case eval_ordered_value(expression, data, context) do
-        {:ok, value} -> {:cont, {:ok, [value | values]}}
-        error -> {:halt, error}
-      end
-    end)
-    |> case do
-      {:ok, values} ->
-        {:ok,
-         expressions
-         |> Enum.zip(Enum.reverse(values))
-         |> Enum.flat_map(fn
-           {{:array, _}, value} -> [value]
-           {_, %Value.Sequence{items: items}} -> items
-           {_, value} when is_list(value) -> value
-           {_, value} -> if Value.undefined?(value), do: [], else: [value]
-         end)}
-
-      error ->
-        error
-    end
-  end
-
-  defp eval_ordered_value(ast, data, context), do: eval(ast, data, context)
 
   defp eval_binding({:binary, ":=", {:variable, name}, right}, data, context)
        when name not in ["$", "$$"] do
@@ -1199,43 +1153,6 @@ defmodule Jexata.Evaluator do
 
   defp tail_expression(ast, _data, _context), do: {:eval, ast}
 
-  defp match_callback(matcher, value) do
-    matcher = with_recursive_bindings(matcher, %{"$match" => matcher})
-
-    with {:ok, first} <- invoke(matcher, [value], value),
-         do: match_callback_results(first, [], 0)
-  end
-
-  defp match_callback_results(_result, _acc, count) when count >= 100_000,
-    do: {:error, Error.new("U1001", "Matcher iteration limit exceeded")}
-
-  defp match_callback_results(result, acc, count) do
-    cond do
-      Value.undefined?(result) ->
-        {:ok, Value.sequence(Enum.reverse(acc))}
-
-      is_map(result) and is_binary(result["match"]) and is_number(result["start"]) and
-          is_list(result["groups"]) ->
-        entry = %{
-          "match" => result["match"],
-          "index" => result["start"],
-          "groups" => result["groups"]
-        }
-
-        case result["next"] do
-          %Closure{} = next ->
-            with {:ok, subsequent} <- invoke(next, [], next.context_value),
-                 do: match_callback_results(subsequent, [entry | acc], count + 1)
-
-          _ ->
-            {:ok, Value.sequence(Enum.reverse([entry | acc]))}
-        end
-
-      true ->
-        {:error, Error.new("T1010", "Matcher did not return a match object")}
-    end
-  end
-
   defp callable?(value),
     do:
       is_struct(value, Closure) or is_struct(value, Builtin) or is_struct(value, Partial) or
@@ -1256,106 +1173,6 @@ defmodule Jexata.Evaluator do
         {:error, Error.new("D3120", "Invalid expression supplied to $eval")}
     end
   end
-
-  defp replace_callback(value, pattern, callback, limit, data) do
-    if LimitedRegex.match?(pattern, "") do
-      {:error, Error.new("D1004", "Regex must not match an empty string")}
-    else
-      matches = LimitedRegex.scan(pattern, value, return: :index)
-      matches = if limit == :all, do: matches, else: Enum.take(matches, limit)
-
-      Enum.reduce_while(matches, {:ok, [], 0}, fn [{start, size} | captures],
-                                                  {:ok, acc, cursor} ->
-        groups =
-          Enum.map(captures, fn
-            {-1, _} -> ""
-            {index, length} -> binary_part(value, index, length)
-          end)
-
-        match = %{
-          "match" => binary_part(value, start, size),
-          "index" => start,
-          "groups" => groups
-        }
-
-        case invoke_callback(callback, [match], data) do
-          {:ok, replacement} when is_binary(replacement) ->
-            prefix = binary_part(value, cursor, start - cursor)
-            {:cont, {:ok, [acc, prefix, replacement], start + size}}
-
-          {:ok, _} ->
-            {:halt, {:error, Error.new("D3012", "Replacement function must return a string")}}
-
-          error ->
-            {:halt, error}
-        end
-      end)
-      |> case do
-        {:ok, parts, cursor} ->
-          {:ok,
-           IO.iodata_to_binary([parts, binary_part(value, cursor, byte_size(value) - cursor)])}
-
-        error ->
-          error
-      end
-    end
-  end
-
-  defp eval_each(items, {:name, name}, _root, flatten_arrays?, keep_array?) do
-    values = select_each_items(items, name, flatten_arrays?, [])
-    {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
-  end
-
-  defp eval_each(items, {:variable, _} = ast, context, _flatten_arrays?, keep_array?) do
-    case eval_each_items(items, ast, context, [], true) do
-      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
-      error -> error
-    end
-  end
-
-  defp eval_each(items, ast, root, _flatten_arrays?, keep_array?) do
-    case eval_each_items(items, ast, root, [], false) do
-      {:ok, values} -> {:ok, Value.sequence(Enum.reverse(values), keep_array?)}
-      error -> error
-    end
-  end
-
-  defp select_each_items([], _name, _flatten?, values), do: values
-
-  defp select_each_items([item | rest], name, flatten?, values) do
-    selected = Semantics.select(item, name)
-    next = if flatten?, do: Enum.reverse(Value.items(selected), values), else: [selected | values]
-    select_each_items(rest, name, flatten?, next)
-  end
-
-  defp eval_each_items([], _ast, _context, values, _skip_empty?), do: {:ok, values}
-
-  defp eval_each_items([item | rest], ast, context, values, skip_empty?) do
-    case eval(ast, item, context) do
-      {:ok, []} when skip_empty? -> eval_each_items(rest, ast, context, values, skip_empty?)
-      {:ok, value} -> eval_each_items(rest, ast, context, [value | values], skip_empty?)
-      error -> error
-    end
-  end
-
-  defp eval_array_items([], _data, _context, acc), do: {:ok, Enum.reverse(acc)}
-
-  defp eval_array_items([expression | rest], data, context, acc) do
-    case eval(expression, data, context) do
-      {:ok, value} ->
-        eval_array_items(rest, data, context, append_array_item(expression, value, acc))
-
-      error ->
-        error
-    end
-  end
-
-  defp append_array_item({:array, _}, value, acc), do: [value | acc]
-  defp append_array_item({:constant_array, _}, value, acc), do: [value | acc]
-  defp append_array_item(_, %Value.Sequence{items: items}, acc), do: Enum.reverse(items, acc)
-  defp append_array_item(_, value, acc) when is_list(value), do: Enum.reverse(value, acc)
-  defp append_array_item(_, %Value.Undefined{}, acc), do: acc
-  defp append_array_item(_, value, acc), do: [value | acc]
 
   defp eval_list([], _data, _root), do: {:ok, []}
 
@@ -1462,14 +1279,6 @@ defmodule Jexata.Evaluator do
       {:error, Error.new("T2007", "Sort keys have incompatible types")}
     end
   end
-
-  defp descendants(value) when is_list(value), do: Enum.flat_map(value, &descendants/1)
-
-  defp descendants(value) when is_map(value) and not is_struct(value) do
-    [value | Enum.flat_map(value, fn {_key, child} -> descendants(child) end)]
-  end
-
-  defp descendants(value), do: [value]
 
   defp contextual_path_call({:call, {:variable, name}, args} = call) do
     needs_context =

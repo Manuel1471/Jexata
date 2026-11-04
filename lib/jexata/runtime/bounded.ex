@@ -38,6 +38,7 @@ defmodule Jexata.Runtime.Bounded do
     do: {:error, Error.new("J0007", "Evaluation limits must be a keyword list")}
 
   defp watch(parent, tag, expression, data, bindings, depth, limits) do
+    Process.flag(:trap_exit, true)
     parent_monitor = Process.monitor(parent)
     watcher = self()
 
@@ -49,6 +50,7 @@ defmodule Jexata.Runtime.Bounded do
         end,
         [
           :monitor,
+          :link,
           {:max_heap_size, %{size: limits.max_heap_words, kill: true, error_logger: false}}
         ]
       )

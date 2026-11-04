@@ -7,6 +7,7 @@ defmodule Jexata.MixProject do
       version: "1.0.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
+      test_coverage: [summary: [threshold: 70]],
       description: "Native JSONata expression compiler and evaluator for Elixir",
       source_url: "https://github.com/Manuel1471/Jexata",
       docs: [

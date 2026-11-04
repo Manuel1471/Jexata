@@ -48,6 +48,36 @@ defmodule Jexata.BoundedTest do
     assert_receive {:DOWN, ^worker_monitor, :process, ^worker, :killed}, 1_000
   end
 
+  test "the worker stops when its watcher is killed" do
+    parent = self()
+
+    caller =
+      spawn(fn ->
+        receive do
+          :start ->
+            expression = Jexata.compile!("($f:=function($n){$f($n+1)};$f(0))")
+            send(parent, :caller_started)
+
+            send(
+              parent,
+              {:bounded_result, Jexata.evaluate_bounded(expression, %{}, timeout_ms: 30_000)}
+            )
+        end
+      end)
+
+    :erlang.trace(caller, true, [:procs, :set_on_spawn])
+    send(caller, :start)
+    assert_receive :caller_started, 1_000
+    assert_receive {:trace, ^caller, :spawn, watcher, _}, 1_000
+    assert_receive {:trace, ^watcher, :spawn, worker, _}, 1_000
+    worker_monitor = Process.monitor(worker)
+
+    Process.exit(watcher, :kill)
+
+    assert_receive {:DOWN, ^worker_monitor, :process, ^worker, :killed}, 1_000
+    assert_receive {:bounded_result, {:error, %Jexata.Error{code: "J1009"}}}, 1_000
+  end
+
   test "time and heap limits stop expensive expressions" do
     expression = Jexata.compile!("$map(orders,function($x){$x*2})")
     data = %{"orders" => Enum.to_list(1..100_000)}
