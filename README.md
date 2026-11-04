@@ -74,16 +74,16 @@ The three remaining reference-fixture mismatches involve `$keys(%)` on input obj
 Jexata.compile("orders.price", max_source_bytes: 1_000, max_tokens: 100)
 ```
 
-There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation), a 100,000 iteration limit for supported tail calls, and a one-million-codepoint output limit for `$pad`. For untrusted or expensive expressions, `evaluate_bounded/3` runs the compiled expression in a separate BEAM process with time, process-heap, reduction, and result-size limits:
+There is a function recursion depth limit of 1,024 for ordinary calls (configurable per evaluation), a 100,000 iteration limit for supported tail calls, and a one-million-codepoint output limit for `$pad`. For untrusted or expensive expressions, `evaluate_bounded/3` runs the compiled expression in a separate BEAM process with time, process-heap, collection, AST-visit, reduction, and result-size limits:
 
 ```elixir
 expression = Jexata.compile!("orders.price")
 Jexata.evaluate_bounded(expression, data,
   timeout_ms: 500, max_heap_words: 1_000_000, max_result_bytes: 200_000,
-  max_reductions: 500_000)
+  max_reductions: 500_000, max_collection_items: 10_000, max_steps: 100_000)
 ```
 
-The result limit is measured as Erlang external-term size, not JSON bytes. The copied input and bindings count against the worker's heap limit; raise `max_heap_words` when processing large input. A separate watcher enforces the timeout even if the caller exits. Unknown option names return `J0007`. Bounded evaluation also passes `regex_match_limit` and `regex_recursion_limit` to Erlang's regex engine; they default to 100,000 and 10,000 respectively. The optional `max_reductions` budget returns `J1010` when exceeded. It counts BEAM reductions, including worker setup, with periodic checks; it is not an exact JSONata step count. A bounded BEAM process is useful for containment but does not make arbitrary expressions a complete security sandbox. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities. See [SECURITY.md](SECURITY.md).
+The result limit is measured as Erlang external-term size, not JSON bytes. The copied input and bindings count against the worker's heap limit; raise `max_heap_words` when processing large input. A separate watcher enforces the timeout even if the caller exits. Unknown option names return `J0007`. Bounded evaluation also passes `regex_match_limit` and `regex_recursion_limit` to Erlang's regex engine; they default to 100,000 and 10,000 respectively. Optional `max_reductions`, `max_collection_items`, and `max_steps` return `J1010`, `J1011`, and `J1012` when exceeded. The collection limit checks input, bindings, literal and constructed collections, generated sequences, selected built-ins, and the result. The step limit counts visits to evaluator AST nodes; it does not count work inside a built-in. The reduction budget counts BEAM work, including worker setup, with periodic checks. Use the deadline and heap limit alongside these optional limits. A bounded BEAM process is useful for containment but does not make arbitrary expressions a complete security sandbox. Jexata does not provide file, network, shell, or arbitrary Elixir execution capabilities. See [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -99,7 +99,7 @@ MIX_ENV=prod mix run scripts/benchmark.exs
 
 See [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md), [benchmark](docs/BENCHMARK.md), [jsonata.js comparison](docs/JSONATA_JS_COMPARISON.md), and [contributing](CONTRIBUTING.md). The 1.0.0 package metadata is prepared for publication.
 
-CI checks a minimum 74% ExUnit line coverage and a maximum of 1,300 **physical** lines for every Elixir source file in `lib/`. The latest local ExUnit run covered 74.70% of lines and generated a per-module HTML report; CI uploads that report. The reference compatibility runner is a separate gate and its cases are not included in the ExUnit coverage percentage.
+CI checks at least 85% ExUnit line coverage with the complete JSONata v2.2.0 reference fixtures included, and a maximum of 1,300 **physical** lines for every Elixir source file in `lib/`. The local combined run passed 114 tests at **90.23%** line coverage. Set `JEXATA_REFERENCE_SUITE` to the fixture directory before running `mix test --cover` locally. CI uploads the per-module HTML coverage report and runs the reference compatibility baseline separately as well.
 
 ## Hex publication
 

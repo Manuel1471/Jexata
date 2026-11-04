@@ -11,6 +11,7 @@ defmodule Jexata.Runtime.Value do
   end
 
   alias __MODULE__.{Sequence, Undefined}
+  alias Jexata.Runtime.CollectionLimit
 
   def undefined, do: %Undefined{}
   def undefined?(%Undefined{}), do: true
@@ -20,10 +21,12 @@ defmodule Jexata.Runtime.Value do
     items = sequence_items(values, [])
 
     case {items, keep_array} do
-      {items, true} -> %Sequence{items: items, keep_array: true}
+      {[], true} -> %Sequence{items: [], keep_array: true}
+      {[one], true} -> %Sequence{items: [one], keep_array: true}
+      {items, true} -> %Sequence{items: CollectionLimit.check(items), keep_array: true}
       {[], false} -> undefined()
       {[one], false} -> one
-      {many, false} -> %Sequence{items: many}
+      {many, false} -> %Sequence{items: CollectionLimit.check(many)}
     end
   end
 
@@ -32,7 +35,7 @@ defmodule Jexata.Runtime.Value do
     case items do
       [] -> undefined()
       [one] -> one
-      many -> %Sequence{items: many}
+      many -> %Sequence{items: CollectionLimit.check(many)}
     end
   end
 

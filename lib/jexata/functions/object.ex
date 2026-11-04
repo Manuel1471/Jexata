@@ -2,16 +2,19 @@ defmodule Jexata.Functions.Object do
   @moduledoc false
   alias Jexata.{Error, Semantics}
   alias Jexata.Runtime.Value
+  alias Jexata.Runtime.CollectionLimit
+
+  def call(name, args), do: CollectionLimit.check_result(call_impl(name, args))
 
   def supported?(name), do: name in ["$keys", "$lookup", "$merge", "$spread", "$clone"]
 
-  def call("$clone", [value]) when is_map(value) and not is_struct(value), do: {:ok, value}
-  def call("$clone", [value]) when is_list(value), do: {:ok, value}
+  defp call_impl("$clone", [value]) when is_map(value) and not is_struct(value), do: {:ok, value}
+  defp call_impl("$clone", [value]) when is_list(value), do: {:ok, value}
 
-  def call("$clone", [value]) when is_struct(value, Value.Undefined),
+  defp call_impl("$clone", [value]) when is_struct(value, Value.Undefined),
     do: {:ok, value}
 
-  def call("$keys", [value]) do
+  defp call_impl("$keys", [value]) do
     keys =
       value
       |> Value.items()
@@ -24,11 +27,12 @@ defmodule Jexata.Functions.Object do
     {:ok, Value.sequence(keys)}
   end
 
-  def call("$lookup", [value, key]) when is_binary(key), do: {:ok, Semantics.select(value, key)}
+  defp call_impl("$lookup", [value, key]) when is_binary(key),
+    do: {:ok, Semantics.select(value, key)}
 
-  def call("$merge", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  defp call_impl("$merge", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
 
-  def call("$merge", [value]) do
+  defp call_impl("$merge", [value]) do
     items = Value.items(value)
 
     if Enum.all?(items, &plain_map?/1),
@@ -36,7 +40,7 @@ defmodule Jexata.Functions.Object do
       else: type_error("$merge")
   end
 
-  def call("$spread", [value]) do
+  defp call_impl("$spread", [value]) do
     if Value.undefined?(value) or is_struct(value, Jexata.Runtime.Closure) or
          is_struct(value, Jexata.Runtime.Builtin) or
          (not is_map(value) and not is_list(value)) do
@@ -53,7 +57,7 @@ defmodule Jexata.Functions.Object do
     end
   end
 
-  def call(name, _), do: type_error(name)
+  defp call_impl(name, _), do: type_error(name)
 
   defp plain_map?(value), do: is_map(value) and not is_struct(value)
 

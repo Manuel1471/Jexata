@@ -16,10 +16,40 @@ defmodule Jexata.BoundedTest do
     assert {:error, %Jexata.Error{code: "J0007"}} =
              Jexata.evaluate_bounded(expression, data, max_reductions: 0)
 
+    assert {:error, %Jexata.Error{code: "J0007"}} =
+             Jexata.evaluate_bounded(expression, data, max_collection_items: 0)
+
+    assert {:error, %Jexata.Error{code: "J0007"}} =
+             Jexata.evaluate_bounded(expression, data, max_steps: 0)
+
     assert Jexata.evaluate_bounded(expression, data, max_reductions: 1_000_000) == {:ok, 3}
 
     assert {:error, %Jexata.Error{code: "J1007"}} =
              Jexata.evaluate_bounded(expression, data, max_result_bytes: 1)
+  end
+
+  test "collection limits cover input, literal arrays, objects and generated sequences" do
+    input = Jexata.compile!("orders[0]")
+    array = Jexata.compile!("[1..20]")
+    object = Jexata.compile!("{'a':1,'b':2,'c':3}")
+    generated = Jexata.compile!("[1..n]")
+    appended = Jexata.compile!("$count($append([1,2],[3]))")
+    split = Jexata.compile!("$count($split('a,b,c',','))")
+
+    for {expression, data} <- [
+          {input, %{"orders" => [1, 2, 3]}},
+          {array, %{}},
+          {object, %{}},
+          {generated, %{"n" => 3}},
+          {appended, %{}},
+          {split, %{}}
+        ] do
+      assert {:error, %Jexata.Error{code: "J1011"}} =
+               Jexata.evaluate_bounded(expression, data, max_collection_items: 2)
+    end
+
+    assert Jexata.evaluate_bounded(array, %{}, max_collection_items: 20) ==
+             {:ok, Enum.to_list(1..20)}
   end
 
   test "a reduction budget limits completed and ongoing evaluations" do
@@ -31,6 +61,41 @@ defmodule Jexata.BoundedTest do
                max_reductions: 10_000,
                max_heap_words: 10_000_000,
                timeout_ms: 5_000
+             )
+  end
+
+  test "AST step budget stops repeated node evaluations" do
+    expression = Jexata.compile!("$map(orders,function($x){$x*2})")
+    data = %{"orders" => Enum.to_list(1..100)}
+
+    assert {:error, %Jexata.Error{code: "J1012"}} =
+             Jexata.evaluate_bounded(expression, data, max_steps: 10)
+
+    assert Jexata.evaluate_bounded(Jexata.compile!("1+2"), %{}, max_steps: 1) == {:ok, 3}
+  end
+
+  test "concurrent AST budgets do not affect each other" do
+    expression = Jexata.compile!("$map(orders,function($x){$x*2})")
+    data = %{"orders" => Enum.to_list(1..100)}
+
+    short = Task.async(fn -> Jexata.evaluate_bounded(expression, data, max_steps: 10) end)
+    long = Task.async(fn -> Jexata.evaluate_bounded(expression, data, max_steps: 10_000) end)
+
+    assert {:error, %Jexata.Error{code: "J1012"}} = Task.await(short)
+    assert {:ok, result} = Task.await(long)
+    assert length(result) == 100
+    assert Jexata.evaluate(expression, data) == {:ok, result}
+  end
+
+  test "timeout still applies while AST trace events are arriving" do
+    expression = Jexata.compile!("$map(orders,function($x){$x*2})")
+    data = %{"orders" => Enum.to_list(1..10_000)}
+
+    assert {:error, %Jexata.Error{code: "J1005"}} =
+             Jexata.evaluate_bounded(expression, data,
+               timeout_ms: 1,
+               max_steps: 1_000_000,
+               max_heap_words: 10_000_000
              )
   end
 

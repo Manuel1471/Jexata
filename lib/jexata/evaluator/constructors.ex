@@ -1,6 +1,7 @@
 defmodule Jexata.Evaluator.Constructors do
   @moduledoc false
   alias Jexata.Error
+  alias Jexata.Runtime.CollectionLimit
   alias Jexata.Runtime.Value
 
   def array(expressions, data, context, evaluate),
@@ -17,6 +18,7 @@ defmodule Jexata.Evaluator.Constructors do
         error -> {:halt, error}
       end
     end)
+    |> CollectionLimit.check_result()
   end
 
   def ordered_value(ast, data, context, evaluate),
@@ -73,7 +75,8 @@ defmodule Jexata.Evaluator.Constructors do
 
   defp ordered(ast, data, context, evaluate), do: evaluate.(ast, data, context)
 
-  defp array_items([], _data, _context, _evaluate, acc), do: {:ok, Enum.reverse(acc)}
+  defp array_items([], _data, _context, _evaluate, acc),
+    do: {:ok, CollectionLimit.check(Enum.reverse(acc))}
 
   defp array_items([expression | rest], data, context, evaluate, acc) do
     case evaluate.(expression, data, context) do

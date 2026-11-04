@@ -15,6 +15,7 @@ defmodule Jexata.Functions do
   }
 
   alias Jexata.Runtime.Value
+  alias Jexata.Runtime.CollectionLimit
 
   @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase $random)
   @boolean ~w($boolean $not $exists)
@@ -72,6 +73,7 @@ defmodule Jexata.Functions do
       name == "$assert" -> assert_function(args)
       name == "$formatNumber" -> NumberFormat.call(args)
       name == "$type" -> type_of(args)
+      name == "$split" -> dispatch_builtin(name, args) |> CollectionLimit.check_result()
       true -> dispatch_builtin(name, args)
     end
   end

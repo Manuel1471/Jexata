@@ -1,6 +1,7 @@
 defmodule Jexata.Runtime.Bounded do
   @moduledoc false
   alias Jexata.Error
+  alias Jexata.Runtime.CollectionLimit
   alias Jexata.Runtime.LimitedRegex
 
   @defaults [
@@ -8,6 +9,8 @@ defmodule Jexata.Runtime.Bounded do
     max_heap_words: 1_000_000,
     max_result_bytes: 1_000_000,
     max_reductions: nil,
+    max_collection_items: nil,
+    max_steps: nil,
     regex_match_limit: 100_000,
     regex_recursion_limit: 10_000
   ]
@@ -46,7 +49,20 @@ defmodule Jexata.Runtime.Bounded do
     {worker, worker_monitor} =
       :erlang.spawn_opt(
         fn ->
+          receive do
+            :start -> :ok
+          end
+
           result = run_worker(expression, data, bindings, depth, limits)
+
+          if limits.max_steps do
+            delivered = :erlang.trace_delivered(self())
+
+            receive do
+              {:trace_delivered, _, ^delivered} -> :ok
+            end
+          end
+
           send(watcher, {tag, result})
         end,
         [
@@ -56,6 +72,14 @@ defmodule Jexata.Runtime.Bounded do
         ]
       )
 
+    if limits.max_steps do
+      Code.ensure_loaded!(Jexata.Evaluator)
+      :erlang.trace_pattern({Jexata.Evaluator, :eval, 3}, true, [:local])
+      :erlang.trace(worker, true, [:call, :arity, {:tracer, watcher}])
+    end
+
+    send(worker, :start)
+
     await_worker(
       parent,
       tag,
@@ -63,11 +87,12 @@ defmodule Jexata.Runtime.Bounded do
       worker,
       worker_monitor,
       limits,
-      System.monotonic_time(:millisecond) + limits.timeout_ms
+      System.monotonic_time(:millisecond) + limits.timeout_ms,
+      0
     )
   end
 
-  defp await_worker(parent, tag, parent_monitor, worker, worker_monitor, limits, deadline) do
+  defp await_worker(parent, tag, parent_monitor, worker, worker_monitor, limits, deadline, steps) do
     remaining = max(deadline - System.monotonic_time(:millisecond), 0)
     interval = if limits.max_reductions, do: min(remaining, 5), else: remaining
 
@@ -80,6 +105,33 @@ defmodule Jexata.Runtime.Bounded do
 
       {:DOWN, ^worker_monitor, :process, ^worker, reason} ->
         send(parent, {tag, exit_error(reason)})
+
+      {:trace, ^worker, :call, {Jexata.Evaluator, :eval, 3}} ->
+        cond do
+          System.monotonic_time(:millisecond) >= deadline ->
+            Process.exit(worker, :kill)
+            send(parent, {tag, {:error, Error.new("J1005", "Evaluation timed out")}})
+
+          steps >= limits.max_steps ->
+            Process.exit(worker, :kill)
+
+            send(
+              parent,
+              {tag, {:error, Error.new("J1012", "Evaluation exceeded AST step limit")}}
+            )
+
+          true ->
+            await_worker(
+              parent,
+              tag,
+              parent_monitor,
+              worker,
+              worker_monitor,
+              limits,
+              deadline,
+              steps + 1
+            )
+        end
     after
       interval ->
         cond do
@@ -92,7 +144,16 @@ defmodule Jexata.Runtime.Bounded do
             send(parent, {tag, reduction_error()})
 
           true ->
-            await_worker(parent, tag, parent_monitor, worker, worker_monitor, limits, deadline)
+            await_worker(
+              parent,
+              tag,
+              parent_monitor,
+              worker,
+              worker_monitor,
+              limits,
+              deadline,
+              steps
+            )
         end
     end
   end
@@ -109,8 +170,13 @@ defmodule Jexata.Runtime.Bounded do
   defp run_worker(expression, data, bindings, depth, limits) do
     try do
       LimitedRegex.install(limits.regex_match_limit, limits.regex_recursion_limit)
+      CollectionLimit.install(limits.max_collection_items)
+      CollectionLimit.check_input(data)
+      CollectionLimit.check_input(bindings)
+      CollectionLimit.check_ast(expression.ast)
 
       Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
+      |> CollectionLimit.check_result()
       |> check_result(limits.max_result_bytes)
       |> check_reductions(limits.max_reductions)
     rescue
@@ -137,8 +203,11 @@ defmodule Jexata.Runtime.Bounded do
             end)
 
           if Enum.all?(limits, fn
-               {:max_reductions, nil} -> true
-               {_name, value} -> is_integer(value) and value > 0
+               {name, nil} when name in [:max_reductions, :max_collection_items, :max_steps] ->
+                 true
+
+               {_name, value} ->
+                 is_integer(value) and value > 0
              end) do
             {:ok, limits}
           else
