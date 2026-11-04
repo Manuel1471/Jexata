@@ -1,6 +1,102 @@
 {
-  "count": 1000,
-  "mismatches": [],
+  "count": 20000,
+  "known_differences": [
+    {
+      "case": {
+        "data": {
+          "order": {
+            "active": true,
+            "customer": "x",
+            "date": "2024-01-02T03:04:05Z",
+            "decimal": "1.50",
+            "epoch": 1704164645000,
+            "padded": "  x ",
+            "price": 1,
+            "text": "Order 1"
+          }
+        },
+        "name": "known_wildcard_order",
+        "source": "order.*"
+      },
+      "jexata": {
+        "kind": "value",
+        "value": [
+          true,
+          "x",
+          "2024-01-02T03:04:05Z",
+          "1.50",
+          1704164645000,
+          "  x ",
+          1,
+          "Order 1"
+        ]
+      },
+      "jsonata_js": {
+        "kind": "value",
+        "value": [
+          1,
+          "x",
+          "1.50",
+          "  x ",
+          "Order 1",
+          true,
+          "2024-01-02T03:04:05Z",
+          1704164645000
+        ]
+      }
+    },
+    {
+      "case": {
+        "data": {
+          "orders": [
+            {
+              "text": "Order 1"
+            },
+            {
+              "text": "Order 2"
+            }
+          ]
+        },
+        "name": "known_match_shape",
+        "source": "$map(orders,function($o){$match($o.text,/Order/)})"
+      },
+      "jexata": {
+        "kind": "value",
+        "value": [
+          {
+            "groups": [],
+            "index": 0,
+            "match": "Order"
+          },
+          {
+            "groups": [],
+            "index": 0,
+            "match": "Order"
+          }
+        ]
+      },
+      "jsonata_js": {
+        "kind": "value",
+        "value": [
+          [
+            {
+              "groups": [],
+              "index": 0,
+              "match": "Order"
+            }
+          ],
+          [
+            {
+              "groups": [],
+              "index": 0,
+              "match": "Order"
+            }
+          ]
+        ]
+      }
+    }
+  ],
   "reference_commit": "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03",
-  "seed": 20261103
+  "seed": 20261103,
+  "unexpected_mismatches": []
 }
