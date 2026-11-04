@@ -22,6 +22,15 @@ defmodule Jexata.FunctionsNumericTest do
     assert {:error, %Jexata.Error{code: "T0412"}} = Jexata.run("$sum([1, 'x'])", %{})
   end
 
+  test "random returns a unit interval value and rejects arguments" do
+    for _ <- 1..100 do
+      assert {:ok, value} = Jexata.run("$random()", %{})
+      assert is_float(value) and value >= 0 and value < 1
+    end
+
+    assert {:error, %Jexata.Error{code: "T0410"}} = Jexata.run("$random(1)", %{})
+  end
+
   test "numeric conversion and powers follow JSONata's basic rules" do
     assert Jexata.run("$number('12.5')", %{}) == {:ok, 12.5}
     assert Jexata.run("$number('0x12')", %{}) == {:ok, 18}

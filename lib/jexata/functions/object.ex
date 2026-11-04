@@ -3,7 +3,13 @@ defmodule Jexata.Functions.Object do
   alias Jexata.{Error, Semantics}
   alias Jexata.Runtime.Value
 
-  def supported?(name), do: name in ["$keys", "$lookup", "$merge", "$spread"]
+  def supported?(name), do: name in ["$keys", "$lookup", "$merge", "$spread", "$clone"]
+
+  def call("$clone", [value]) when is_map(value) and not is_struct(value), do: {:ok, value}
+  def call("$clone", [value]) when is_list(value), do: {:ok, value}
+
+  def call("$clone", [value]) when is_struct(value, Value.Undefined),
+    do: {:ok, value}
 
   def call("$keys", [value]) do
     keys =

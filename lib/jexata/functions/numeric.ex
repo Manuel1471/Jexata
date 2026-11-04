@@ -5,9 +5,13 @@ defmodule Jexata.Functions.Numeric do
 
   @aggregates ["$sum", "$count", "$max", "$min", "$average"]
   @unary ["$abs", "$floor", "$ceil"]
-  @supported @aggregates ++ @unary ++ ["$round", "$number", "$sqrt", "$power", "$formatBase"]
+  @supported @aggregates ++
+               @unary ++ ["$round", "$number", "$sqrt", "$power", "$formatBase", "$random"]
 
   def supported?(name), do: name in @supported
+
+  def call("$random", []),
+    do: {:ok, (:rand.uniform(9_007_199_254_740_992) - 1) / 9_007_199_254_740_992}
 
   def call(name, [input])
       when name in @aggregates and name != "$count" and is_struct(input, Value.Undefined),

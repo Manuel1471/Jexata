@@ -16,11 +16,11 @@ defmodule Jexata.Functions do
 
   alias Jexata.Runtime.Value
 
-  @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase)
+  @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase $random)
   @boolean ~w($boolean $not $exists)
   @string ~w($string $length $uppercase $lowercase $trim $substring $contains $split $join $substringBefore $substringAfter $replace $pad $match $base64encode $base64decode)
   @array ~w($append $reverse $sort $distinct $zip $shuffle)
-  @object ~w($keys $lookup $merge $spread)
+  @object ~w($keys $lookup $merge $spread $clone)
   @url ~w($encodeUrl $encodeUrlComponent $decodeUrl $decodeUrlComponent)
   @datetime ~w($toMillis $fromMillis $now $millis)
   @integer_format ~w($formatInteger $parseInteger)
@@ -61,7 +61,8 @@ defmodule Jexata.Functions do
              "$lowercase",
              "$trim",
              "$string",
-             "$fromMillis"
+             "$fromMillis",
+             "$clone"
            ],
          do: [context],
          else: args
