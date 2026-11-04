@@ -1,0 +1,2728 @@
+{
+  "commits": {
+    "base": "3781c0d08b0c021bf15fb80591983c5ee9b7eebc",
+    "current": "f5096dee9a4d57c418d38dd9bf380d4cb18f11db"
+  },
+  "order": "alternating base/current and current/base",
+  "raw": {
+    "base": {
+      "chain_sum": [
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 40.868
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 41.907
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 40.781
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 41.852
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 41.048
+        }
+      ],
+      "compile_field": [
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0094,
+          "mode": "compile",
+          "reductions_per_op": 274.5644,
+          "result_hash": 54998772,
+          "us_per_op": 0.8838
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6387
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6141
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.639
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6249
+        }
+      ],
+      "descendants": [
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205683.77,
+          "result_hash": 2642358,
+          "us_per_op": 311.05
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205684.85,
+          "result_hash": 2642358,
+          "us_per_op": 319.41
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205683.65,
+          "result_hash": 2642358,
+          "us_per_op": 331.6
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205686.37,
+          "result_hash": 2642358,
+          "us_per_op": 322.46
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205686.13,
+          "result_hash": 2642358,
+          "us_per_op": 321.22
+        }
+      ],
+      "filter": [
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.92,
+          "result_hash": 20912551,
+          "us_per_op": 95.388
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.882,
+          "result_hash": 20912551,
+          "us_per_op": 94.819
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25758.004,
+          "result_hash": 20912551,
+          "us_per_op": 95.479
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.9,
+          "result_hash": 20912551,
+          "us_per_op": 94.984
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.912,
+          "result_hash": 20912551,
+          "us_per_op": 97.416
+        }
+      ],
+      "format_number_each": [
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.48,
+          "mode": "evaluate",
+          "reductions_per_op": 1356054.32,
+          "result_hash": 77727890,
+          "us_per_op": 7317.22
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.2,
+          "mode": "evaluate",
+          "reductions_per_op": 1355594.38,
+          "result_hash": 77727890,
+          "us_per_op": 6989.14
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.44,
+          "mode": "evaluate",
+          "reductions_per_op": 1356643.58,
+          "result_hash": 77727890,
+          "us_per_op": 7330.32
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.48,
+          "mode": "evaluate",
+          "reductions_per_op": 1356055.36,
+          "result_hash": 77727890,
+          "us_per_op": 7069.62
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.44,
+          "mode": "evaluate",
+          "reductions_per_op": 1356643.58,
+          "result_hash": 77727890,
+          "us_per_op": 7061.4
+        }
+      ],
+      "format_number_integer": [
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.02,
+          "mode": "evaluate",
+          "reductions_per_op": 1141882.38,
+          "result_hash": 62354838,
+          "us_per_op": 5722.62
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.02,
+          "mode": "evaluate",
+          "reductions_per_op": 1141879.96,
+          "result_hash": 62354838,
+          "us_per_op": 5626.4
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.2,
+          "mode": "evaluate",
+          "reductions_per_op": 1142342.8,
+          "result_hash": 62354838,
+          "us_per_op": 5703.66
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.02,
+          "mode": "evaluate",
+          "reductions_per_op": 1141881.66,
+          "result_hash": 62354838,
+          "us_per_op": 5733.34
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.2,
+          "mode": "evaluate",
+          "reductions_per_op": 1142345.52,
+          "result_hash": 62354838,
+          "us_per_op": 5934.8
+        }
+      ],
+      "from_millis_each": [
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152614.22,
+          "result_hash": 44061525,
+          "us_per_op": 538.56
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152613.59,
+          "result_hash": 44061525,
+          "us_per_op": 539.69
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.47,
+          "mode": "evaluate",
+          "reductions_per_op": 152538.05,
+          "result_hash": 44061525,
+          "us_per_op": 546.07
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152615.14,
+          "result_hash": 44061525,
+          "us_per_op": 538.35
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.47,
+          "mode": "evaluate",
+          "reductions_per_op": 152537.49,
+          "result_hash": 44061525,
+          "us_per_op": 565.39
+        }
+      ],
+      "from_millis_picture": [
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128253.8,
+          "result_hash": 36568399,
+          "us_per_op": 448.16
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128254.18,
+          "result_hash": 36568399,
+          "us_per_op": 448.44
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.6,
+          "mode": "evaluate",
+          "reductions_per_op": 128286.3,
+          "result_hash": 36568399,
+          "us_per_op": 458.1
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128255.48,
+          "result_hash": 36568399,
+          "us_per_op": 456.74
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.6,
+          "mode": "evaluate",
+          "reductions_per_op": 128287.74,
+          "result_hash": 36568399,
+          "us_per_op": 464.38
+        }
+      ],
+      "group_object": [
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.54,
+          "result_hash": 79006981,
+          "us_per_op": 146.43
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.54,
+          "result_hash": 79006981,
+          "us_per_op": 146.88
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.54,
+          "result_hash": 79006981,
+          "us_per_op": 146.87
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.58,
+          "result_hash": 79006981,
+          "us_per_op": 147.69
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.66,
+          "result_hash": 79006981,
+          "us_per_op": 150.76
+        }
+      ],
+      "index_negative": [
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.716
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.168,
+          "result_hash": 65787489,
+          "us_per_op": 1.636
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.622
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.724
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.665
+        }
+      ],
+      "index_zero": [
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.188
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.784,
+          "result_hash": 2614250,
+          "us_per_op": 0.185
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.192
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.192
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.212
+        }
+      ],
+      "map_lambda": [
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.933333333334,
+          "result_hash": 110690341,
+          "us_per_op": 149.10666666666665
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.886666666665,
+          "result_hash": 110690341,
+          "us_per_op": 146.02333333333334
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.8,
+          "result_hash": 110690341,
+          "us_per_op": 152.43333333333334
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.84,
+          "result_hash": 110690341,
+          "us_per_op": 151.89666666666668
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.81333333333,
+          "result_hash": 110690341,
+          "us_per_op": 148.38333333333333
+        }
+      ],
+      "match_each": [
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171423.79,
+          "result_hash": 132429003,
+          "us_per_op": 1288.98
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171420.35,
+          "result_hash": 132429003,
+          "us_per_op": 1013.87
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.14,
+          "mode": "evaluate",
+          "reductions_per_op": 171390.11,
+          "result_hash": 132429003,
+          "us_per_op": 1024.2
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171417.71,
+          "result_hash": 132429003,
+          "us_per_op": 1037.02
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.14,
+          "mode": "evaluate",
+          "reductions_per_op": 171389.63,
+          "result_hash": 132429003,
+          "us_per_op": 1058.91
+        }
+      ],
+      "merge_objects": [
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 16.68
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.82,
+          "result_hash": 82401079,
+          "us_per_op": 16.68
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 16.66
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 17.04
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 17.18
+        }
+      ],
+      "number_float_each": [
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.8,
+          "result_hash": 88603174,
+          "us_per_op": 511.32
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108763.02,
+          "result_hash": 88603174,
+          "us_per_op": 504.09
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108715.54,
+          "result_hash": 88603174,
+          "us_per_op": 522.16
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.2,
+          "result_hash": 88603174,
+          "us_per_op": 519.89
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108715.82,
+          "result_hash": 88603174,
+          "us_per_op": 523.6
+        }
+      ],
+      "reduce_recursive": [
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1577.2333333333333
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1568.2
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 40.666666666666664,
+          "mode": "evaluate",
+          "reductions_per_op": 357247.5,
+          "result_hash": 79801108,
+          "us_per_op": 1621.6666666666667
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1592.0
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 40.666666666666664,
+          "mode": "evaluate",
+          "reductions_per_op": 357247.5,
+          "result_hash": 79801108,
+          "us_per_op": 1611.0666666666666
+        }
+      ],
+      "replace_each": [
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97291.47,
+          "result_hash": 24210486,
+          "us_per_op": 718.9
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97291.15,
+          "result_hash": 24210486,
+          "us_per_op": 710.2
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.17,
+          "mode": "evaluate",
+          "reductions_per_op": 97379.09,
+          "result_hash": 24210486,
+          "us_per_op": 697.54
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97290.67,
+          "result_hash": 24210486,
+          "us_per_op": 690.94
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.17,
+          "mode": "evaluate",
+          "reductions_per_op": 97379.21,
+          "result_hash": 24210486,
+          "us_per_op": 706.48
+        }
+      ],
+      "serialize_orders": [
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308791.9,
+          "result_hash": 11529360,
+          "us_per_op": 898.22
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.18,
+          "mode": "evaluate",
+          "reductions_per_op": 307694.41,
+          "result_hash": 11529360,
+          "us_per_op": 882.1
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308793.78,
+          "result_hash": 11529360,
+          "us_per_op": 906.08
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308800.18,
+          "result_hash": 11529360,
+          "us_per_op": 903.9
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308801.98,
+          "result_hash": 11529360,
+          "us_per_op": 909.29
+        }
+      ],
+      "sort_comparator": [
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437917.8333333333,
+          "result_hash": 8689764,
+          "us_per_op": 1288.4666666666667
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437916.73333333334,
+          "result_hash": 8689764,
+          "us_per_op": 1266.9333333333334
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437922.5,
+          "result_hash": 8689764,
+          "us_per_op": 1298.9
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437916.5,
+          "result_hash": 8689764,
+          "us_per_op": 1287.0
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437917.1666666667,
+          "result_hash": 8689764,
+          "us_per_op": 1314.1333333333334
+        }
+      ],
+      "spread_each": [
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284269.22,
+          "result_hash": 78295827,
+          "us_per_op": 726.24
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284263.78,
+          "result_hash": 78295827,
+          "us_per_op": 717.69
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.25,
+          "mode": "evaluate",
+          "reductions_per_op": 284512.22,
+          "result_hash": 78295827,
+          "us_per_op": 732.88
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284268.46,
+          "result_hash": 78295827,
+          "us_per_op": 714.36
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.25,
+          "mode": "evaluate",
+          "reductions_per_op": 284521.5,
+          "result_hash": 78295827,
+          "us_per_op": 737.96
+        }
+      ],
+      "sum": [
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 40.389
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.033,
+          "result_hash": 16799329,
+          "us_per_op": 39.757
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 40.213
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 40.111
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 40.857
+        }
+      ],
+      "to_millis_picture": [
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455016.14,
+          "result_hash": 31563603,
+          "us_per_op": 3476.82
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455016.08,
+          "result_hash": 31563603,
+          "us_per_op": 3332.06
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 5.28,
+          "mode": "evaluate",
+          "reductions_per_op": 454902.92,
+          "result_hash": 31563603,
+          "us_per_op": 3342.58
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455015.9,
+          "result_hash": 31563603,
+          "us_per_op": 3464.08
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 5.28,
+          "mode": "evaluate",
+          "reductions_per_op": 454902.76,
+          "result_hash": 31563603,
+          "us_per_op": 3487.46
+        }
+      ],
+      "trim_each": [
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136168.98,
+          "result_hash": 61172193,
+          "us_per_op": 1698.66
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136168.98,
+          "result_hash": 61172193,
+          "us_per_op": 1704.01
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.6,
+          "mode": "evaluate",
+          "reductions_per_op": 136077.16,
+          "result_hash": 61172193,
+          "us_per_op": 1725.3
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136165.42,
+          "result_hash": 61172193,
+          "us_per_op": 1731.0
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.6,
+          "mode": "evaluate",
+          "reductions_per_op": 136075.52,
+          "result_hash": 61172193,
+          "us_per_op": 1753.1
+        }
+      ],
+      "wildcard": [
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 54.94
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.44,
+          "result_hash": 86659229,
+          "us_per_op": 54.0
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 55.11
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 55.96
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 56.72
+        }
+      ]
+    },
+    "current": {
+      "chain_sum": [
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 40.945
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 41.929
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 42.247
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 42.407
+        },
+        {
+          "case": "chain_sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 1.334,
+          "mode": "evaluate",
+          "reductions_per_op": 13319.647,
+          "result_hash": 16799329,
+          "us_per_op": 41.638
+        }
+      ],
+      "compile_field": [
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0094,
+          "mode": "compile",
+          "reductions_per_op": 274.5644,
+          "result_hash": 54998772,
+          "us_per_op": 0.6173
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6051
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6116
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6201
+        },
+        {
+          "case": "compile_field",
+          "iterations": 10000,
+          "minor_gcs_per_op": 0.0152,
+          "mode": "compile",
+          "reductions_per_op": 274.6922,
+          "result_hash": 54998772,
+          "us_per_op": 0.6093
+        }
+      ],
+      "descendants": [
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205698.05,
+          "result_hash": 2642358,
+          "us_per_op": 314.9
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205683.73,
+          "result_hash": 2642358,
+          "us_per_op": 310.71
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205683.45,
+          "result_hash": 2642358,
+          "us_per_op": 319.48
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205685.57,
+          "result_hash": 2642358,
+          "us_per_op": 318.87
+        },
+        {
+          "case": "descendants",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.04,
+          "mode": "evaluate",
+          "reductions_per_op": 205684.97,
+          "result_hash": 2642358,
+          "us_per_op": 330.16
+        }
+      ],
+      "filter": [
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.83,
+          "result_hash": 20912551,
+          "us_per_op": 99.138
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.904,
+          "result_hash": 20912551,
+          "us_per_op": 97.429
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.874,
+          "result_hash": 20912551,
+          "us_per_op": 97.215
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.882,
+          "result_hash": 20912551,
+          "us_per_op": 94.955
+        },
+        {
+          "case": "filter",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.933,
+          "mode": "evaluate",
+          "reductions_per_op": 25757.896,
+          "result_hash": 20912551,
+          "us_per_op": 93.579
+        }
+      ],
+      "format_number_each": [
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.24,
+          "mode": "evaluate",
+          "reductions_per_op": 1355949.06,
+          "result_hash": 77727890,
+          "us_per_op": 7608.22
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.48,
+          "mode": "evaluate",
+          "reductions_per_op": 1356057.6,
+          "result_hash": 77727890,
+          "us_per_op": 7080.22
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.2,
+          "mode": "evaluate",
+          "reductions_per_op": 1355602.22,
+          "result_hash": 77727890,
+          "us_per_op": 7188.16
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.2,
+          "mode": "evaluate",
+          "reductions_per_op": 1355597.98,
+          "result_hash": 77727890,
+          "us_per_op": 7045.12
+        },
+        {
+          "case": "format_number_each",
+          "iterations": 50,
+          "minor_gcs_per_op": 0.48,
+          "mode": "evaluate",
+          "reductions_per_op": 1356054.56,
+          "result_hash": 77727890,
+          "us_per_op": 6989.66
+        }
+      ],
+      "format_number_integer": [
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 1.1,
+          "mode": "evaluate",
+          "reductions_per_op": 67807.26,
+          "result_hash": 62354838,
+          "us_per_op": 280.9
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 1.02,
+          "mode": "evaluate",
+          "reductions_per_op": 67810.78,
+          "result_hash": 62354838,
+          "us_per_op": 254.04
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 1.02,
+          "mode": "evaluate",
+          "reductions_per_op": 67810.44,
+          "result_hash": 62354838,
+          "us_per_op": 250.92
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 1.02,
+          "mode": "evaluate",
+          "reductions_per_op": 67810.92,
+          "result_hash": 62354838,
+          "us_per_op": 250.96
+        },
+        {
+          "case": "format_number_integer",
+          "iterations": 50,
+          "minor_gcs_per_op": 1.02,
+          "mode": "evaluate",
+          "reductions_per_op": 67810.38,
+          "result_hash": 62354838,
+          "us_per_op": 257.48
+        }
+      ],
+      "from_millis_each": [
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.46,
+          "mode": "evaluate",
+          "reductions_per_op": 152545.4,
+          "result_hash": 44061525,
+          "us_per_op": 557.19
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152614.74,
+          "result_hash": 44061525,
+          "us_per_op": 547.72
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152613.63,
+          "result_hash": 44061525,
+          "us_per_op": 537.31
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152614.07,
+          "result_hash": 44061525,
+          "us_per_op": 534.65
+        },
+        {
+          "case": "from_millis_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.6,
+          "mode": "evaluate",
+          "reductions_per_op": 152615.1,
+          "result_hash": 44061525,
+          "us_per_op": 542.22
+        }
+      ],
+      "from_millis_picture": [
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.36,
+          "mode": "evaluate",
+          "reductions_per_op": 128523.14,
+          "result_hash": 36568399,
+          "us_per_op": 479.9
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128255.0,
+          "result_hash": 36568399,
+          "us_per_op": 456.2
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128254.26,
+          "result_hash": 36568399,
+          "us_per_op": 443.44
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128254.98,
+          "result_hash": 36568399,
+          "us_per_op": 449.12
+        },
+        {
+          "case": "from_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 2.56,
+          "mode": "evaluate",
+          "reductions_per_op": 128253.88,
+          "result_hash": 36568399,
+          "us_per_op": 448.28
+        }
+      ],
+      "group_object": [
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.54,
+          "result_hash": 79006981,
+          "us_per_op": 148.02
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24792.14,
+          "result_hash": 79006981,
+          "us_per_op": 146.08
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24792.22,
+          "result_hash": 79006981,
+          "us_per_op": 148.68
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.66,
+          "result_hash": 79006981,
+          "us_per_op": 148.22
+        },
+        {
+          "case": "group_object",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.0,
+          "mode": "evaluate",
+          "reductions_per_op": 24791.46,
+          "result_hash": 79006981,
+          "us_per_op": 148.18
+        }
+      ],
+      "index_negative": [
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.168,
+          "result_hash": 65787489,
+          "us_per_op": 1.624
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.634
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.168,
+          "result_hash": 65787489,
+          "us_per_op": 1.63
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.168,
+          "result_hash": 65787489,
+          "us_per_op": 1.88
+        },
+        {
+          "case": "index_negative",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 1146.159,
+          "result_hash": 65787489,
+          "us_per_op": 1.936
+        }
+      ],
+      "index_zero": [
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.784,
+          "result_hash": 2614250,
+          "us_per_op": 0.186
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.189
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.784,
+          "result_hash": 2614250,
+          "us_per_op": 0.203
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.784,
+          "result_hash": 2614250,
+          "us_per_op": 0.182
+        },
+        {
+          "case": "index_zero",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.001,
+          "mode": "evaluate",
+          "reductions_per_op": 82.774,
+          "result_hash": 2614250,
+          "us_per_op": 0.202
+        }
+      ],
+      "map_lambda": [
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.9,
+          "result_hash": 110690341,
+          "us_per_op": 156.13333333333333
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.81333333333,
+          "result_hash": 110690341,
+          "us_per_op": 150.09333333333333
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.806666666664,
+          "result_hash": 110690341,
+          "us_per_op": 149.52333333333334
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.846666666665,
+          "result_hash": 110690341,
+          "us_per_op": 150.34333333333333
+        },
+        {
+          "case": "map_lambda",
+          "iterations": 300,
+          "minor_gcs_per_op": 1.84,
+          "mode": "evaluate",
+          "reductions_per_op": 52459.84,
+          "result_hash": 110690341,
+          "us_per_op": 150.17666666666668
+        }
+      ],
+      "match_each": [
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.14,
+          "mode": "evaluate",
+          "reductions_per_op": 171413.03,
+          "result_hash": 132429003,
+          "us_per_op": 1028.53
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171420.27,
+          "result_hash": 132429003,
+          "us_per_op": 1058.98
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171419.31,
+          "result_hash": 132429003,
+          "us_per_op": 1012.14
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171419.55,
+          "result_hash": 132429003,
+          "us_per_op": 1052.62
+        },
+        {
+          "case": "match_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.4,
+          "mode": "evaluate",
+          "reductions_per_op": 171419.91,
+          "result_hash": 132429003,
+          "us_per_op": 1014.78
+        }
+      ],
+      "merge_objects": [
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.82,
+          "result_hash": 82401079,
+          "us_per_op": 17.51
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 17.32
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.82,
+          "result_hash": 82401079,
+          "us_per_op": 17.08
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.82,
+          "result_hash": 82401079,
+          "us_per_op": 16.96
+        },
+        {
+          "case": "merge_objects",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.01,
+          "mode": "evaluate",
+          "reductions_per_op": 7148.66,
+          "result_hash": 82401079,
+          "us_per_op": 17.46
+        }
+      ],
+      "number_float_each": [
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.23,
+          "mode": "evaluate",
+          "reductions_per_op": 108766.39,
+          "result_hash": 88603174,
+          "us_per_op": 527.11
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.08,
+          "result_hash": 88603174,
+          "us_per_op": 516.21
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.14,
+          "result_hash": 88603174,
+          "us_per_op": 498.06
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.38,
+          "result_hash": 88603174,
+          "us_per_op": 515.28
+        },
+        {
+          "case": "number_float_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.89,
+          "mode": "evaluate",
+          "reductions_per_op": 108762.48,
+          "result_hash": 88603174,
+          "us_per_op": 510.03
+        }
+      ],
+      "reduce_recursive": [
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 40.53333333333333,
+          "mode": "evaluate",
+          "reductions_per_op": 357224.5333333333,
+          "result_hash": 79801108,
+          "us_per_op": 1599.8666666666666
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1570.4
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1591.4333333333334
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1577.9
+        },
+        {
+          "case": "reduce_recursive",
+          "iterations": 30,
+          "minor_gcs_per_op": 39.36666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 357337.1,
+          "result_hash": 79801108,
+          "us_per_op": 1578.2333333333333
+        }
+      ],
+      "replace_each": [
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.24,
+          "mode": "evaluate",
+          "reductions_per_op": 97533.99,
+          "result_hash": 24210486,
+          "us_per_op": 699.16
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97290.59,
+          "result_hash": 24210486,
+          "us_per_op": 695.55
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97290.99,
+          "result_hash": 24210486,
+          "us_per_op": 691.16
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97290.99,
+          "result_hash": 24210486,
+          "us_per_op": 707.96
+        },
+        {
+          "case": "replace_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.27,
+          "mode": "evaluate",
+          "reductions_per_op": 97290.91,
+          "result_hash": 24210486,
+          "us_per_op": 672.68
+        }
+      ],
+      "serialize_orders": [
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.18,
+          "mode": "evaluate",
+          "reductions_per_op": 307700.33,
+          "result_hash": 11529360,
+          "us_per_op": 882.42
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308793.14,
+          "result_hash": 11529360,
+          "us_per_op": 872.58
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.18,
+          "mode": "evaluate",
+          "reductions_per_op": 307700.69,
+          "result_hash": 11529360,
+          "us_per_op": 897.05
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.18,
+          "mode": "evaluate",
+          "reductions_per_op": 307695.61,
+          "result_hash": 11529360,
+          "us_per_op": 885.07
+        },
+        {
+          "case": "serialize_orders",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.32,
+          "mode": "evaluate",
+          "reductions_per_op": 308796.94,
+          "result_hash": 11529360,
+          "us_per_op": 907.38
+        }
+      ],
+      "sort_comparator": [
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437915.13333333336,
+          "result_hash": 8689764,
+          "us_per_op": 1309.3
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437919.7,
+          "result_hash": 8689764,
+          "us_per_op": 1285.8666666666666
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437916.6,
+          "result_hash": 8689764,
+          "us_per_op": 1301.6333333333334
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437917.0,
+          "result_hash": 8689764,
+          "us_per_op": 1287.6333333333334
+        },
+        {
+          "case": "sort_comparator",
+          "iterations": 30,
+          "minor_gcs_per_op": 4.666666666666667,
+          "mode": "evaluate",
+          "reductions_per_op": 437917.43333333335,
+          "result_hash": 8689764,
+          "us_per_op": 1309.4333333333334
+        }
+      ],
+      "spread_each": [
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.19,
+          "mode": "evaluate",
+          "reductions_per_op": 283763.18,
+          "result_hash": 78295827,
+          "us_per_op": 727.58
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284268.82,
+          "result_hash": 78295827,
+          "us_per_op": 731.56
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284264.66,
+          "result_hash": 78295827,
+          "us_per_op": 716.43
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284264.78,
+          "result_hash": 78295827,
+          "us_per_op": 717.08
+        },
+        {
+          "case": "spread_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.22,
+          "mode": "evaluate",
+          "reductions_per_op": 284271.26,
+          "result_hash": 78295827,
+          "us_per_op": 724.46
+        }
+      ],
+      "sum": [
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.033,
+          "result_hash": 16799329,
+          "us_per_op": 41.3
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 40.925
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.033,
+          "result_hash": 16799329,
+          "us_per_op": 42.347
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.033,
+          "result_hash": 16799329,
+          "us_per_op": 41.145
+        },
+        {
+          "case": "sum",
+          "iterations": 1000,
+          "minor_gcs_per_op": 0.799,
+          "mode": "evaluate",
+          "reductions_per_op": 13247.034,
+          "result_hash": 16799329,
+          "us_per_op": 41.852
+        }
+      ],
+      "to_millis_picture": [
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.82,
+          "mode": "evaluate",
+          "reductions_per_op": 454986.06,
+          "result_hash": 31563603,
+          "us_per_op": 3335.76
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455015.9,
+          "result_hash": 31563603,
+          "us_per_op": 3475.94
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455016.24,
+          "result_hash": 31563603,
+          "us_per_op": 3365.3
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455016.56,
+          "result_hash": 31563603,
+          "us_per_op": 3524.38
+        },
+        {
+          "case": "to_millis_picture",
+          "iterations": 50,
+          "minor_gcs_per_op": 4.8,
+          "mode": "evaluate",
+          "reductions_per_op": 455016.22,
+          "result_hash": 31563603,
+          "us_per_op": 3348.48
+        }
+      ],
+      "trim_each": [
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.7,
+          "mode": "evaluate",
+          "reductions_per_op": 136124.07,
+          "result_hash": 61172193,
+          "us_per_op": 1723.5
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136165.78,
+          "result_hash": 61172193,
+          "us_per_op": 1695.98
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136166.46,
+          "result_hash": 61172193,
+          "us_per_op": 1725.98
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136165.54,
+          "result_hash": 61172193,
+          "us_per_op": 1715.77
+        },
+        {
+          "case": "trim_each",
+          "iterations": 100,
+          "minor_gcs_per_op": 0.81,
+          "mode": "evaluate",
+          "reductions_per_op": 136166.14,
+          "result_hash": 61172193,
+          "us_per_op": 1710.36
+        }
+      ],
+      "wildcard": [
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.44,
+          "result_hash": 86659229,
+          "us_per_op": 54.14
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 56.02
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.44,
+          "result_hash": 86659229,
+          "us_per_op": 56.05
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.44,
+          "result_hash": 86659229,
+          "us_per_op": 55.79
+        },
+        {
+          "case": "wildcard",
+          "iterations": 100,
+          "minor_gcs_per_op": 1.99,
+          "mode": "evaluate",
+          "reductions_per_op": 21675.45,
+          "result_hash": 86659229,
+          "us_per_op": 55.57
+        }
+      ]
+    }
+  },
+  "rounds": 5,
+  "summary": {
+    "chain_sum": {
+      "base": {
+        "minor_gcs_median": 1.334,
+        "reductions_median": 13319.647,
+        "us_max": 41.907,
+        "us_median": 41.048,
+        "us_min": 40.781
+      },
+      "current": {
+        "minor_gcs_median": 1.334,
+        "reductions_median": 13319.647,
+        "us_max": 42.407,
+        "us_median": 41.929,
+        "us_min": 40.945
+      },
+      "iterations": 1000,
+      "mode": "evaluate",
+      "result_hash": 16799329
+    },
+    "compile_field": {
+      "base": {
+        "minor_gcs_median": 0.0152,
+        "reductions_median": 274.6922,
+        "us_max": 0.8838,
+        "us_median": 0.6387,
+        "us_min": 0.6141
+      },
+      "current": {
+        "minor_gcs_median": 0.0152,
+        "reductions_median": 274.6922,
+        "us_max": 0.6201,
+        "us_median": 0.6116,
+        "us_min": 0.6051
+      },
+      "iterations": 10000,
+      "mode": "compile",
+      "result_hash": 54998772
+    },
+    "descendants": {
+      "base": {
+        "minor_gcs_median": 0.04,
+        "reductions_median": 205684.85,
+        "us_max": 331.6,
+        "us_median": 321.22,
+        "us_min": 311.05
+      },
+      "current": {
+        "minor_gcs_median": 0.04,
+        "reductions_median": 205684.97,
+        "us_max": 330.16,
+        "us_median": 318.87,
+        "us_min": 310.71
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 2642358
+    },
+    "filter": {
+      "base": {
+        "minor_gcs_median": 0.933,
+        "reductions_median": 25757.912,
+        "us_max": 97.416,
+        "us_median": 95.388,
+        "us_min": 94.819
+      },
+      "current": {
+        "minor_gcs_median": 0.933,
+        "reductions_median": 25757.882,
+        "us_max": 99.138,
+        "us_median": 97.215,
+        "us_min": 93.579
+      },
+      "iterations": 1000,
+      "mode": "evaluate",
+      "result_hash": 20912551
+    },
+    "format_number_each": {
+      "base": {
+        "minor_gcs_median": 0.44,
+        "reductions_median": 1356055.36,
+        "us_max": 7330.32,
+        "us_median": 7069.62,
+        "us_min": 6989.14
+      },
+      "current": {
+        "minor_gcs_median": 0.24,
+        "reductions_median": 1355949.06,
+        "us_max": 7608.22,
+        "us_median": 7080.22,
+        "us_min": 6989.66
+      },
+      "iterations": 50,
+      "mode": "evaluate",
+      "result_hash": 77727890
+    },
+    "format_number_integer": {
+      "base": {
+        "minor_gcs_median": 0.02,
+        "reductions_median": 1141882.38,
+        "us_max": 5934.8,
+        "us_median": 5722.62,
+        "us_min": 5626.4
+      },
+      "current": {
+        "minor_gcs_median": 1.02,
+        "reductions_median": 67810.44,
+        "us_max": 280.9,
+        "us_median": 254.04,
+        "us_min": 250.92
+      },
+      "iterations": 50,
+      "mode": "evaluate",
+      "result_hash": 62354838
+    },
+    "from_millis_each": {
+      "base": {
+        "minor_gcs_median": 1.6,
+        "reductions_median": 152613.59,
+        "us_max": 565.39,
+        "us_median": 539.69,
+        "us_min": 538.35
+      },
+      "current": {
+        "minor_gcs_median": 1.6,
+        "reductions_median": 152614.07,
+        "us_max": 557.19,
+        "us_median": 542.22,
+        "us_min": 534.65
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 44061525
+    },
+    "from_millis_picture": {
+      "base": {
+        "minor_gcs_median": 2.56,
+        "reductions_median": 128255.48,
+        "us_max": 464.38,
+        "us_median": 456.74,
+        "us_min": 448.16
+      },
+      "current": {
+        "minor_gcs_median": 2.56,
+        "reductions_median": 128254.98,
+        "us_max": 479.9,
+        "us_median": 449.12,
+        "us_min": 443.44
+      },
+      "iterations": 50,
+      "mode": "evaluate",
+      "result_hash": 36568399
+    },
+    "group_object": {
+      "base": {
+        "minor_gcs_median": 0.0,
+        "reductions_median": 24791.54,
+        "us_max": 150.76,
+        "us_median": 146.88,
+        "us_min": 146.43
+      },
+      "current": {
+        "minor_gcs_median": 0.0,
+        "reductions_median": 24791.66,
+        "us_max": 148.68,
+        "us_median": 148.18,
+        "us_min": 146.08
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 79006981
+    },
+    "index_negative": {
+      "base": {
+        "minor_gcs_median": 0.001,
+        "reductions_median": 1146.159,
+        "us_max": 1.724,
+        "us_median": 1.665,
+        "us_min": 1.622
+      },
+      "current": {
+        "minor_gcs_median": 0.001,
+        "reductions_median": 1146.168,
+        "us_max": 1.936,
+        "us_median": 1.634,
+        "us_min": 1.624
+      },
+      "iterations": 1000,
+      "mode": "evaluate",
+      "result_hash": 65787489
+    },
+    "index_zero": {
+      "base": {
+        "minor_gcs_median": 0.001,
+        "reductions_median": 82.774,
+        "us_max": 0.212,
+        "us_median": 0.192,
+        "us_min": 0.185
+      },
+      "current": {
+        "minor_gcs_median": 0.001,
+        "reductions_median": 82.784,
+        "us_max": 0.203,
+        "us_median": 0.189,
+        "us_min": 0.182
+      },
+      "iterations": 1000,
+      "mode": "evaluate",
+      "result_hash": 2614250
+    },
+    "map_lambda": {
+      "base": {
+        "minor_gcs_median": 1.84,
+        "reductions_median": 52459.84,
+        "us_max": 152.43333333333334,
+        "us_median": 149.10666666666665,
+        "us_min": 146.02333333333334
+      },
+      "current": {
+        "minor_gcs_median": 1.84,
+        "reductions_median": 52459.84,
+        "us_max": 156.13333333333333,
+        "us_median": 150.17666666666668,
+        "us_min": 149.52333333333334
+      },
+      "iterations": 300,
+      "mode": "evaluate",
+      "result_hash": 110690341
+    },
+    "match_each": {
+      "base": {
+        "minor_gcs_median": 0.4,
+        "reductions_median": 171417.71,
+        "us_max": 1288.98,
+        "us_median": 1037.02,
+        "us_min": 1013.87
+      },
+      "current": {
+        "minor_gcs_median": 0.4,
+        "reductions_median": 171419.55,
+        "us_max": 1058.98,
+        "us_median": 1028.53,
+        "us_min": 1012.14
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 132429003
+    },
+    "merge_objects": {
+      "base": {
+        "minor_gcs_median": 0.01,
+        "reductions_median": 7148.66,
+        "us_max": 17.18,
+        "us_median": 16.68,
+        "us_min": 16.66
+      },
+      "current": {
+        "minor_gcs_median": 0.01,
+        "reductions_median": 7148.82,
+        "us_max": 17.51,
+        "us_median": 17.32,
+        "us_min": 16.96
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 82401079
+    },
+    "number_float_each": {
+      "base": {
+        "minor_gcs_median": 1.89,
+        "reductions_median": 108762.2,
+        "us_max": 523.6,
+        "us_median": 519.89,
+        "us_min": 504.09
+      },
+      "current": {
+        "minor_gcs_median": 1.89,
+        "reductions_median": 108762.38,
+        "us_max": 527.11,
+        "us_median": 515.28,
+        "us_min": 498.06
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 88603174
+    },
+    "reduce_recursive": {
+      "base": {
+        "minor_gcs_median": 39.36666666666667,
+        "reductions_median": 357337.1,
+        "us_max": 1621.6666666666667,
+        "us_median": 1592.0,
+        "us_min": 1568.2
+      },
+      "current": {
+        "minor_gcs_median": 39.36666666666667,
+        "reductions_median": 357337.1,
+        "us_max": 1599.8666666666666,
+        "us_median": 1578.2333333333333,
+        "us_min": 1570.4
+      },
+      "iterations": 30,
+      "mode": "evaluate",
+      "result_hash": 79801108
+    },
+    "replace_each": {
+      "base": {
+        "minor_gcs_median": 0.27,
+        "reductions_median": 97291.47,
+        "us_max": 718.9,
+        "us_median": 706.48,
+        "us_min": 690.94
+      },
+      "current": {
+        "minor_gcs_median": 0.27,
+        "reductions_median": 97290.99,
+        "us_max": 707.96,
+        "us_median": 695.55,
+        "us_min": 672.68
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 24210486
+    },
+    "serialize_orders": {
+      "base": {
+        "minor_gcs_median": 0.32,
+        "reductions_median": 308793.78,
+        "us_max": 909.29,
+        "us_median": 903.9,
+        "us_min": 882.1
+      },
+      "current": {
+        "minor_gcs_median": 0.18,
+        "reductions_median": 307700.69,
+        "us_max": 907.38,
+        "us_median": 885.07,
+        "us_min": 872.58
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 11529360
+    },
+    "sort_comparator": {
+      "base": {
+        "minor_gcs_median": 4.666666666666667,
+        "reductions_median": 437917.1666666667,
+        "us_max": 1314.1333333333334,
+        "us_median": 1288.4666666666667,
+        "us_min": 1266.9333333333334
+      },
+      "current": {
+        "minor_gcs_median": 4.666666666666667,
+        "reductions_median": 437917.0,
+        "us_max": 1309.4333333333334,
+        "us_median": 1301.6333333333334,
+        "us_min": 1285.8666666666666
+      },
+      "iterations": 30,
+      "mode": "evaluate",
+      "result_hash": 8689764
+    },
+    "spread_each": {
+      "base": {
+        "minor_gcs_median": 0.22,
+        "reductions_median": 284269.22,
+        "us_max": 737.96,
+        "us_median": 726.24,
+        "us_min": 714.36
+      },
+      "current": {
+        "minor_gcs_median": 0.22,
+        "reductions_median": 284264.78,
+        "us_max": 731.56,
+        "us_median": 724.46,
+        "us_min": 716.43
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 78295827
+    },
+    "sum": {
+      "base": {
+        "minor_gcs_median": 0.799,
+        "reductions_median": 13247.034,
+        "us_max": 40.857,
+        "us_median": 40.213,
+        "us_min": 39.757
+      },
+      "current": {
+        "minor_gcs_median": 0.799,
+        "reductions_median": 13247.033,
+        "us_max": 42.347,
+        "us_median": 41.3,
+        "us_min": 40.925
+      },
+      "iterations": 1000,
+      "mode": "evaluate",
+      "result_hash": 16799329
+    },
+    "to_millis_picture": {
+      "base": {
+        "minor_gcs_median": 4.8,
+        "reductions_median": 455015.9,
+        "us_max": 3487.46,
+        "us_median": 3464.08,
+        "us_min": 3332.06
+      },
+      "current": {
+        "minor_gcs_median": 4.8,
+        "reductions_median": 455016.22,
+        "us_max": 3524.38,
+        "us_median": 3365.3,
+        "us_min": 3335.76
+      },
+      "iterations": 50,
+      "mode": "evaluate",
+      "result_hash": 31563603
+    },
+    "trim_each": {
+      "base": {
+        "minor_gcs_median": 0.81,
+        "reductions_median": 136165.42,
+        "us_max": 1753.1,
+        "us_median": 1725.3,
+        "us_min": 1698.66
+      },
+      "current": {
+        "minor_gcs_median": 0.81,
+        "reductions_median": 136165.78,
+        "us_max": 1725.98,
+        "us_median": 1715.77,
+        "us_min": 1695.98
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 61172193
+    },
+    "wildcard": {
+      "base": {
+        "minor_gcs_median": 1.99,
+        "reductions_median": 21675.45,
+        "us_max": 56.72,
+        "us_median": 55.11,
+        "us_min": 54.0
+      },
+      "current": {
+        "minor_gcs_median": 1.99,
+        "reductions_median": 21675.44,
+        "us_max": 56.05,
+        "us_median": 55.79,
+        "us_min": 54.14
+      },
+      "iterations": 100,
+      "mode": "evaluate",
+      "result_hash": 86659229
+    }
+  }
+}

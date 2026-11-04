@@ -32,7 +32,9 @@ def render(results):
     lines = [
         START,
         f"**{results['case_count']} expressions:** {results['comparable_count']} matching results; "
-        f"{results['mismatch_count']} mismatches excluded from timing ratios.",
+        f"{results['mismatch_count']} "
+        f"{'mismatch' if results['mismatch_count'] == 1 else 'mismatches'} "
+        "excluded from timing ratios.",
         "",
         "| Category | Matching cases | Lower Jexata median | Lower JS median |",
         "| --- | ---: | ---: | ---: |",

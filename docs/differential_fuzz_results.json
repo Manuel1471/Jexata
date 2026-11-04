@@ -44,56 +44,6 @@
           1704164645000
         ]
       }
-    },
-    {
-      "case": {
-        "data": {
-          "orders": [
-            {
-              "text": "Order 1"
-            },
-            {
-              "text": "Order 2"
-            }
-          ]
-        },
-        "name": "known_match_shape",
-        "source": "$map(orders,function($o){$match($o.text,/Order/)})"
-      },
-      "jexata": {
-        "kind": "value",
-        "value": [
-          {
-            "groups": [],
-            "index": 0,
-            "match": "Order"
-          },
-          {
-            "groups": [],
-            "index": 0,
-            "match": "Order"
-          }
-        ]
-      },
-      "jsonata_js": {
-        "kind": "value",
-        "value": [
-          [
-            {
-              "groups": [],
-              "index": 0,
-              "match": "Order"
-            }
-          ],
-          [
-            {
-              "groups": [],
-              "index": 0,
-              "match": "Order"
-            }
-          ]
-        ]
-      }
     }
   ],
   "reference_commit": "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03",

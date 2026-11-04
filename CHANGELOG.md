@@ -9,6 +9,7 @@
 - Split constructors, path selection, and regex callbacks into focused modules; CI enforces 1,300 physical lines for the main evaluator and a 70% ExUnit coverage floor.
 - Linked bounded evaluation workers to their watcher so an externally killed watcher also stops its worker.
 - Added `$random` and `$clone` for ordinary JSON-shaped inputs and expanded differential fuzzing to 20,000 local cases plus two nightly random-seed batches.
+- Preserved nested `$match` result arrays inside `$map`, resolving the shape difference found by the 64-case JS comparison.
 
 The complete JSONata v2.2.0 reference fixture set reports 1,676 passing, three output-order differences, zero unsupported, and zero skipped cases. The earlier 1,271/1,271 result covered only `case*.json` files. The remaining differences are `$keys(%)` order on native Elixir input maps. Version 1.0.0 adds date/time picture parsing and formatting, integer-picture functions, `$now`, `$millis`, focus and index joins, and parent navigation. Comparator `$sort` uses a stable merge sort, numeric operators and ASCII string operations have fast paths, `$pad` has a one-million-codepoint output limit, and CI checks reduction budgets for selected workloads. See `docs/COMPATIBILITY.md` for details and execution limits.
 
