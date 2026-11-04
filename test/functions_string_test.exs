@@ -34,6 +34,21 @@ defmodule Jexata.FunctionsStringTest do
     assert Jexata.run("$contains('ORDER', /Order/i)", %{}) == {:ok, true}
   end
 
+  test "capture templates preserve dollars, multi-digit references and literal text" do
+    pattern = ~r/(Order) ([0-9]+)/
+
+    for {template, expected} <- [
+          {"$2 $1", "123 Order"},
+          {"$$-$1", "$-Order"},
+          {"$10", "Order0"},
+          {"$9", ""},
+          {"$x and $", "$x and $"}
+        ] do
+      assert Jexata.Functions.String.call("$replace", ["Order 123", pattern, template]) ==
+               {:ok, expected}
+    end
+  end
+
   test "$match keeps its array boundary inside $map" do
     match = %{"match" => "Order", "index" => 0, "groups" => []}
     data = %{"orders" => [%{"text" => "Order 1"}, %{"text" => "Order 2"}]}

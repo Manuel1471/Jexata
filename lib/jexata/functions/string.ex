@@ -372,17 +372,40 @@ defmodule Jexata.Functions.String do
   end
 
   defp prepare_replacement(template) do
-    matches = Regex.scan(~r/\$\$|\$\d+/, template, return: :index)
+    replacement_parts(template, 0, 0, [])
+  end
 
-    {parts, cursor} =
-      Enum.map_reduce(matches, 0, fn [{start, size}], cursor ->
-        literal = binary_part(template, cursor, start - cursor)
-        token = binary_part(template, start, size)
-        part = if token == "$$", do: :dollar, else: {:group, binary_part(token, 1, size - 1)}
-        {[literal, part], start + size}
-      end)
+  defp replacement_parts(template, search, literal_start, acc) do
+    size = byte_size(template)
 
-    [parts, binary_part(template, cursor, byte_size(template) - cursor)]
+    case :binary.match(template, "$", scope: {search, size - search}) do
+      :nomatch ->
+        [Enum.reverse(acc), binary_part(template, literal_start, size - literal_start)]
+
+      {start, 1} ->
+        next = start + 1
+
+        cond do
+          next < size and :binary.at(template, next) == ?$ ->
+            literal = binary_part(template, literal_start, start - literal_start)
+            replacement_parts(template, next + 1, next + 1, [[literal, :dollar] | acc])
+
+          next < size and :binary.at(template, next) in ?0..?9 ->
+            finish = replacement_digits_end(template, next, size)
+            literal = binary_part(template, literal_start, start - literal_start)
+            digits = binary_part(template, next, finish - next)
+            replacement_parts(template, finish, finish, [[literal, {:group, digits}] | acc])
+
+          true ->
+            replacement_parts(template, next, literal_start, acc)
+        end
+    end
+  end
+
+  defp replacement_digits_end(template, offset, size) do
+    if offset < size and :binary.at(template, offset) in ?0..?9,
+      do: replacement_digits_end(template, offset + 1, size),
+      else: offset
   end
 
   defp expand_replacement(template, value, full_match, captures) do
