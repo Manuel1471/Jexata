@@ -115,6 +115,20 @@ The navigation implementation adds parent paths, focus and index joins, and date
 
 The largest positive median change among the 22 workloads was below 3%; this is a check against a broad regression, not proof that each individual operation became faster. The parent-navigation mode is prepared at compile time, so expressions without `%` do not scan their AST during evaluation.
 
+## Evaluator below 1,300 physical lines
+
+Commit `2d3f855` moved constructors, path selection, and regex callbacks to focused modules, leaving `evaluator.ex` at **1,296 physical lines**. CI checks the physical line count with `wc -l`. A [five-round paired comparison](evaluator_1300_comparison.json) against `2c1b0ce` returned identical result hashes for all 22 workloads. Selected medians in µs/op:
+
+| Workload | Before | After | Reductions before → after |
+| --- | ---: | ---: | ---: |
+| Filter, 1,000 orders | 95.46 | 97.31 | 25,758 → 25,758 |
+| Map with lambda | 147.81 | 150.85 | 52,460 → 52,460 |
+| Comparator sort | 1,285.17 | 1,337.27 | 437,908 → 437,916 |
+| Regex replacement | 688.92 | 685.04 | 97,292 → 97,291 |
+| Object serialization | 923.78 | 932.34 | 308,802 → 308,793 |
+
+The largest positive median change was 5.6% for a small object-merge workload; its reduction count stayed the same. The paired run is evidence that the extraction preserved outputs and did not add an algorithmic pass. Timing differences at this scale are diagnostic and may be run-to-run noise.
+
 ## Reproduce
 
 ```bash
