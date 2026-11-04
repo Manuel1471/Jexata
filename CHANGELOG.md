@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-Jexata compiles and evaluates JSONata expressions over native Elixir data. The public API supports reusable compiled expressions, external bindings, structured errors, and bounded evaluation with time, process-heap, result-size, and regex limits.
+Jexata compiles and evaluates JSONata expressions over native Elixir data. The public API supports reusable compiled expressions, external bindings, structured errors, and bounded evaluation with time, process-heap, result-size, optional BEAM reduction, and regex limits.
 
 The language implementation includes paths, predicates, constructors, grouping and sorting, variables, lambdas, higher-order functions, partial application, transforms, regex, numeric and string functions, and date/time and integer pictures. It has no production dependency on JavaScript or a database.
 
