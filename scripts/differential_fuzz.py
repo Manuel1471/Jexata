@@ -134,7 +134,8 @@ def main():
               "known_differences": known, "unexpected_mismatches": unexpected}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n")
-    print(f"{len(cases)} cases, {len(known)} known differences, "
+    known_label = "known difference" if len(known) == 1 else "known differences"
+    print(f"{len(cases)} cases, {len(known)} {known_label}, "
           f"{len(unexpected)} unexpected mismatches; wrote {args.output}")
     for mismatch in unexpected[:10]:
         print(json.dumps(mismatch, ensure_ascii=False))
