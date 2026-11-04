@@ -567,7 +567,7 @@ defmodule Jexata.Evaluator do
   defp eval_index_filter(left, index, data, root) do
     with {:ok, source} <- eval(left, data, root) do
       keep_array? = is_struct(source, Value.Sequence) and source.keep_array
-      {:ok, Value.sequence([Enum.at(Value.items(source), index, Value.undefined())], keep_array?)}
+      {:ok, Value.sequence([IndexBindings.at(Value.items(source), index)], keep_array?)}
     end
   end
 
@@ -633,7 +633,7 @@ defmodule Jexata.Evaluator do
   defp eval_index_filtered_path(left, index, name, data, context) do
     with {:ok, source} <- eval(left, data, context) do
       keep_array? = is_struct(source, Value.Sequence) and source.keep_array
-      item = Enum.at(Value.items(source), index, Value.undefined())
+      item = IndexBindings.at(Value.items(source), index)
 
       if Value.undefined?(item) do
         {:ok, Value.sequence([], keep_array?)}

@@ -21,6 +21,10 @@ defmodule Jexata.Evaluator.IndexBindings do
   def keep_array?({:compiled_path, left, _, _}), do: keep_array?(left)
   def keep_array?(_), do: false
 
+  def at([], -1), do: Value.undefined()
+  def at(items, -1), do: List.last(items)
+  def at(items, index), do: Enum.at(items, index, Value.undefined())
+
   def expand(mode, previous, step, name, index_name, data, context, evaluate_previous, evaluate) do
     parents =
       if previous == nil,
