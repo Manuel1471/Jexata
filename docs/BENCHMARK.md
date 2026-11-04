@@ -129,6 +129,10 @@ Commit `2d3f855` moved constructors, path selection, and regex callbacks to focu
 
 The largest positive median change was 5.6% for a small object-merge workload; its reduction count stayed the same. The paired run is evidence that the extraction preserved outputs and did not add an algorithmic pass. Timing differences at this scale are diagnostic and may be run-to-run noise.
 
+## Canonical date picture fast path
+
+Commit `7118619` formats `[Y0001]-[M01]-[D01]` directly from the UTC date while retaining the general picture formatter for other formats and out-of-range years. In a [five-round paired comparison](date_picture_fast_path_comparison.json) against `568fdac`, `$fromMillis` with this picture over 1,000 orders moved from **5,002.12 to 456.02 µs/op** (−90.9%) and from 927,752 to 128,256 reductions/op. All 23 workload result hashes agreed; the ordinary `$fromMillis` case moved 547.97 → 553.69 µs/op and the filter 96.91 → 96.98 µs/op. The separate [jsonata.js comparison](JSONATA_JS_COMPARISON.md) now measures this workload at 467.82 µs/op in Jexata versus 2,536.51 µs/op in JS on the same host.
+
 ## Reproduce
 
 ```bash
