@@ -1,6 +1,6 @@
 # Jexata
 
-Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes 1,676 of 1,679 JSONata v2.2.0 reference cases, with three output-order differences and no unsupported cases in that suite. The earlier 1,271/1,271 figure covered only files named `case*.json`. See the [compatibility report](docs/COMPATIBILITY.md) for the test method and remaining gaps.
+Jexata 1.0.0 compiles [JSONata](https://docs.jsonata.org/) expressions and evaluates them against native Elixir data. It is a pure Elixir library with no production dependencies. Its local runner passes 1,676 of 1,679 JSONata v2.2.0 reference cases, with three output-order differences and no unsupported cases in that suite. See the [compatibility report](docs/COMPATIBILITY.md) for the test method and remaining gaps.
 
 Jason decodes or encodes JSON. Jexata queries and transforms already decoded Elixir maps and lists. String keys in maps correspond to JSON object properties.
 
@@ -96,12 +96,12 @@ mix run scripts/reductions_guard.exs
 MIX_ENV=prod mix run scripts/benchmark.exs
 ```
 
-See [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md), [benchmark](docs/BENCHMARK.md), [jsonata.js comparison](docs/JSONATA_JS_COMPARISON.md), and [contributing](CONTRIBUTING.md). The 1.0.0 package metadata and branch are prepared locally; no Hex package or GitHub release has been published by this work.
+See [architecture](docs/ARCHITECTURE.md), [compatibility](docs/COMPATIBILITY.md), [benchmark](docs/BENCHMARK.md), [jsonata.js comparison](docs/JSONATA_JS_COMPARISON.md), and [contributing](CONTRIBUTING.md). The 1.0.0 package metadata is prepared for publication.
 
-CI checks a minimum 70% ExUnit line coverage and a maximum of 1,300 **physical** lines in `lib/jexata/evaluator.ex`. The reference compatibility runner is a separate gate; its cases are not included in the ExUnit coverage percentage.
+CI checks a minimum 74% ExUnit line coverage and a maximum of 1,300 **physical** lines for every Elixir source file in `lib/`. The latest local ExUnit run covered 74.48% of lines and generated a per-module HTML report; CI uploads that report. The reference compatibility runner is a separate gate and its cases are not included in the ExUnit coverage percentage.
 
 ## Hex publication
 
-[GitHub Actions](.github/workflows/hex.yml) runs formatting, warning-free compilation, and tests on Elixir 1.20.0 / OTP 27 and Elixir 1.20.5 / OTP 29 for pull requests to `master` and pushes to `master` or `release/**`. A separate job runs Dialyzer; the recent toolchain also runs performance guards and a Hex package dry run. A successful push to `master` publishes the version in `mix.exs` if that version does not already exist on Hex. An existing version is skipped.
+[GitHub Actions](https://github.com/Manuel1471/Jexata/blob/master/.github/workflows/hex.yml) runs formatting, warning-free compilation, and tests on Elixir 1.20.0 / OTP 27 and Elixir 1.20.5 / OTP 29 for pull requests to `master` and pushes to `master` or `release/**`. A separate job runs Dialyzer; the recent toolchain also runs performance guards and a Hex package dry run. A successful push to `master` publishes the version in `mix.exs` if that version does not already exist on Hex. An existing version is skipped.
 
 To enable publication, create a Hex API key with publish permission and add it to the GitHub repository as the `HEX_API_KEY` Actions secret. The first public release needs a key that can create the package; later releases can use a key scoped to `jexata`. If the secret is absent, the publication job fails with a setup message. The package is MIT licensed. This repository does not include a deployment step or publish from a release branch.

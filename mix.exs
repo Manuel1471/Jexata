@@ -7,7 +7,7 @@ defmodule Jexata.MixProject do
       version: "1.0.0",
       elixir: "~> 1.20",
       start_permanent: Mix.env() == :prod,
-      test_coverage: [summary: [threshold: 70]],
+      test_coverage: [summary: [threshold: 74]],
       description: "Native JSONata expression compiler and evaluator for Elixir",
       source_url: "https://github.com/Manuel1471/Jexata",
       docs: [
@@ -31,7 +31,12 @@ defmodule Jexata.MixProject do
           "CONTRIBUTING.md",
           "SECURITY.md",
           "LICENSE",
-          "docs"
+          "docs/ARCHITECTURE.md",
+          "docs/COMPATIBILITY.md",
+          "docs/BENCHMARK.md",
+          "docs/JSONATA_JS_COMPARISON.md",
+          "docs/jsonata_js_comparison.json",
+          "docs/differential_fuzz_results.json"
         ],
         licenses: ["MIT"],
         links: %{"GitHub" => "https://github.com/Manuel1471/Jexata"}

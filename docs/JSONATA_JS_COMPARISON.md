@@ -1,6 +1,6 @@
 # Jexata versus jsonata.js
 
-This comparison uses Jexata 1.0.0 at commit `8d70298` and the official [jsonata.js v2.2.0](https://github.com/jsonata-js/jsonata/releases/tag/v2.2.0) source at `8ee4476f8a228bfc7a62979ae0a9c13a4043cd03`. The harness exercises the public compile and evaluate APIs. JavaScript evaluations await the promise returned by `evaluate`. These are API costs in different runtimes, not identical virtual-machine operations.
+This comparison uses Jexata 1.0.0 and the official [jsonata.js v2.2.0](https://github.com/jsonata-js/jsonata/releases/tag/v2.2.0). The exact reference revision and release metadata are recorded in the raw results. The harness exercises the public compile and evaluate APIs. JavaScript evaluations await the promise returned by `evaluate`. These are API costs in different runtimes, not identical virtual-machine operations.
 
 ## Method
 
@@ -28,114 +28,114 @@ The run used a Mac16,12 arm64 host, Elixir 1.20.2 / OTP 29, and Node v26.5.0. Th
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `compile_field` | `customer.name` | 0.64 [0.62–0.67] | 12.98 [12.76–13.76] | 20.32× |
-| `compile_filter` | `orders[price > 50].price` | 2.83 [2.57–3.01] | 21.39 [21.22–26.65] | 7.56× |
-| `compile_lambda` | `$map(orders,function($o){$o.price*2})` | 4.25 [3.91–4.52] | 27.11 [24.23–82.37] | 6.38× |
-| `compile_object` | `orders{customer:$sum(price)}` | 2.08 [2.01–2.10] | 19.06 [18.92–19.48] | 9.17× |
-| `compile_picture` | `$fromMillis(1704164645000,'[Y0001]-[M01]-[D01]')` | 2.85 [2.64–3.00] | 17.14 [16.88–17.70] | 6.01× |
-| `compile_regex` | `$replace(text,/Order/,'Item')` | 4.19 [3.87–4.62] | 14.78 [14.57–18.34] | 3.53× |
+| `compile_field` | `customer.name` | 0.63 [0.62–0.63] | 12.95 [12.72–13.27] | 20.70× |
+| `compile_filter` | `orders[price > 50].price` | 2.80 [2.62–2.85] | 21.55 [21.31–22.09] | 7.69× |
+| `compile_lambda` | `$map(orders,function($o){$o.price*2})` | 4.25 [4.17–4.36] | 26.96 [24.25–29.83] | 6.35× |
+| `compile_object` | `orders{customer:$sum(price)}` | 2.08 [2.04–2.21] | 19.14 [18.99–23.91] | 9.21× |
+| `compile_picture` | `$fromMillis(1704164645000,'[Y0001]-[M01]-[D01]')` | 2.81 [2.61–2.91] | 17.42 [16.90–17.68] | 6.20× |
+| `compile_regex` | `$replace(text,/Order/,'Item')` | 4.26 [4.08–4.44] | 14.70 [14.60–15.32] | 3.45× |
 
 ### Scalar expressions
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `arithmetic` | `(12 + 8) * 3 / 2` | 0.14 [0.14–0.15] | 2.39 [2.32–2.50] | 16.82× |
-| `coalesce` | `customer.missing ?? 'unknown'` | 0.14 [0.13–0.15] | 2.09 [2.01–3.30] | 14.45× |
-| `concat` | `customer.name & ' Lovelace'` | 0.28 [0.25–0.31] | 1.44 [1.40–1.48] | 5.14× |
-| `conditional` | `customer.name = 'Ada' ? 'yes' : 'no'` | 0.17 [0.15–0.17] | 1.71 [1.66–1.73] | 10.16× |
-| `field` | `customer.name` | 0.11 [0.10–0.12] | 1.36 [1.33–1.46] | 11.96× |
-| `missing_field` | `customer.missing` | 0.14 [0.13–0.14] | 0.99 [0.98–1.00] | 7.17× |
+| `arithmetic` | `(12 + 8) * 3 / 2` | 0.14 [0.13–0.15] | 2.33 [2.30–2.60] | 16.51× |
+| `coalesce` | `customer.missing ?? 'unknown'` | 0.15 [0.13–0.15] | 2.05 [2.03–2.25] | 14.01× |
+| `concat` | `customer.name & ' Lovelace'` | 0.27 [0.25–0.30] | 1.44 [1.40–1.57] | 5.27× |
+| `conditional` | `customer.name = 'Ada' ? 'yes' : 'no'` | 0.16 [0.15–0.17] | 1.68 [1.65–1.72] | 10.25× |
+| `field` | `customer.name` | 0.11 [0.10–0.12] | 1.35 [1.30–1.57] | 12.23× |
+| `missing_field` | `customer.missing` | 0.14 [0.12–0.14] | 0.99 [0.97–0.99] | 7.29× |
 
 ### Paths and predicates
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `descendants` | `customer.**` | 0.16 [0.14–0.18] | 1.51 [1.47–1.53] | 9.57× |
-| `filter` | `orders[price > 50].price` | 113.10 [105.90–121.15] | 803.62 [783.31–816.89] | 7.11× |
-| `filter_boolean` | `orders[active].price` | 56.48 [54.10–62.59] | 460.53 [450.23–498.68] | 8.15× |
-| `filter_narrow` | `orders[price > 900].price` | 56.51 [54.54–61.63] | 681.90 [665.05–695.23] | 12.07× |
-| `focus_binding` | `orders@$o[$o.price > 900].price` | 164.44 [155.81–176.19] | 1,179.93 [1,145.56–1,356.40] | 7.18× |
-| `index_binding` | `orders#$i[$i < 10].price` | 99.99 [95.39–111.40] | 555.80 [543.74–632.06] | 5.56× |
-| `index_last` | `orders[-1].price` | 1.44 [1.30–1.57] | 1.02 [1.00–1.05] | 0.71× |
-| `index_zero` | `orders[0].price` | 0.15 [0.14–0.15] | 1.06 [1.03–1.10] | 7.25× |
-| `order_projection` | `orders[0].(price & ':' & customer)` | 0.62 [0.58–0.75] | 3.31 [3.23–3.43] | 5.37× |
-| `path_customers` | `orders.customer` | 37.63 [35.66–39.10] | 127.96 [127.19–137.80] | 3.40× |
-| `path_prices` | `orders.price` | 56.59 [54.46–61.04] | 144.38 [140.68–172.54] | 2.55× |
+| `descendants` | `customer.**` | 0.15 [0.14–0.17] | 1.50 [1.46–1.54] | 9.71× |
+| `filter` | `orders[price > 50].price` | 107.85 [104.26–111.54] | 785.88 [775.46–812.00] | 7.29× |
+| `filter_boolean` | `orders[active].price` | 56.17 [54.98–57.71] | 455.19 [450.14–470.83] | 8.10× |
+| `filter_narrow` | `orders[price > 900].price` | 57.81 [55.40–63.89] | 669.50 [665.11–688.61] | 11.58× |
+| `focus_binding` | `orders@$o[$o.price > 900].price` | 158.88 [150.84–165.25] | 1,144.35 [1,134.06–1,197.80] | 7.20× |
+| `index_binding` | `orders#$i[$i < 10].price` | 98.95 [94.69–103.26] | 554.75 [547.59–570.35] | 5.61× |
+| `index_last` | `orders[-1].price` | 1.41 [1.30–1.45] | 1.01 [0.99–1.04] | 0.72× |
+| `index_zero` | `orders[0].price` | 0.14 [0.14–0.16] | 1.05 [1.03–1.08] | 7.32× |
+| `order_projection` | `orders[0].(price & ':' & customer)` | 0.61 [0.58–0.67] | 3.24 [3.20–3.35] | 5.33× |
+| `path_customers` | `orders.customer` | 37.79 [34.36–38.54] | 127.70 [123.16–135.18] | 3.38× |
+| `path_prices` | `orders.price` | 55.47 [53.89–57.60] | 140.57 [139.58–151.61] | 2.53× |
 
 ### Aggregates and grouping
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `average` | `$average(orders.price)` | 48.96 [47.89–51.00] | 161.68 [157.24–168.06] | 3.30× |
-| `count` | `$count(orders.price)` | 48.41 [47.81–50.12] | 136.43 [130.50–139.51] | 2.82× |
-| `distinct` | `$distinct(orders.customer)` | 67.28 [65.73–68.17] | 160.59 [157.33–163.38] | 2.39× |
-| `group_object` | `orders{customer:$sum(price)}` | 163.59 [158.21–165.45] | 728.41 [717.05–766.91] | 4.45× |
-| `max` | `$max(orders.price)` | 48.40 [47.47–53.21] | 150.58 [142.61–154.25] | 3.11× |
-| `min` | `$min(orders.price)` | 48.53 [45.97–52.95] | 152.74 [143.80–157.81] | 3.15× |
-| `sum` | `$sum(orders.price)` | 48.02 [46.24–51.51] | 156.15 [152.16–171.39] | 3.25× |
+| `average` | `$average(orders.price)` | 48.51 [46.02–51.26] | 159.79 [153.97–162.98] | 3.29× |
+| `count` | `$count(orders.price)` | 47.58 [45.59–50.24] | 134.84 [131.60–138.34] | 2.83× |
+| `distinct` | `$distinct(orders.customer)` | 66.56 [63.82–67.86] | 157.35 [155.54–161.79] | 2.36× |
+| `group_object` | `orders{customer:$sum(price)}` | 160.11 [156.10–166.16] | 722.39 [712.03–730.46] | 4.51× |
+| `max` | `$max(orders.price)` | 48.38 [47.69–51.09] | 147.87 [144.30–151.01] | 3.06× |
+| `min` | `$min(orders.price)` | 48.66 [47.61–50.97] | 149.04 [145.29–158.81] | 3.06× |
+| `sum` | `$sum(orders.price)` | 48.16 [46.93–49.92] | 155.04 [151.52–159.45] | 3.22× |
 
 ### Collections and sorting
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `append` | `$append(orders.price,[1001])` | 60.78 [55.86–69.58] | 140.44 [139.64–143.88] | 2.31× |
-| `reverse` | `$reverse(orders.price)` | 58.89 [57.65–60.71] | 137.01 [135.79–141.81] | 2.33× |
-| `sort_comparator` | `$sort(orders,function($a,$b){$a.price>$b.price})` | 1,425.07 [1,369.15–1,456.16] | 9,980.94 [9,666.86–10,210.33] | 7.00× |
-| `sort_key` | `orders^(price)` | 209.02 [200.74–221.89] | 4,900.76 [4,802.17–5,216.67] | 23.45× |
-| `zip` | `$zip(orders.price,orders.customer)` | 140.04 [137.28–146.30] | 290.73 [290.30–301.83] | 2.08× |
+| `append` | `$append(orders.price,[1001])` | 58.46 [57.38–60.65] | 139.46 [138.18–144.02] | 2.39× |
+| `reverse` | `$reverse(orders.price)` | 58.06 [57.20–60.75] | 136.76 [134.02–139.94] | 2.36× |
+| `sort_comparator` | `$sort(orders,function($a,$b){$a.price>$b.price})` | 1,392.49 [1,364.14–1,448.00] | 9,976.10 [9,594.63–10,134.70] | 7.16× |
+| `sort_key` | `orders^(price)` | 208.68 [196.29–220.81] | 4,829.93 [4,776.93–5,022.77] | 23.14× |
+| `zip` | `$zip(orders.price,orders.customer)` | 141.09 [139.03–146.23] | 294.65 [288.45–302.47] | 2.09× |
 
 ### Higher-order functions
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `each_object` | `$each(customer,function($value,$key){$key & ':' & $value})` | 0.78 [0.77–0.79] | 3.03 [2.97–3.09] | 3.91× |
-| `filter_lambda` | `$filter(orders,function($o){$o.price>900})` | 147.83 [143.37–179.79] | 1,270.07 [1,224.27–1,290.96] | 8.59× |
-| `map_index` | `$map(orders,function($o,$i){$o.price+$i})` | 197.54 [194.66–207.41] | 1,310.04 [1,278.58–1,349.23] | 6.63× |
-| `map_lambda` | `$map(orders,function($o){$o.price*2})` | 155.44 [152.70–167.16] | 1,275.15 [1,242.12–1,301.87] | 8.20× |
-| `reduce_lambda` | `$reduce(orders,function($a,$o){$a+$o.price},0)` | 185.12 [178.85–194.45] | 1,301.33 [1,269.88–1,326.06] | 7.03× |
-| `sift_object` | `$sift(customer,function($value,$key){$key='name'})` | 0.52 [0.52–0.55] | 2.70 [2.60–2.75] | 5.15× |
+| `each_object` | `$each(customer,function($value,$key){$key & ':' & $value})` | 0.75 [0.72–0.85] | 3.03 [3.01–3.04] | 4.04× |
+| `filter_lambda` | `$filter(orders,function($o){$o.price>900})` | 146.78 [142.05–156.23] | 1,260.06 [1,251.54–1,374.79] | 8.58× |
+| `map_index` | `$map(orders,function($o,$i){$o.price+$i})` | 195.95 [192.34–205.32] | 1,302.16 [1,292.72–1,328.06] | 6.65× |
+| `map_lambda` | `$map(orders,function($o){$o.price*2})` | 156.11 [150.32–160.96] | 1,264.74 [1,236.10–1,287.71] | 8.10× |
+| `reduce_lambda` | `$reduce(orders,function($a,$o){$a+$o.price},0)` | 179.34 [178.13–187.38] | 1,312.57 [1,290.00–1,341.68] | 7.32× |
+| `sift_object` | `$sift(customer,function($value,$key){$key='name'})` | 0.53 [0.49–0.56] | 2.64 [2.59–2.75] | 5.00× |
 
 ### Numeric functions
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `floor` | `$map(orders,function($o){$floor($o.price / 3)})` | 351.05 [345.03–369.27] | 1,952.43 [1,881.41–2,348.07] | 5.56× |
-| `format_integer` | `$map(orders,function($o){$formatInteger($o.price,'I')})` | 815.22 [796.67–822.59] | 1,892.08 [1,847.09–1,949.94] | 2.32× |
-| `format_number` | `$map(orders,function($o){$formatNumber($o.price,'#,##0')})` | 260.40 [252.67–285.84] | 3,475.57 [3,364.31–3,866.42] | 13.35× |
-| `number_decimal` | `$map(orders,function($o){$number($o.decimal)})` | 508.51 [495.33–543.23] | 1,670.57 [1,636.94–1,705.18] | 3.29× |
-| `round` | `$map(orders,function($o){$round($o.price / 3,2)})` | 1,425.19 [1,385.45–1,487.27] | 2,333.94 [2,294.12–2,436.57] | 1.64× |
+| `floor` | `$map(orders,function($o){$floor($o.price / 3)})` | 357.06 [351.95–371.64] | 1,906.48 [1,859.72–1,953.58] | 5.34× |
+| `format_integer` | `$map(orders,function($o){$formatInteger($o.price,'I')})` | 813.46 [789.81–838.49] | 1,893.32 [1,875.25–2,130.40] | 2.33× |
+| `format_number` | `$map(orders,function($o){$formatNumber($o.price,'#,##0')})` | 267.62 [259.80–282.02] | 3,439.26 [3,382.80–3,774.78] | 12.85× |
+| `number_decimal` | `$map(orders,function($o){$number($o.decimal)})` | 511.56 [509.52–530.72] | 1,669.54 [1,646.25–2,046.72] | 3.26× |
+| `round` | `$map(orders,function($o){$round($o.price / 3,2)})` | 1,387.31 [1,318.57–1,449.18] | 2,333.44 [2,280.54–2,385.97] | 1.68× |
 
 ### String functions
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `contains_text` | `$map(orders,function($o){$contains($o.text,'Order')})` | 464.63 [451.34–470.02] | 1,795.53 [1,763.24–1,968.42] | 3.86× |
-| `length` | `$map(orders,function($o){$length($o.text)})` | 294.49 [291.68–312.59] | 1,656.62 [1,593.45–1,727.10] | 5.63× |
-| `lowercase` | `$map(orders,function($o){$lowercase($o.text)})` | 390.79 [384.26–487.86] | 1,569.55 [1,529.45–1,595.94] | 4.02× |
-| `pad` | `$map(orders,function($o){$pad($o.text,20,'-')})` | 513.26 [488.60–571.59] | 2,028.00 [1,974.96–2,392.08] | 3.95× |
-| `split_text` | `$map(orders,function($o){$split($o.text,' ')})` | 457.83 [437.79–590.59] | 1,916.72 [1,851.35–1,947.58] | 4.19× |
-| `substring` | `$map(orders,function($o){$substring($o.text,0,5)})` | 321.12 [304.40–336.02] | 2,022.17 [1,983.55–2,156.11] | 6.30× |
-| `trim` | `$map(orders,function($o){$trim($o.padded)})` | 1,727.79 [1,666.72–1,891.90] | 1,726.93 [1,695.26–1,769.99] | 1.00× |
-| `uppercase` | `$map(orders,function($o){$uppercase($o.text)})` | 382.87 [379.48–396.03] | 1,626.08 [1,551.42–1,694.92] | 4.25× |
+| `contains_text` | `$map(orders,function($o){$contains($o.text,'Order')})` | 468.71 [452.09–475.67] | 1,782.78 [1,671.02–1,831.79] | 3.80× |
+| `length` | `$map(orders,function($o){$length($o.text)})` | 302.96 [292.79–317.46] | 1,643.76 [1,506.76–1,760.30] | 5.43× |
+| `lowercase` | `$map(orders,function($o){$lowercase($o.text)})` | 391.40 [382.93–407.07] | 1,541.98 [1,440.72–1,576.10] | 3.94× |
+| `pad` | `$map(orders,function($o){$pad($o.text,20,'-')})` | 512.79 [481.02–527.39] | 2,012.40 [1,907.31–2,048.66] | 3.92× |
+| `split_text` | `$map(orders,function($o){$split($o.text,' ')})` | 450.30 [440.23–480.05] | 1,839.23 [1,780.28–1,926.69] | 4.08× |
+| `substring` | `$map(orders,function($o){$substring($o.text,0,5)})` | 315.54 [309.62–323.23] | 2,075.83 [2,011.61–2,154.55] | 6.58× |
+| `trim` | `$map(orders,function($o){$trim($o.padded)})` | 1,707.78 [1,622.88–1,728.30] | 1,694.55 [1,555.68–1,739.83] | 0.99× |
+| `uppercase` | `$map(orders,function($o){$uppercase($o.text)})` | 385.71 [373.61–402.25] | 1,611.90 [1,425.39–1,675.43] | 4.18× |
 
 ### Regular expressions
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `contains_regex` | `$map(orders,function($o){$contains($o.text,/Order/)})` | 477.38 [466.89–533.78] | 2,010.19 [1,975.89–2,050.95] | 4.21× |
-| `match_regex` | `$map(orders,function($o){$match($o.text,/Order/)})` | 1,109.32 [1,065.58–1,149.23] | 2,125.10 [2,057.24–2,361.90] | 1.92× |
-| `match_scalar` | `$match(orders[0].text,/Order/).match` | 1.25 [1.17–1.29] | 3.44 [3.33–3.48] | 2.75× |
-| `replace` | `$map(orders,function($o){$replace($o.text,/Order/,'Item')})` | 702.92 [677.24–780.88] | 2,301.79 [2,255.78–2,338.44] | 3.27× |
-| `replace_capture` | `$map(orders,function($o){$replace($o.text,/(Order) (\d+)/,'$2 $1')})` | 3,174.74 [3,034.42–3,250.99] | 2,357.86 [2,265.70–2,395.61] | 0.74× |
-| `split_regex` | `$map(orders,function($o){$split($o.text,/\s+/)})` | 1,361.51 [1,303.95–1,495.33] | 2,213.47 [2,092.36–2,372.63] | 1.63× |
+| `contains_regex` | `$map(orders,function($o){$contains($o.text,/Order/)})` | 472.37 [468.92–501.61] | 1,975.27 [1,873.21–2,047.49] | 4.18× |
+| `match_regex` | `$map(orders,function($o){$match($o.text,/Order/)})` | 1,068.38 [1,034.77–1,128.01] | 2,091.59 [1,988.27–4,195.83] | 1.96× |
+| `match_scalar` | `$match(orders[0].text,/Order/).match` | 1.24 [1.21–1.36] | 3.51 [3.40–4.37] | 2.82× |
+| `replace` | `$map(orders,function($o){$replace($o.text,/Order/,'Item')})` | 689.15 [666.39–714.95] | 2,251.69 [2,152.74–2,306.48] | 3.27× |
+| `replace_capture` | `$map(orders,function($o){$replace($o.text,/(Order) (\d+)/,'$2 $1')})` | 3,041.19 [3,008.70–3,185.33] | 2,271.18 [2,198.22–2,340.58] | 0.75× |
+| `split_regex` | `$map(orders,function($o){$split($o.text,/\s+/)})` | 1,307.59 [1,267.84–1,366.01] | 2,159.71 [2,066.26–2,643.53] | 1.65× |
 
 ### Date and time
 
 | Case | Exact expression | Jexata µs med [min–max] | JS µs med [min–max] | JS / Jexata |
 | --- | --- | ---: | ---: | ---: |
-| `from_millis` | `$map(orders,function($o){$fromMillis($o.epoch)})` | 591.11 [578.66–609.14] | 2,186.57 [2,031.14–2,203.22] | 3.70× |
-| `from_millis_picture` | `$map(orders,function($o){$fromMillis($o.epoch,'[Y0001]-[M01]-[D01]')})` | 465.27 [451.34–504.90] | 2,666.23 [2,492.08–2,981.39] | 5.73× |
-| `to_millis` | `$map(orders,function($o){$toMillis($o.date)})` | 389.43 [385.73–411.75] | 1,703.43 [1,567.79–1,893.99] | 4.37× |
+| `from_millis` | `$map(orders,function($o){$fromMillis($o.epoch)})` | 586.91 [581.68–591.25] | 2,065.32 [2,011.66–2,179.55] | 3.52× |
+| `from_millis_picture` | `$map(orders,function($o){$fromMillis($o.epoch,'[Y0001]-[M01]-[D01]')})` | 460.48 [452.42–487.52] | 2,557.97 [2,494.50–2,669.61] | 5.55× |
+| `to_millis` | `$map(orders,function($o){$toMillis($o.date)})` | 391.37 [388.61–412.48] | 1,613.41 [1,579.62–1,749.81] | 4.12× |
 
 <!-- END GENERATED RESULTS -->
 
@@ -149,7 +149,7 @@ One of 64 expressions returned a different result and has **no timing ratio**:
 
 The remaining difference is another form of the input-object key-order limitation. The `$match`-inside-`$map` case now agrees, including its nested array shape. The order mismatch is additional to the **three** `$keys(%)` failures in the [1,679-case reference fixture suite](COMPATIBILITY.md). The reference fixtures report 1,676 passes, zero unsupported and zero skipped cases. The expanded [differential fuzzer](differential_fuzz_results.json) ran 20,000 cases with one known difference and no unexpected mismatches; its grammar remains narrower than the full language. Jexata now provides `$random` and `$clone`, but these functions are not covered by the official fixtures or the timed workloads in this report.
 
-Among the 63 matching cases, Jexata had a lower median in 60 and JS in three. The canonical `$fromMillis` date picture and grouped integer `$formatNumber` measure 465 versus 2,666 µs and 260 versus 3,476 µs, respectively, on 1,000 orders. The `$match`-inside-`$map` case now matches and measures 1,109 versus 2,125 µs. The clearest remaining JS wins are regex replacement with captures and the negative index path. `$trim` has nearly equal medians in this run and overlapping timing ranges. The new 64-case fixture has more object fields than the old 12-case fixture, so its path and filter times should not be compared directly with the historical table. None of these ratios is a claim about concurrent throughput, memory consumption or end-to-end request latency.
+Among the 63 matching cases, Jexata had a lower median in 60 and JSONata.js in three. The clearest JS wins are regex replacement with captures and the negative index path; `$trim` also had a lower JS median in this run. The canonical `$fromMillis` date picture and grouped integer `$formatNumber` are faster in Jexata on the recorded 1,000-order workload. Timing ranges, exact expressions and absolute differences are in the tables above. These ratios are specific to the host and API usage; they do not measure concurrent throughput, memory consumption or end-to-end request latency.
 
 ## Reproduce
 
@@ -161,4 +161,4 @@ python3 scripts/compare_jsonata.py \
 python3 scripts/render_jsonata_comparison.py
 ```
 
-The driver verifies the reference commit, records every round and its engine order, checks that results are stable across rounds, and separates mismatches from comparable workloads. The raw file also records CPU and power metadata, Node flags, an empty-promise floor, exact expressions, iteration counts, result digests and the fixture digest. The benchmark needs Python 3, Node.js and Elixir for development; Jexata itself has no production JavaScript dependency.
+The driver verifies the reference version, records every round and its engine order, checks that results are stable across rounds, and separates mismatches from comparable workloads. The raw file also records CPU and power metadata, Node flags, an empty-promise floor, exact expressions, iteration counts, result digests and the fixture digest. The benchmark needs Python 3, Node.js and Elixir for development; Jexata itself has no production JavaScript dependency.

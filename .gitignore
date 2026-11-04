@@ -26,3 +26,6 @@ jexata-*.tar
 __pycache__/
 *.pyc
 
+# Local development instructions; not part of the library or Hex package.
+/agent.md
+

@@ -41,13 +41,26 @@ jobs:
       - run: mix local.hex --force
       - run: mix deps.get
       - run: mix format --check-formatted
-      - name: Keep the evaluator below 1,300 physical lines
-        run: test "$(wc -l < lib/jexata/evaluator.ex)" -le 1300
+      - name: Keep every library source file below 1,300 physical lines
+        run: |
+          find lib -type f -name '*.ex' -print0 | while IFS= read -r -d '' file; do
+            lines="$(wc -l < "$file")"
+            if [ "$lines" -gt 1300 ]; then
+              echo "$file has $lines physical lines (limit: 1300)" >&2
+              exit 1
+            fi
+          done
       - run: mix compile --warnings-as-errors
       - run: mix test
         if: matrix.otp == '27'
       - run: mix test --cover
         if: matrix.otp == '29'
+      - name: Save per-module coverage report
+        if: matrix.otp == '29'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exunit-coverage
+          path: cover/
       - name: Check full JSONata v2.2.0 reference fixtures
         if: matrix.otp == '29'
         run: |
