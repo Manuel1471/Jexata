@@ -131,11 +131,15 @@ The largest positive median change was 5.6% for a small object-merge workload; i
 
 ## Canonical date picture fast path
 
-Commit `7118619` formats `[Y0001]-[M01]-[D01]` directly from the UTC date while retaining the general picture formatter for other formats and out-of-range years. In a [five-round paired comparison](date_picture_fast_path_comparison.json) against `568fdac`, `$fromMillis` with this picture over 1,000 orders moved from **5,002.12 to 456.02 µs/op** (−90.9%) and from 927,752 to 128,256 reductions/op. All 23 workload result hashes agreed; the ordinary `$fromMillis` case moved 547.97 → 553.69 µs/op and the filter 96.91 → 96.98 µs/op. The refreshed [jsonata.js comparison](JSONATA_JS_COMPARISON.md) measures this workload at 475.01 µs/op in Jexata versus 2,510.86 µs/op in JS on the same host.
+Commit `7118619` formats `[Y0001]-[M01]-[D01]` directly from the UTC date while retaining the general picture formatter for other formats and out-of-range years. In a [five-round paired comparison](date_picture_fast_path_comparison.json) against `568fdac`, `$fromMillis` with this picture over 1,000 orders moved from **5,002.12 to 456.02 µs/op** (−90.9%) and from 927,752 to 128,256 reductions/op. All 23 workload result hashes agreed; the ordinary `$fromMillis` case moved 547.97 → 553.69 µs/op and the filter 96.91 → 96.98 µs/op. The current [jsonata.js comparison](JSONATA_JS_COMPARISON.md) measures this workload at 465.27 µs/op in Jexata versus 2,666.23 µs/op in JS on the same host.
 
 ## Grouped integer picture fast path
 
-Commit `f5096de` handles integer `$formatNumber` values with picture `#,##0` using byte grouping. In a [five-round paired comparison](number_picture_fast_path_comparison.json) against `3781c0d`, the 1,000-order workload moved from **5,722.62 to 254.04 µs/op** (−95.6%) and from 1,141,882 to 67,810 reductions/op. All 24 workload result hashes agreed. The general decimal picture workload `#,###.00` remained at 7,069.62 → 7,080.22 µs/op. The refreshed [jsonata.js comparison](JSONATA_JS_COMPARISON.md) measures `#,##0` at 266.07 µs/op in Jexata versus 3,435.84 µs/op in JS. The special path applies only to integer values and this exact picture; other number formats still use the general formatter.
+Commit `f5096de` handles integer `$formatNumber` values with picture `#,##0` using byte grouping. In a [five-round paired comparison](number_picture_fast_path_comparison.json) against `3781c0d`, the 1,000-order workload moved from **5,722.62 to 254.04 µs/op** (−95.6%) and from 1,141,882 to 67,810 reductions/op. All 24 workload result hashes agreed. The general decimal picture workload `#,###.00` remained at 7,069.62 → 7,080.22 µs/op. The current [jsonata.js comparison](JSONATA_JS_COMPARISON.md) measures `#,##0` at 260.40 µs/op in Jexata versus 3,475.57 µs/op in JS. The special path applies only to integer values and this exact picture; other number formats still use the general formatter.
+
+## Final negative index
+
+Commit `8d70298` selects `[-1]` in one list traversal. The [five-round paired comparison](index_last_comparison.json) against `ca98feb` returned identical result hashes for all 24 workloads. `orders[-1].price` moved from **1.700 to 1.353 µs/op** (−20.4%) and from 1,146 to 573 reductions/op. The `orders[0].price` median changed 0.195 → 0.202 µs/op with the same reduction count, too small an absolute difference to interpret as a regression.
 
 ## Reproduce
 
