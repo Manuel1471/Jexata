@@ -13,8 +13,25 @@ defmodule Jexata.BoundedTest do
     assert {:error, %Jexata.Error{code: "J0007"}} =
              Jexata.evaluate_bounded(expression, data, timeout: 1)
 
+    assert {:error, %Jexata.Error{code: "J0007"}} =
+             Jexata.evaluate_bounded(expression, data, max_reductions: 0)
+
+    assert Jexata.evaluate_bounded(expression, data, max_reductions: 1_000_000) == {:ok, 3}
+
     assert {:error, %Jexata.Error{code: "J1007"}} =
              Jexata.evaluate_bounded(expression, data, max_result_bytes: 1)
+  end
+
+  test "a reduction budget limits completed and ongoing evaluations" do
+    expression = Jexata.compile!("$map(orders,function($x){$x*2})")
+    data = %{"orders" => Enum.to_list(1..10_000)}
+
+    assert {:error, %Jexata.Error{code: "J1010"}} =
+             Jexata.evaluate_bounded(expression, data,
+               max_reductions: 10_000,
+               max_heap_words: 10_000_000,
+               timeout_ms: 5_000
+             )
   end
 
   test "internal worker exceptions have their own error code" do

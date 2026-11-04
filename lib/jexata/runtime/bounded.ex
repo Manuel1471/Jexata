@@ -7,6 +7,7 @@ defmodule Jexata.Runtime.Bounded do
     timeout_ms: 1_000,
     max_heap_words: 1_000_000,
     max_result_bytes: 1_000_000,
+    max_reductions: nil,
     regex_match_limit: 100_000,
     regex_recursion_limit: 10_000
   ]
@@ -55,6 +56,21 @@ defmodule Jexata.Runtime.Bounded do
         ]
       )
 
+    await_worker(
+      parent,
+      tag,
+      parent_monitor,
+      worker,
+      worker_monitor,
+      limits,
+      System.monotonic_time(:millisecond) + limits.timeout_ms
+    )
+  end
+
+  defp await_worker(parent, tag, parent_monitor, worker, worker_monitor, limits, deadline) do
+    remaining = max(deadline - System.monotonic_time(:millisecond), 0)
+    interval = if limits.max_reductions, do: min(remaining, 5), else: remaining
+
     receive do
       {^tag, result} ->
         send(parent, {tag, result})
@@ -65,9 +81,28 @@ defmodule Jexata.Runtime.Bounded do
       {:DOWN, ^worker_monitor, :process, ^worker, reason} ->
         send(parent, {tag, exit_error(reason)})
     after
-      limits.timeout_ms ->
-        Process.exit(worker, :kill)
-        send(parent, {tag, {:error, Error.new("J1005", "Evaluation timed out")}})
+      interval ->
+        cond do
+          remaining == 0 ->
+            Process.exit(worker, :kill)
+            send(parent, {tag, {:error, Error.new("J1005", "Evaluation timed out")}})
+
+          over_reduction_budget?(worker, limits.max_reductions) ->
+            Process.exit(worker, :kill)
+            send(parent, {tag, reduction_error()})
+
+          true ->
+            await_worker(parent, tag, parent_monitor, worker, worker_monitor, limits, deadline)
+        end
+    end
+  end
+
+  defp over_reduction_budget?(_worker, nil), do: false
+
+  defp over_reduction_budget?(worker, budget) do
+    case Process.info(worker, :reductions) do
+      {:reductions, count} -> count > budget
+      nil -> false
     end
   end
 
@@ -77,6 +112,7 @@ defmodule Jexata.Runtime.Bounded do
 
       Jexata.evaluate(expression, data, bindings, max_function_depth: depth)
       |> check_result(limits.max_result_bytes)
+      |> check_reductions(limits.max_reductions)
     rescue
       error in Error -> {:error, error}
       error -> internal_error(Exception.message(error))
@@ -100,7 +136,10 @@ defmodule Jexata.Runtime.Bounded do
               {name, Keyword.get(options, name, default)}
             end)
 
-          if Enum.all?(limits, fn {_name, value} -> is_integer(value) and value > 0 end) do
+          if Enum.all?(limits, fn
+               {:max_reductions, nil} -> true
+               {_name, value} -> is_integer(value) and value > 0
+             end) do
             {:ok, limits}
           else
             {:error, Error.new("J0007", "Evaluation limits must be positive integers")}
@@ -118,6 +157,15 @@ defmodule Jexata.Runtime.Bounded do
   end
 
   defp check_result(result, _max_result_bytes), do: result
+
+  defp check_reductions(result, nil), do: result
+
+  defp check_reductions(result, budget) do
+    if over_reduction_budget?(self(), budget), do: reduction_error(), else: result
+  end
+
+  defp reduction_error,
+    do: {:error, Error.new("J1010", "Evaluation exceeded its reduction budget")}
 
   defp exit_error(:killed),
     do: {:error, Error.new("J1006", "Evaluation process exceeded its heap")}
