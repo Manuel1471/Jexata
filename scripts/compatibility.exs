@@ -189,3 +189,5 @@ if "--details" in System.argv() do
   |> Enum.sort_by(fn {_name, counts} -> -(counts.fail + counts.unsupported) end)
   |> Enum.each(fn {name, counts} -> IO.puts("#{name}: #{inspect(counts)}") end)
 end
+
+result
