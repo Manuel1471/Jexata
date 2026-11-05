@@ -1,0 +1,115 @@
+name: CI and Hex
+
+on:
+  push:
+    branches: [master, "release/**"]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  dialyzer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.5"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix dialyzer --format github
+
+  test:
+    runs-on: ubuntu-24.04
+    name: Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }}
+    strategy:
+      matrix:
+        include:
+          - elixir: "1.20.0"
+            otp: "27"
+          - elixir: "1.20.5"
+            otp: "29"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix format --check-formatted
+      - name: Keep every library source file below 1,300 physical lines
+        run: |
+          find lib -type f -name '*.ex' -print0 | while IFS= read -r -d '' file; do
+            lines="$(wc -l < "$file")"
+            if [ "$lines" -gt 1300 ]; then
+              echo "$file has $lines physical lines (limit: 1300)" >&2
+              exit 1
+            fi
+          done
+      - run: mix compile --warnings-as-errors
+      - run: mix test
+        if: matrix.otp == '27'
+      - name: Fetch JSONata v2.2.0 reference fixtures
+        if: matrix.otp == '29'
+        run: |
+          git clone --depth 1 --branch v2.2.0 https://github.com/jsonata-js/jsonata.git /tmp/jexata-reference-2.2.0
+          test "$(git -C /tmp/jexata-reference-2.2.0 rev-parse HEAD)" = "8ee4476f8a228bfc7a62979ae0a9c13a4043cd03"
+      - run: mix test --cover
+        if: matrix.otp == '29'
+        env:
+          JEXATA_REFERENCE_SUITE: /tmp/jexata-reference-2.2.0/test/test-suite
+      - name: Save per-module coverage report
+        if: matrix.otp == '29'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exunit-coverage
+          path: cover/
+      - name: Check full JSONata v2.2.0 reference fixtures
+        if: matrix.otp == '29'
+        run: mix run scripts/compatibility.exs /tmp/jexata-reference-2.2.0/test/test-suite --assert-baseline
+      - run: mix run scripts/reductions_guard.exs
+        if: matrix.otp == '29'
+      - run: mix run scripts/time_canaries.exs
+        if: matrix.otp == '29'
+      - run: mix hex.publish --dry-run --yes
+        if: matrix.otp == '29'
+
+  publish:
+    needs: [test, dialyzer]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: hex-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.5"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - name: Publish new version to Hex
+        env:
+          HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HEX_API_KEY" ]; then
+            echo "Configure the HEX_API_KEY repository secret with publish permission" >&2
+            exit 1
+          fi
+
+          version="$(mix run --no-compile --no-start -e 'IO.puts(Mix.Project.config()[:version])')"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            "https://hex.pm/api/packages/jexata/releases/$version")"
+
+          case "$status" in
+            200) echo "jexata $version is already published; skipping" ;;
+            404) mix hex.publish --yes ;;
+            *) echo "Hex version check returned HTTP $status" >&2; exit 1 ;;
+          esac

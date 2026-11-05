@@ -23,10 +23,18 @@ defmodule Jexata.TokenizerTest do
     assert Enum.map(tokens, & &1.value) == ["full name", "&", "é\n", nil]
   end
 
+  test "scans long quoted spans and escapes without changing positions" do
+    source = "'" <> String.duplicate("á", 500) <> "\\n' + 1"
+    assert {:ok, [string, plus, number, _eof]} = Tokenizer.tokenize(source)
+    assert string.value == String.duplicate("á", 500) <> "\n"
+    assert plus.position == byte_size("'" <> String.duplicate("á", 500) <> "\\n' ")
+    assert number.value == 1
+  end
+
   test "rejects malformed lexical input" do
-    assert {:error, %Jexata.Error{code: "S0101", position: 0}} = Tokenizer.tokenize("!")
-    assert {:error, %Jexata.Error{code: "S0103"}} = Tokenizer.tokenize("'oops")
-    assert {:error, %Jexata.Error{code: "S0104"}} = Tokenizer.tokenize("'\\x'")
+    assert {:error, %Jexata.Error{code: "S0204", position: 0}} = Tokenizer.tokenize("!")
+    assert {:error, %Jexata.Error{code: "S0101"}} = Tokenizer.tokenize("'oops")
+    assert {:error, %Jexata.Error{code: "S0103"}} = Tokenizer.tokenize("'\\x'")
     assert {:error, %Jexata.Error{code: "S0106"}} = Tokenizer.tokenize("/* oops")
     assert {:error, %Jexata.Error{code: "S0102"}} = Tokenizer.tokenize("1e999999")
   end

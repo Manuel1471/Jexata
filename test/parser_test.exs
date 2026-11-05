@@ -6,7 +6,8 @@ defmodule Jexata.ParserTest do
     assert {:ok, {:binary, "+", {:literal, 1}, {:binary, "*", {:literal, 2}, {:literal, 3}}}} =
              Parser.parse("1 + 2 * 3")
 
-    assert {:ok, {:binary, "*", {:binary, "+", _, _}, _}} = Parser.parse("(1 + 2) * 3")
+    assert {:ok, {:binary, "*", {:block, [{:binary, "+", _, _}]}, _}} =
+             Parser.parse("(1 + 2) * 3")
   end
 
   test "parses paths, predicates, calls, constructors and blocks" do
@@ -23,6 +24,19 @@ defmodule Jexata.ParserTest do
   test "rejects incomplete expressions" do
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("a +")
     assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("[1,")
-    assert {:error, %Jexata.Error{code: "S0202"}} = Parser.parse("(1")
+    assert {:error, %Jexata.Error{code: "S0203"}} = Parser.parse("(1")
+
+    assert {:error, %Jexata.Error{code: "S0202"}} =
+             Parser.parse(~S|$replace("foo", "o, "rr")|)
+
+    assert {:error, %Jexata.Error{code: "S0101"}} = Parser.parse(~S|"unterminated|)
+  end
+
+  test "reports invalid grouped steps and numeric path segments" do
+    assert {:error, %Jexata.Error{code: "S0213"}} = Parser.parse("$.7")
+    assert {:error, %Jexata.Error{code: "S0201"}} = Parser.parse("$.7a")
+    assert {:error, %Jexata.Error{code: "S0210"}} = Parser.parse("[1]{'n':$}{'n':$}")
+    assert {:error, %Jexata.Error{code: "S0209"}} = Parser.parse("[1]{'n':$}[true]")
+    assert {:error, %Jexata.Error{code: "S0207"}} = Parser.parse("1=")
   end
 end

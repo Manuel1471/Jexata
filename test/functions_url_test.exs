@@ -9,5 +9,9 @@ defmodule Jexata.FunctionsURLTest do
     assert Jexata.run("$decodeUrlComponent('%3Fx%3Dtest')", %{}) == {:ok, "?x=test"}
     assert Jexata.run("$decodeUrl(missing)", %{}) == {:ok, :undefined}
     assert {:error, %Jexata.Error{code: "D3140"}} = Jexata.run("$decodeUrl('%E0%A4%A')", %{})
+    assert {:error, %Jexata.Error{code: "D3140"}} = Jexata.run("$encodeUrl('\\uD800')", %{})
+
+    assert {:error, %Jexata.Error{code: "D3140"}} =
+             Jexata.run("$encodeUrlComponent('\\uD800')", %{})
   end
 end

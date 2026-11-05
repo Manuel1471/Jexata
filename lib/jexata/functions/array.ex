@@ -2,32 +2,44 @@ defmodule Jexata.Functions.Array do
   @moduledoc false
   alias Jexata.Error
   alias Jexata.Runtime.Value
+  alias Jexata.Runtime.CollectionLimit
 
-  def supported?(name), do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip"]
-  def call("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
-  def call("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
-  def call("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
+  def call(name, args), do: CollectionLimit.check_result(call_impl(name, args))
 
-  def call("$zip", args) when args != [] do
+  def supported?(name),
+    do: name in ["$append", "$reverse", "$sort", "$distinct", "$zip", "$shuffle"]
+
+  defp call_impl("$append", [left, right]) when is_struct(left, Value.Undefined), do: {:ok, right}
+  defp call_impl("$append", [left, right]) when is_struct(right, Value.Undefined), do: {:ok, left}
+  defp call_impl("$append", [left, right]), do: {:ok, Value.items(left) ++ Value.items(right)}
+  defp call_impl("$reverse", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  defp call_impl("$reverse", [value]), do: {:ok, Enum.reverse(Value.items(value))}
+  defp call_impl("$distinct", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
+  defp call_impl("$distinct", [%Value.Sequence{} = value]),
+    do: {:ok, Enum.uniq(Value.items(value))}
+
+  defp call_impl("$distinct", [value]) when not is_list(value), do: {:ok, value}
+  defp call_impl("$distinct", [value]), do: {:ok, Enum.uniq(Value.items(value))}
+  defp call_impl("$shuffle", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+  defp call_impl("$shuffle", [value]), do: {:ok, value |> Value.items() |> Enum.shuffle()}
+
+  defp call_impl("$zip", args) when args != [] do
     lists = Enum.map(args, &Value.items/1)
-    count = lists |> Enum.map(&length/1) |> Enum.min()
-
-    {:ok,
-     if(count == 0,
-       do: [],
-       else: for(index <- 0..(count - 1), do: Enum.map(lists, &Enum.at(&1, index)))
-     )}
+    {:ok, lists |> Enum.zip() |> Enum.map(&Tuple.to_list/1)}
   end
 
-  def call("$sort", [value]) do
+  defp call_impl("$sort", [value]) when is_struct(value, Value.Undefined), do: {:ok, value}
+
+  defp call_impl("$sort", [value]) do
     items = Value.items(value)
 
     cond do
       Enum.all?(items, &is_number/1) -> {:ok, Enum.sort(items)}
       Enum.all?(items, &is_binary/1) -> {:ok, Enum.sort(items)}
-      true -> {:error, Error.new("T2007", "$sort requires all numbers or all strings")}
+      true -> {:error, Error.new("D3070", "$sort requires all numbers or all strings")}
     end
   end
 
-  def call(name, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
+  defp call_impl(name, _), do: {:error, Error.new("T0410", "Invalid arguments for #{name}")}
 end

@@ -1,0 +1,42 @@
+name: Nightly benchmark
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20.2"
+      - run: mix local.hex --force
+      - run: mix deps.get
+      - run: MIX_ENV=prod mix compile --warnings-as-errors
+      - name: Fetch JSONata reference
+        run: git clone --depth 1 --branch v2.2.0 https://github.com/jsonata-js/jsonata.git /tmp/jexata-reference-2.2.0
+      - name: Compare Jexata and jsonata.js
+        run: |
+          mkdir -p benchmark-artifacts
+          python3 scripts/compare_jsonata.py --reference /tmp/jexata-reference-2.2.0 \
+            --rounds 7 --output benchmark-artifacts/jsonata_js_comparison.json \
+            > benchmark-artifacts/jsonata_js_comparison.txt
+      - name: Differential fuzz against jsonata.js
+        run: |
+          python3 scripts/differential_fuzz.py --count 10000 --seed random \
+            --output benchmark-artifacts/differential_fuzz_first.json
+          python3 scripts/differential_fuzz.py --count 10000 --seed random \
+            --output benchmark-artifacts/differential_fuzz_second.json
+      - name: Measure concurrent evaluation
+        run: MIX_ENV=prod mix run scripts/concurrent_benchmark.exs > benchmark-artifacts/concurrent.jsonl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86-benchmark
+          path: benchmark-artifacts/

@@ -1,8 +1,49 @@
 defmodule Jexata.Functions do
   @moduledoc false
   alias Jexata.Error
-  alias Jexata.Functions.{Array, Boolean, Numeric, Object, String, URL}
+
+  alias Jexata.Functions.{
+    Array,
+    Boolean,
+    Datetime,
+    IntegerFormat,
+    NumberFormat,
+    Numeric,
+    Object,
+    String,
+    URL
+  }
+
   alias Jexata.Runtime.Value
+  alias Jexata.Runtime.CollectionLimit
+
+  @numeric ~w($sum $count $max $min $average $abs $floor $ceil $round $number $sqrt $power $formatBase $random)
+  @boolean ~w($boolean $not $exists)
+  @string ~w($string $length $uppercase $lowercase $trim $substring $contains $split $join $substringBefore $substringAfter $replace $pad $match $base64encode $base64decode)
+  @array ~w($append $reverse $sort $distinct $zip $shuffle)
+  @object ~w($keys $lookup $merge $spread $clone)
+  @url ~w($encodeUrl $encodeUrlComponent $decodeUrl $decodeUrlComponent)
+  @datetime ~w($toMillis $fromMillis $now $millis)
+  @integer_format ~w($formatInteger $parseInteger)
+  @builtin_modules [
+    {Numeric, @numeric},
+    {Boolean, @boolean},
+    {String, @string},
+    {Array, @array},
+    {Object, @object},
+    {URL, @url},
+    {Datetime, @datetime},
+    {IntegerFormat, @integer_format}
+  ]
+  @module_by_name for {module, names} <- @builtin_modules,
+                      name <- names,
+                      into: %{},
+                      do: {name, module}
+  @special_names ~w($type $error $assert $map $filter $reduce $single $each $sift $eval $formatNumber)
+
+  def supported?(name) do
+    name in @special_names or Map.has_key?(@module_by_name, name)
+  end
 
   def call(name, args, context) do
     args =
@@ -17,7 +58,12 @@ defmodule Jexata.Functions do
              "$sqrt",
              "$boolean",
              "$not",
-             "$exists"
+             "$uppercase",
+             "$lowercase",
+             "$trim",
+             "$string",
+             "$fromMillis",
+             "$clone"
            ],
          do: [context],
          else: args
@@ -25,28 +71,48 @@ defmodule Jexata.Functions do
     cond do
       name == "$error" -> error_function(args)
       name == "$assert" -> assert_function(args)
+      name == "$formatNumber" -> NumberFormat.call(args)
       name == "$type" -> type_of(args)
-      Numeric.supported?(name) -> Numeric.call(name, args)
-      Boolean.supported?(name) -> Boolean.call(name, args)
-      String.supported?(name) -> String.call(name, args)
-      Array.supported?(name) -> Array.call(name, args)
-      Object.supported?(name) -> Object.call(name, args)
-      URL.supported?(name) -> URL.call(name, args)
-      true -> {:error, Error.new("T1006", "Unknown function #{name}")}
+      name == "$split" -> dispatch_builtin(name, args) |> CollectionLimit.check_result()
+      true -> dispatch_builtin(name, args)
+    end
+  end
+
+  defp dispatch_builtin(name, args) do
+    case Map.fetch(@module_by_name, name) do
+      {:ok, module} -> module.call(name, args)
+      :error -> {:error, Error.new("T1006", "Unknown function #{name}")}
     end
   end
 
   defp type_of([value]) do
     result =
       cond do
-        Value.undefined?(value) -> Value.undefined()
-        is_nil(value) -> "null"
-        is_boolean(value) -> "boolean"
-        is_number(value) -> "number"
-        is_binary(value) -> "string"
-        is_list(value) or is_struct(value, Value.Sequence) -> "array"
-        is_struct(value, Jexata.Runtime.Closure) -> "function"
-        is_map(value) -> "object"
+        Value.undefined?(value) ->
+          Value.undefined()
+
+        is_nil(value) ->
+          "null"
+
+        is_boolean(value) ->
+          "boolean"
+
+        is_number(value) ->
+          "number"
+
+        is_binary(value) ->
+          "string"
+
+        is_list(value) or is_struct(value, Value.Sequence) ->
+          "array"
+
+        is_struct(value, Jexata.Runtime.Closure) or is_struct(value, Jexata.Runtime.Builtin) or
+          is_struct(value, Jexata.Runtime.Partial) or is_struct(value, Jexata.Runtime.Transform) or
+            is_struct(value, Jexata.Runtime.Composition) ->
+          "function"
+
+        is_map(value) ->
+          "object"
       end
 
     {:ok, result}

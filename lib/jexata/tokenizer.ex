@@ -2,47 +2,22 @@ defmodule Jexata.Tokenizer do
   @moduledoc false
   alias Jexata.{Error, Token}
 
-  @number ~r/\A(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
   @name ~r/\A[\p{L}_][\p{L}\p{N}_]*/u
-  @operators ["~>", ":=", "!=", "<=", ">=", "**", "..", "??", "?:"]
-  @single [
-    ".",
-    "[",
-    "]",
-    "{",
-    "}",
-    "(",
-    ")",
-    ",",
-    ":",
-    ";",
-    "?",
-    "+",
-    "-",
-    "*",
-    "/",
-    "%",
-    "=",
-    "<",
-    ">",
-    "&",
-    "|",
-    "^",
-    "#",
-    "@"
-  ]
-
+  @unicode_space ~r/\A\s/u
   @spec tokenize(String.t()) :: {:ok, [Token.t()]} | {:error, Error.t()}
   def tokenize(source) when is_binary(source), do: scan(source, 0, [])
 
   defp scan(<<>>, position, acc), do: {:ok, Enum.reverse([token(:eof, nil, position) | acc])}
 
   defp scan(source, position, acc) do
-    cond do
-      String.match?(source, ~r/\A\s/u) ->
-        [space] = Regex.run(~r/\A\s/u, source)
-        consume(source, space, position, acc)
+    case whitespace_length(source) do
+      0 -> scan_non_space(source, position, acc)
+      size -> consume(source, binary_part(source, 0, size), position, acc)
+    end
+  end
 
+  defp scan_non_space(source, position, acc) do
+    cond do
       String.starts_with?(source, "/*") ->
         case :binary.match(source, "*/") do
           {offset, 2} -> consume(source, binary_part(source, 0, offset + 2), position, acc)
@@ -65,70 +40,259 @@ defmodule Jexata.Tokenizer do
     end
   end
 
-  defp scan_token(source, position, acc) do
-    multi = Enum.find(@operators, &String.starts_with?(source, &1))
+  defp scan_token(<<"$$", _::binary>> = source, position, acc),
+    do: emit(source, "$$", :variable, "$$", position, acc)
 
-    cond do
-      multi ->
-        emit(source, multi, :op, multi, position, acc)
+  defp scan_token(<<"$", _::binary>> = source, position, acc),
+    do: scan_variable(source, position, acc)
 
-      String.starts_with?(source, "$$") ->
-        emit(source, "$$", :variable, "$$", position, acc)
+  defp scan_token(<<"/", _::binary>> = source, position, acc) do
+    if regex_position?(acc),
+      do: scan_regex(source, position, acc),
+      else: scan_symbol(source, position, acc)
+  end
 
-      String.starts_with?(source, "$") ->
-        scan_variable(source, position, acc)
+  defp scan_token(<<first, _::binary>> = source, position, acc) when first in ?0..?9,
+    do: scan_number(source, position, acc)
 
-      Regex.match?(@number, source) ->
-        [lexeme] = Regex.run(@number, source)
+  defp scan_token(<<first, _::binary>> = source, position, acc)
+       when first in ?a..?z or first in ?A..?Z or first == ?_ or first >= 0x80,
+       do: scan_name(source, position, acc)
 
-        if String.contains?(lexeme, [".", "e", "E"]) do
-          case Float.parse(lexeme) do
-            {value, ""} -> emit(source, lexeme, :number, value, position, acc)
-            _ -> {:error, Error.new("S0102", "Invalid numeric literal", position)}
-          end
-        else
-          emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
-        end
+  defp scan_token(source, position, acc), do: scan_symbol(source, position, acc)
 
-      Regex.match?(@name, source) ->
-        [name] = Regex.run(@name, source)
+  defp scan_number(source, position, acc) do
+    number_size = number_length(source)
+    lexeme = binary_part(source, 0, number_size)
+
+    if String.contains?(lexeme, [".", "e", "E"]) do
+      case Float.parse(lexeme) do
+        {value, ""} -> emit(source, lexeme, :number, value, position, acc)
+        _ -> {:error, Error.new("S0102", "Invalid numeric literal", position)}
+      end
+    else
+      emit(source, lexeme, :number, String.to_integer(lexeme), position, acc)
+    end
+  end
+
+  defp scan_name(source, position, acc) do
+    case name_length(source) do
+      0 ->
+        scan_symbol(source, position, acc)
+
+      name_size ->
+        name = binary_part(source, 0, name_size)
 
         {type, value} =
           case name do
             "true" -> {:literal, true}
             "false" -> {:literal, false}
             "null" -> {:literal, nil}
-            "and" -> {:op, "and"}
-            "or" -> {:op, "or"}
-            "in" -> {:op, "in"}
             _ -> {:name, name}
           end
 
         emit(source, name, type, value, position, acc)
+    end
+  end
 
-      true ->
+  defp scan_symbol(source, position, acc) do
+    case operator(source) || single_symbol(source) do
+      nil ->
         <<character::utf8, _::binary>> = source
         symbol = <<character::utf8>>
 
-        if symbol in @single do
-          emit(source, symbol, :op, symbol, position, acc)
-        else
-          {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
-        end
+        if symbol == "!",
+          do: {:error, Error.new("S0204", "Unexpected operator !", position)},
+          else: {:error, Error.new("S0101", "Unexpected character #{inspect(symbol)}", position)}
+
+      symbol ->
+        emit(source, symbol, :op, symbol, position, acc)
     end
   end
 
   defp scan_variable(source, position, acc) do
     rest = binary_part(source, 1, byte_size(source) - 1)
 
-    name =
-      case Regex.run(@name, rest) do
-        [value] -> value
-        _ -> ""
-      end
+    name = binary_part(rest, 0, name_length(rest))
 
     lexeme = "$" <> name
     emit(source, lexeme, :variable, lexeme, position, acc)
+  end
+
+  defp regex_position?([]), do: true
+
+  defp regex_position?([%Token{value: value} | _]),
+    do:
+      value in [
+        "(",
+        "[",
+        "{",
+        ",",
+        ":",
+        ";",
+        "?",
+        "=",
+        "+",
+        "-",
+        "*",
+        "/",
+        "%",
+        "&",
+        "|",
+        "~>",
+        ":="
+      ]
+
+  defp scan_regex(<<?/, rest::binary>>, position, acc) do
+    case regex_body(rest, [], false) do
+      {:ok, body, tail} ->
+        flags = Regex.run(~r/\A[a-z]*/, tail) |> hd()
+        remaining = binary_part(tail, byte_size(flags), byte_size(tail) - byte_size(flags))
+        consumed = byte_size(rest) - byte_size(remaining) + 1
+        scan(remaining, position + consumed, [token(:regex, {body, flags}, position) | acc])
+
+      :error ->
+        {:error, Error.new("S0104", "Unterminated regular expression", position)}
+    end
+  end
+
+  defp regex_body(<<>>, _, _), do: :error
+
+  defp regex_body(<<?\\, character, tail::binary>>, acc, in_class),
+    do: regex_body(tail, [<<?\\, character>> | acc], in_class)
+
+  defp regex_body(<<?[, tail::binary>>, acc, false),
+    do: regex_body(tail, ["[" | acc], true)
+
+  defp regex_body(<<?], tail::binary>>, acc, true),
+    do: regex_body(tail, ["]" | acc], false)
+
+  defp regex_body(<<?/, tail::binary>>, acc, false),
+    do: {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary(), tail}
+
+  defp regex_body(<<character, tail::binary>>, acc, in_class),
+    do: regex_body(tail, [<<character>> | acc], in_class)
+
+  # --- Escaneo sin regex para el caso ASCII (el caso frecuente) -------------
+  # Para bytes >= 0x80 se delega en las mismas regex Unicode de antes, de modo
+  # que el comportamiento no cambia.
+
+  defp operator(<<"~>", _::binary>>), do: "~>"
+  defp operator(<<":=", _::binary>>), do: ":="
+  defp operator(<<"!=", _::binary>>), do: "!="
+  defp operator(<<"<=", _::binary>>), do: "<="
+  defp operator(<<">=", _::binary>>), do: ">="
+  defp operator(<<"**", _::binary>>), do: "**"
+  defp operator(<<"..", _::binary>>), do: ".."
+  defp operator(<<"??", _::binary>>), do: "??"
+  defp operator(<<"?:", _::binary>>), do: "?:"
+  defp operator(_), do: nil
+
+  defp single_symbol(<<".", _::binary>>), do: "."
+  defp single_symbol(<<"[", _::binary>>), do: "["
+  defp single_symbol(<<"]", _::binary>>), do: "]"
+  defp single_symbol(<<"{", _::binary>>), do: "{"
+  defp single_symbol(<<"}", _::binary>>), do: "}"
+  defp single_symbol(<<"(", _::binary>>), do: "("
+  defp single_symbol(<<")", _::binary>>), do: ")"
+  defp single_symbol(<<",", _::binary>>), do: ","
+  defp single_symbol(<<":", _::binary>>), do: ":"
+  defp single_symbol(<<";", _::binary>>), do: ";"
+  defp single_symbol(<<"?", _::binary>>), do: "?"
+  defp single_symbol(<<"+", _::binary>>), do: "+"
+  defp single_symbol(<<"-", _::binary>>), do: "-"
+  defp single_symbol(<<"*", _::binary>>), do: "*"
+  defp single_symbol(<<"/", _::binary>>), do: "/"
+  defp single_symbol(<<"%", _::binary>>), do: "%"
+  defp single_symbol(<<"=", _::binary>>), do: "="
+  defp single_symbol(<<"<", _::binary>>), do: "<"
+  defp single_symbol(<<">", _::binary>>), do: ">"
+  defp single_symbol(<<"&", _::binary>>), do: "&"
+  defp single_symbol(<<"|", _::binary>>), do: "|"
+  defp single_symbol(<<"^", _::binary>>), do: "^"
+  defp single_symbol(<<"#", _::binary>>), do: "#"
+  defp single_symbol(<<"@", _::binary>>), do: "@"
+  defp single_symbol(_), do: nil
+
+  # Longitud en bytes del espacio en blanco inicial (un solo carácter) o 0.
+  defp whitespace_length(<<c, _::binary>>) when c in [?\s, ?\t, ?\n, ?\r, ?\v, ?\f], do: 1
+
+  defp whitespace_length(<<c, _::binary>> = source) when c >= 0x80 do
+    case Regex.run(@unicode_space, source) do
+      [space] -> byte_size(space)
+      _ -> 0
+    end
+  end
+
+  defp whitespace_length(_), do: 0
+
+  # Equivale a ~r/\A(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
+  defp number_length(<<?0, rest::binary>>), do: 1 + fraction_exponent_length(rest)
+
+  defp number_length(<<d, _::binary>> = source) when d in ?1..?9 do
+    int = digit_run(source)
+    rest = binary_part(source, int, byte_size(source) - int)
+    int + fraction_exponent_length(rest)
+  end
+
+  defp number_length(_), do: 0
+
+  defp fraction_exponent_length(rest) do
+    fraction = fraction_length(rest)
+    after_fraction = binary_part(rest, fraction, byte_size(rest) - fraction)
+    fraction + exponent_length(after_fraction)
+  end
+
+  defp fraction_length(<<?., tail::binary>>) do
+    case digit_run(tail) do
+      0 -> 0
+      n -> 1 + n
+    end
+  end
+
+  defp fraction_length(_), do: 0
+
+  defp exponent_length(<<e, rest::binary>>) when e in [?e, ?E] do
+    {sign, digits} =
+      case rest do
+        <<s, tail::binary>> when s in [?+, ?-] -> {1, tail}
+        _ -> {0, rest}
+      end
+
+    case digit_run(digits) do
+      0 -> 0
+      n -> 1 + sign + n
+    end
+  end
+
+  defp exponent_length(_), do: 0
+
+  defp digit_run(binary, count \\ 0)
+  defp digit_run(<<d, rest::binary>>, count) when d in ?0..?9, do: digit_run(rest, count + 1)
+  defp digit_run(_, count), do: count
+
+  # Equivale a ~r/\A[\p{L}_][\p{L}\p{N}_]*/u
+  defp name_length(<<d, _::binary>>) when d in ?0..?9, do: 0
+
+  defp name_length(source) do
+    case ascii_name_run(source, 0) do
+      {:done, size} -> size
+      :non_ascii -> unicode_name_length(source)
+    end
+  end
+
+  defp ascii_name_run(<<c, rest::binary>>, size)
+       when c in ?a..?z or c in ?A..?Z or c in ?0..?9 or c == ?_,
+       do: ascii_name_run(rest, size + 1)
+
+  defp ascii_name_run(<<c, _::binary>>, _size) when c >= 0x80, do: :non_ascii
+  defp ascii_name_run(_, size), do: {:done, size}
+
+  defp unicode_name_length(source) do
+    case Regex.run(@name, source) do
+      [name] -> byte_size(name)
+      _ -> 0
+    end
   end
 
   defp emit(source, lexeme, type, value, position, acc) do
@@ -143,8 +307,10 @@ defmodule Jexata.Tokenizer do
 
   defp token(type, value, position), do: %Token{type: type, value: value, position: position}
 
-  defp quoted(<<>>, _quote, position, _acc),
-    do: {:error, Error.new("S0103", "Unterminated string", position)}
+  defp quoted(<<>>, quote, position, _acc),
+    do:
+      {:error,
+       Error.new(if(quote == ?`, do: "S0105", else: "S0101"), "Unterminated string", position)}
 
   defp quoted(<<quote::utf8, tail::binary>>, quote, _position, acc),
     do: {:ok, IO.iodata_to_binary(Enum.reverse(acc)), tail}
@@ -174,16 +340,42 @@ defmodule Jexata.Tokenizer do
 
         if value,
           do: quoted(tail, quote, position + 2, [value | acc]),
-          else: {:error, Error.new("S0104", "Invalid escape", position)}
+          else: {:error, Error.new("S0103", "Invalid escape", position)}
     end
   end
 
-  defp quoted(<<character::utf8, tail::binary>>, quote, position, acc),
-    do:
-      quoted(tail, quote, position + byte_size(<<character::utf8>>), [<<character::utf8>> | acc])
+  defp quoted(source, quote, position, acc) do
+    case :binary.match(source, [<<quote>>, "\\"]) do
+      {size, 1} when size > 0 ->
+        <<chunk::binary-size(^size), tail::binary>> = source
+        quoted(tail, quote, position + size, [chunk | acc])
+
+      :nomatch ->
+        quoted(<<>>, quote, position + byte_size(source), [source | acc])
+    end
+  end
 
   defp unicode_escape(<<digits::binary-size(4), tail::binary>>, quote, position, acc) do
     case Integer.parse(digits, 16) do
+      {high, ""} when high in 0xD800..0xDBFF ->
+        case tail do
+          <<?\\, ?u, low_digits::binary-size(4), rest::binary>> ->
+            case Integer.parse(low_digits, 16) do
+              {low, ""} when low in 0xDC00..0xDFFF ->
+                codepoint = 0x10000 + (high - 0xD800) * 0x400 + low - 0xDC00
+                quoted(rest, quote, position + 12, [<<codepoint::utf8>> | acc])
+
+              _ ->
+                quoted(tail, quote, position + 6, [surrogate_bytes(high) | acc])
+            end
+
+          _ ->
+            quoted(tail, quote, position + 6, [surrogate_bytes(high) | acc])
+        end
+
+      {low, ""} when low in 0xDC00..0xDFFF ->
+        quoted(tail, quote, position + 6, [surrogate_bytes(low) | acc])
+
       {codepoint, ""} when codepoint not in 0xD800..0xDFFF and codepoint <= 0x10FFFF ->
         quoted(tail, quote, position + 6, [<<codepoint::utf8>> | acc])
 
@@ -194,4 +386,7 @@ defmodule Jexata.Tokenizer do
 
   defp unicode_escape(_, _, position, _),
     do: {:error, Error.new("S0104", "Invalid Unicode escape", position)}
+
+  defp surrogate_bytes(value),
+    do: <<0xE0 + div(value, 4096), 0x80 + rem(div(value, 64), 64), 0x80 + rem(value, 64)>>
 end

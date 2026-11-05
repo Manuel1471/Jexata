@@ -25,25 +25,35 @@ defmodule Jexata.Runtime.Limits do
   end
 
   def tokens(tokens, options) do
-    if length(tokens) <= options[:max_tokens],
-      do: nesting(tokens, options[:max_nesting], 0),
-      else: {:error, Error.new("J1002", "Expression exceeds token limit")}
+    scan_tokens(tokens, options[:max_tokens], options[:max_nesting], 0, 0, nil)
   end
 
-  defp nesting([], _, _), do: :ok
+  defp scan_tokens([], _, _, _, _, nil), do: :ok
+  defp scan_tokens([], _, _, _, _, error), do: {:error, error}
 
-  defp nesting([%{value: value, position: position} | rest], max, depth) do
+  defp scan_tokens([_ | _], max_tokens, _, count, _, _) when count >= max_tokens,
+    do: {:error, Error.new("J1002", "Expression exceeds token limit")}
+
+  defp scan_tokens(
+         [%{type: type, value: value, position: position} | rest],
+         max_tokens,
+         max_nesting,
+         count,
+         depth,
+         error
+       ) do
     next =
       cond do
-        value in ["(", "[", "{"] -> depth + 1
-        value in [")", "]", "}"] -> depth - 1
+        type == :op and value in ["(", "[", "{"] -> depth + 1
+        type == :op and value in [")", "]", "}"] -> depth - 1
         true -> depth
       end
 
-    if next > max do
-      {:error, Error.new("J1003", "Expression exceeds nesting limit", position)}
-    else
-      nesting(rest, max, next)
-    end
+    error =
+      if next > max_nesting and error == nil,
+        do: Error.new("J1003", "Expression exceeds nesting limit", position),
+        else: error
+
+    scan_tokens(rest, max_tokens, max_nesting, count + 1, next, error)
   end
 end

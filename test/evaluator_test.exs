@@ -7,6 +7,12 @@ defmodule Jexata.EvaluatorTest do
 
     assert Jexata.run("orders.price", %{"orders" => [%{"price" => 2}, %{"price" => 3}]}) ==
              {:ok, [2, 3]}
+
+    assert Jexata.run("\"customer\".\"name\"", %{"customer" => %{"name" => "Ada"}}) ==
+             {:ok, "Ada"}
+
+    assert Jexata.run("price", [%{"price" => [1, 2]}, %{"price" => 3}, %{}]) ==
+             {:ok, [1, 2, 3]}
   end
 
   test "preserves null, missing, arrays and sequence cardinality" do
@@ -20,10 +26,20 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("[items.x]", %{"items" => [%{"x" => 1}, %{"x" => 2}]}) == {:ok, [1, 2]}
   end
 
+  test "public values preserve native subtrees and convert internal sentinels" do
+    input = %{"items" => [%{"value" => 1}, %{"value" => 2}]}
+    assert Jexata.run("$", input) == {:ok, input}
+
+    internal = %{"items" => [%Jexata.Runtime.Value.Undefined{}, %{"value" => 2}]}
+    assert Jexata.Runtime.Value.public(internal) == %{"items" => [:undefined, %{"value" => 2}]}
+  end
+
   test "ranges flatten into array constructors and validate endpoints" do
     assert Jexata.run("[0..3]", %{}) == {:ok, [0, 1, 2, 3]}
     assert Jexata.run("[5..2]", %{}) == {:ok, []}
     assert {:error, %Jexata.Error{code: "T2003"}} = Jexata.run("[1.1..5]", %{})
+    assert Jexata.run("[1..10000000] ~> $count()", %{}) == {:ok, 10_000_000}
+    assert {:error, %Jexata.Error{code: "D2014"}} = Jexata.run("[1..10000000]", %{})
   end
 
   test "flattens path sequences while preserving explicit nested arrays" do
@@ -37,6 +53,12 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("items[-1].x", data) == {:ok, [3, 4]}
   end
 
+  test "folds scalar array literals at compilation without changing nested arrays" do
+    assert Jexata.compile!("[1, 'a', null]").ast == {:literal, [1, "a", nil]}
+    assert Jexata.run("[[1, 2], [3]]", %{}) == {:ok, [[1, 2], [3]]}
+    assert Jexata.run("[1, [2, 3]]", %{}) == {:ok, [1, [2, 3]]}
+  end
+
   test "supports filters, constructors and conditions" do
     data = %{"items" => [%{"price" => 1}, %{"price" => 3}]}
     assert Jexata.run("items[price > 2].price", data) == {:ok, 3}
@@ -46,12 +68,31 @@ defmodule Jexata.EvaluatorTest do
     assert Jexata.run("true ? 2", %{}) == {:ok, 2}
   end
 
+  test "literal index filters keep per-context and out-of-range semantics" do
+    data = %{
+      "orders" => [%{"price" => 11}, %{"price" => 22}],
+      "groups" => [%{"prices" => [1, 2]}, %{"prices" => [3, 4]}]
+    }
+
+    assert Jexata.run("orders[0].price", data) == {:ok, 11}
+    assert Jexata.run("orders[-1].price", data) == {:ok, 22}
+    assert Jexata.run("orders[9].price", data) == {:ok, :undefined}
+    assert Jexata.run("groups.prices[0]", data) == {:ok, [1, 3]}
+    assert Jexata.run("groups.prices[-1]", data) == {:ok, [2, 4]}
+  end
+
   test "reports type and arithmetic errors" do
     assert {:error, %Jexata.Error{code: "T2001"}} = Jexata.run("'a' + 2", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 / 0", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1 % 0.0", %{})
     assert {:error, %Jexata.Error{code: "D1001"}} = Jexata.run("1/(10e300 * 10e100)", :undefined)
     assert Jexata.run("{'a': 1} & 'x'", %{}) == {:ok, "{\"a\":1}x"}
+    assert {:error, %Jexata.Error{code: "T2002"}} = Jexata.run("1 + null", %{})
+    assert {:error, %Jexata.Error{code: "D1002"}} = Jexata.run("-'x'", %{})
+    assert Jexata.run("missing = 1", %{}) == {:ok, false}
+    assert Jexata.run("missing != 1", %{}) == {:ok, false}
+    assert Jexata.run("missing = missing", %{}) == {:ok, false}
+    assert Jexata.run("missing < 1", %{}) == {:ok, :undefined}
   end
 
   test "compiled expressions can be reused concurrently" do
@@ -63,5 +104,47 @@ defmodule Jexata.EvaluatorTest do
             Task.async(fn -> Jexata.evaluate!(expression, %{"customer" => %{"name" => name}}) end)
 
     assert Enum.map(tasks, &Task.await/1) == ~w(Ada Bea Cal)
+  end
+
+  test "index bindings follow items through paths and sorting" do
+    data = %{
+      "orders" => [
+        %{"products" => [%{"id" => 3}, %{"id" => 1}]},
+        %{"products" => [%{"id" => 2}]}
+      ]
+    }
+
+    assert Jexata.run("orders#$i.products^(id).{'order': $i, 'id': id}", data) ==
+             {:ok,
+              [
+                %{"order" => 0, "id" => 1},
+                %{"order" => 1, "id" => 2},
+                %{"order" => 0, "id" => 3}
+              ]}
+  end
+
+  test "recursive function depth can be limited per evaluation" do
+    source = "($f := function($n){$n = 0 ? 0 : 1 + $f($n - 1)}; $f(3))"
+    expression = Jexata.compile!(source)
+
+    assert {:error, %Jexata.Error{code: "U1001"}} =
+             Jexata.evaluate(expression, %{}, %{}, max_function_depth: 3)
+
+    assert Jexata.evaluate(expression, %{}, %{}, max_function_depth: 4) == {:ok, 3}
+    assert Jexata.evaluate(expression, %{}) == {:ok, 3}
+
+    assert {:error, %Jexata.Error{code: "J0006"}} =
+             Jexata.evaluate(expression, %{}, %{}, max_function_depth: 0)
+
+    assert {:error, %Jexata.Error{code: "J0003"}} =
+             Jexata.evaluate(%Jexata.Expression{source: ""}, %{}, %{}, max_function_depth: 4)
+  end
+
+  test "chained bindings remain local to their parenthesized block" do
+    assert Jexata.run("($a := $b := 5; $a + $b)", %{}) == {:ok, 10}
+    assert Jexata.run("($x := 'outer'; ($x := missing); $x)", %{}) == {:ok, "outer"}
+
+    assert Jexata.run("($x := 'outer'; ($x := missing; $x))", %{}) ==
+             {:ok, :undefined}
   end
 end

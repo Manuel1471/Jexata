@@ -2,10 +2,11 @@ defmodule Jexata do
   @moduledoc """
   Compile JSONata expressions and evaluate them against native Elixir values.
 
-  The implementation is under development. See `README.md` for supported syntax.
+  See `README.md` and `docs/COMPATIBILITY.md` for supported syntax and known gaps.
   """
 
-  alias Jexata.{Error, Evaluator, Expression, Parser}
+  alias Jexata.{Error, Evaluator, Expression, Optimizer, Parser}
+  alias Jexata.Evaluator.Ancestry
   alias Jexata.Runtime.Limits
 
   @type json ::
@@ -26,11 +27,19 @@ defmodule Jexata do
     with {:ok, limits} <- Limits.validate(options),
          true <- String.valid?(source),
          :ok <- Limits.source(source, limits) do
-      if String.trim(source) == "" do
+      if String.trim_leading(source) == "" do
         {:error, Error.new("S0201", "Expression is empty", 0)}
       else
-        with {:ok, ast} <- Parser.parse(source, limits),
-             do: {:ok, %Expression{source: source, ast: ast}}
+        with {:ok, ast} <- Parser.parse(source, limits) do
+          optimized = Optimizer.optimize(ast)
+
+          prepared =
+            if Ancestry.contains_parent?(optimized),
+              do: {:parent_mode, optimized},
+              else: optimized
+
+          {:ok, %Expression{source: source, ast: prepared}}
+        end
       end
     else
       false -> {:error, Error.new("J0001", "Expression must be valid UTF-8")}
@@ -42,20 +51,95 @@ defmodule Jexata do
 
   @doc "Evaluates a compiled expression against JSON-like Elixir data."
   @spec evaluate(Expression.t(), input()) :: {:ok, result()} | {:error, Error.t()}
-  def evaluate(%Expression{ast: nil}, _data),
+  def evaluate(expression, data), do: evaluate(expression, data, %{})
+
+  @doc "Evaluates a compiled expression with external variable bindings.
+
+  Binding keys are variable names without the leading `$`, and values are JSON-like Elixir data.
+  "
+  @spec evaluate(Expression.t(), input(), map()) :: {:ok, result()} | {:error, Error.t()}
+  def evaluate(%Expression{ast: nil}, _data, _bindings),
     do: {:error, Error.new("J0003", "Expected a compiled expression")}
 
-  def evaluate(%Expression{ast: ast}, data) do
-    with {:ok, value} <- Evaluator.evaluate(ast, data),
-         do: {:ok, Jexata.Runtime.Value.public(value)}
+  def evaluate(%Expression{ast: ast}, data, bindings) when is_map(bindings) do
+    if Enum.all?(bindings, fn {name, _} ->
+         is_binary(name) and name != "" and not String.starts_with?(name, "$")
+       end) do
+      environment = Map.new(bindings, fn {name, value} -> {"$" <> name, value} end)
+
+      with {:ok, value} <- Evaluator.evaluate(ast, data, environment),
+           do: {:ok, Jexata.Runtime.Value.public_root(value)}
+    else
+      {:error, Error.new("J0005", "Bindings must use names without a leading $")}
+    end
   end
 
-  def evaluate(_, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
+  def evaluate(_, _, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
+  @doc "Evaluates with a positive `:max_function_depth` limit for recursive calls."
+  @spec evaluate(Expression.t(), input(), map(), keyword()) ::
+          {:ok, result()} | {:error, Error.t()}
+  def evaluate(%Expression{ast: nil}, _data, _bindings, _options),
+    do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
+  def evaluate(%Expression{ast: ast}, data, bindings, options)
+      when is_map(bindings) and is_list(options) do
+    max_depth = Keyword.get(options, :max_function_depth, 1024)
+
+    cond do
+      not (is_integer(max_depth) and max_depth > 0) ->
+        {:error, Error.new("J0006", "max_function_depth must be a positive integer")}
+
+      not Enum.all?(bindings, fn {name, _} ->
+        is_binary(name) and name != "" and not String.starts_with?(name, "$")
+      end) ->
+        {:error, Error.new("J0005", "Bindings must use names without a leading $")}
+
+      true ->
+        environment = Map.new(bindings, fn {name, value} -> {"$" <> name, value} end)
+
+        with {:ok, value} <- Evaluator.evaluate(ast, data, environment, max_depth),
+             do: {:ok, Jexata.Runtime.Value.public_root(value)}
+    end
+  end
+
+  def evaluate(_, _, _, _), do: {:error, Error.new("J0003", "Expected a compiled expression")}
+
+  @doc """
+  Evaluates in a separate BEAM process with time, heap, reductions, and result-size limits.
+
+  Options are `:timeout_ms` (default 1000), `:max_heap_words` (default 1,000,000),
+  `:max_result_bytes` (default 1,000,000), `:max_reductions` (disabled by default),
+  `:max_function_depth` (default 1024),
+  `:regex_match_limit` (default 100,000), `:regex_recursion_limit` (default 10,000),
+  and `:bindings` (default `%{}`). The result-size limit uses Erlang external-term
+  size as an estimate; it is not a JSON byte count. The process heap includes
+  the copied input and bindings. A separate watcher enforces the timeout even
+  if the caller exits. The optional reduction budget counts BEAM reductions,
+  including worker setup, and is checked when work completes and periodically
+  while it runs. It is not an exact JSONata step count.
+  """
+  @spec evaluate_bounded(Expression.t(), input(), keyword()) ::
+          {:ok, result()} | {:error, Error.t()}
+  def evaluate_bounded(expression, data, options \\ []),
+    do: Jexata.Runtime.Bounded.evaluate(expression, data, options)
 
   @doc "Compiles and evaluates a JSONata expression in one call."
   @spec run(String.t(), input()) :: {:ok, result()} | {:error, Error.t()}
   def run(source, data) do
     with {:ok, expression} <- compile(source), do: evaluate(expression, data)
+  end
+
+  @doc "Compiles and evaluates an expression with external variable bindings."
+  @spec run(String.t(), input(), map()) :: {:ok, result()} | {:error, Error.t()}
+  def run(source, data, bindings) do
+    with {:ok, expression} <- compile(source), do: evaluate(expression, data, bindings)
+  end
+
+  @doc "Compiles and evaluates with external bindings and evaluation options."
+  @spec run(String.t(), input(), map(), keyword()) :: {:ok, result()} | {:error, Error.t()}
+  def run(source, data, bindings, options) do
+    with {:ok, expression} <- compile(source), do: evaluate(expression, data, bindings, options)
   end
 
   @doc "Like `compile/1`, but raises on errors."
