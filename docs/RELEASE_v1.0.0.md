@@ -1,4 +1,4 @@
-# Jexata v1.0.0
+# Jexata v1.0.0 — First Public Release
 
 The first public release of **Jexata**, a JSONata expression compiler and evaluator written in Elixir. It runs expressions against JSON-shaped Elixir values such as maps and lists, with no production dependency on JavaScript or a database.
 
