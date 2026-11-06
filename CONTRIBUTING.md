@@ -8,4 +8,4 @@ Do not copy reference fixtures without retaining their MIT license notice. Do no
 
 ## Release titles
 
-Name each GitHub release `Jexata vMAJOR.MINOR.PATCH — Short description of the release`. The description should identify its main milestone or change, rather than repeat the version number. For example, the first release is `Jexata v1.0.0 — First Public Release`. Use `vMAJOR.MINOR.PATCH` for the Git tag and `MAJOR.MINOR.PATCH` for the Hex package version. Make the first heading of the release notes match the GitHub release title.
+Name each GitHub release `Jexata vMAJOR.MINOR.PATCH — Short description of the release`. The description should identify its main capability or change, rather than repeat the version number. For example, the first release is `Jexata v1.0.0 — JSONata Queries and Transformations for Elixir`. Use `vMAJOR.MINOR.PATCH` for the Git tag and `MAJOR.MINOR.PATCH` for the Hex package version. Make the first heading of the release notes match the GitHub release title.
